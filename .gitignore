@@ -22,3 +22,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 var/
+
+# Outils locaux
+.playwright-mcp/

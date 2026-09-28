@@ -85,7 +85,7 @@ SC-004, SC-006, SC-010, SC-012).
 ### Tests pour US1 (à écrire d'abord)
 
 - [X] T022 [P] [US1] Écrire `tools/figer_fixtures.py` et figer dans `tests/fixtures/courbevoie/` les extractions de toutes les sources pour Courbevoie (IDFM, OSM, BD TOPO, altimétrie, îlots de chaleur, orthophotos, Panoramax), plus les attendus extraits de `docs/reference/prototype-courbevoie-v2.html` (points, rangs, priorités)
-- [ ] T023 [P] [US1] Écrire `tests/adaptateurs/test_sources.py` : chaque adaptateur, sur les extractions figées, produit les champs attendus avec licence, URL et date
+- [X] T023 [P] [US1] Écrire `tests/adaptateurs/test_sources.py` : chaque adaptateur, sur les extractions figées, produit les champs attendus avec licence, URL et date
 - [X] T024 [P] [US1] Écrire `tests/unit/test_facteurs.py` et `tests/unit/test_score.py` (effets de la méthode 1.0, bornes, priorités 20/40/40, déterminisme)
 - [X] T025 [P] [US1] Écrire `tests/non_regression/test_courbevoie.py` : **SC-003** (≥ 80 % des P1 du prototype parmi les P1, écarts listés avec leur cause) et **SC-004** (deux exécutions ⇒ classement identique à 100 %)
 - [X] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; commune sans ligne de bus ⇒ rapport produit indiquant « aucun point à relever » ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
