@@ -61,8 +61,10 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
   1. Côté plateforme : recherche de secrets et protection au push (déjà actives).
   2. Côté CI : Gitleaks v8.30.1 en conteneur
      (`zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f`),
-     sur l'historique complet (`fetch-depth: 0`), sortie SARIF avec secrets masqués
-     (`--redact`).
+     sortie SARIF avec secrets masqués (`--redact`). Portée : sur une PR, uniquement ses
+     commits (`base.sha..head.sha`) ; sur `main`, en hebdomadaire et à la demande,
+     l'historique complet de toutes les branches (`fetch-depth: 0`, `git log --all`).
+     Une branche fautive ne bloque donc pas les autres PR (LL-004).
 - **Alternatives** : TruffleHog : orienté secrets « vérifiés » (appels réseau aux
   fournisseurs), moins adapté à un blocage déterministe.
 

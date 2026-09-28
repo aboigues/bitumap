@@ -138,7 +138,7 @@ scénarios d'acceptation des workflows sont validés par les branches pièges du
 - [X] T027 Exécuter localement zizmor sur `.github/workflows/` si Docker est disponible, sinon noter dans la PR que la validation se fera en CI ; corriger toute détection
 - [X] T028 Relire chaque workflow contre les « Règles communes » en tête de ce fichier (permissions, SHA, `persist-credentials: false`, pas d'interpolation dans `run:`)
 - [X] T029 Mettre à jour `CLAUDE.md` : section « Sécurité CI » listant les 6 contrôles requis et la règle d'ajout d'une exception (registre + fichier d'ignorance dans la même PR)
-- [ ] T030 Pousser la branche `001-security-ci-baseline` et ouvrir la PR vers `main` avec, dans la description, la liste des actions humaines post-fusion : ajouter au ruleset les 6 contrôles requis et la règle *code scanning* (CodeQL, zizmor : `high_or_higher` / `errors`) selon `contracts/required-checks.md`, puis dérouler le quickstart §3 (branches pièges) ; relever dans la description la durée de la première exécution complète des contrôles (SC-003 : < 10 min)
+- [X] T030 Pousser la branche `001-security-ci-baseline` et ouvrir la PR vers `main` avec, dans la description, la liste des actions humaines post-fusion : ajouter au ruleset les 6 contrôles requis et la règle *code scanning* (CodeQL, zizmor : `high_or_higher` / `errors`) selon `contracts/required-checks.md`, puis dérouler le quickstart §3 (branches pièges) ; relever dans la description la durée de la première exécution complète des contrôles (SC-003 : < 10 min)
 
 ---
 
