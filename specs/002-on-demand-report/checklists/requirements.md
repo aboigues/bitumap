@@ -39,5 +39,8 @@
   - Q2 = A : âge de l'enrobé par IA sur les P1 dès 002, modèle hébergé en France, plafond
     2 €/rapport (FR-014, FR-024, SC-012).
   - Q3 = C : rapports réservés aux utilisateurs connectés, cache partagé entre eux (FR-021).
+- Itération 3 (2026-09-28) : traitement par lots demandé pour réduire les coûts — file
+  d'attente, lots toutes les 15 min (10 communes max), données régionales partagées dans le
+  lot, notification par e-mail (FR-007a à FR-007d, SC-002 révisé, SC-002b, SC-002c) : **16/16**.
 - Seule référence nommée : « API Géo » dans les hypothèses (référentiel officiel) ; les
   exigences restent formulées en capacités.

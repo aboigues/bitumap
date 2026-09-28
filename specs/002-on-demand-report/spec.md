@@ -33,9 +33,9 @@ Acteurs :
 Le demandeur ouvre le service et se connecte avec son adresse e-mail en cliquant sur le
 lien de connexion qu'il reçoit (sans mot de passe). Il saisit ensuite un code postal
 d'Île-de-France, choisit la commune concernée si le code postal en couvre plusieurs, puis
-lance la génération. Il suit
-l'avancement sur une page d'attente et obtient un lien vers le rapport complet dès qu'il est
-prêt.
+demande le rapport. Si le rapport existe déjà, il l'obtient immédiatement ; sinon sa demande
+rejoint une file d'attente traitée par lots à intervalle régulier, il voit sa position et
+l'heure estimée, et il reçoit un e-mail quand le rapport est prêt.
 
 **Why this priority**: c'est la raison d'être du service ; sans elle, rien d'autre n'a de
 valeur.
@@ -53,11 +53,16 @@ comparable au prototype (mêmes types de points, priorités, carte, fiches, mét
 3. **Given** le code postal `95000`, **When** il le saisit, **Then** les 4 communes
    correspondantes lui sont proposées et il doit en choisir une avant de lancer la
    génération.
-4. **Given** une génération lancée, **When** le demandeur suit l'avancement, **Then** il voit
-   l'étape en cours (acquisition, calcul, rapport) et, à la fin, un lien vers le rapport.
-5. **Given** le demandeur a fermé la page, **When** il revient et se reconnecte,
+4. **Given** une demande placée en file d'attente, **When** le demandeur consulte son suivi,
+   **Then** il voit sa position, l'heure estimée de traitement, puis l'étape en cours
+   (acquisition, calcul, rapport) et, à la fin, un lien vers le rapport.
+5. **Given** un rapport terminé, **When** la génération s'achève, **Then** le demandeur reçoit
+   un e-mail qui contient uniquement le nom de la commune et un lien vers le rapport
+   (connexion requise pour l'ouvrir) ; en cas d'échec, un e-mail l'en informe sans détail
+   technique.
+6. **Given** le demandeur a fermé la page, **When** il revient et se reconnecte,
    **Then** il retrouve la liste de ses générations, leur état et les rapports terminés.
-6. **Given** un rapport déjà produit pour cette commune avec les mêmes sources et la même
+7. **Given** un rapport déjà produit pour cette commune avec les mêmes sources et la même
    version de méthode, **When** un demandeur le redemande, **Then** le rapport existant est
    servi immédiatement, sans nouveau calcul ni coût.
 
@@ -89,9 +94,10 @@ génération lancée.
 5. **Given** le quota de générations atteint (par compte ou global), **When** une nouvelle
    génération est demandée, **Then** elle est refusée avec l'heure à laquelle réessayer ;
    les rapports déjà en cache restent consultables.
-6. **Given** une commune déjà en cours de génération, **When** une seconde demande arrive
-   pour elle, **Then** elle est rattachée à la génération en cours au lieu d'en lancer une
-   deuxième.
+6. **Given** une commune déjà en file d'attente ou en cours de génération, **When** une
+   seconde demande arrive pour elle, **Then** elle est rattachée à la demande existante (les
+   deux demandeurs sont prévenus) au lieu d'en créer une deuxième ; elle ne compte pas dans
+   le quota du second demandeur.
 7. **Given** un visiteur non connecté ou dont la session a expiré, **When** il tente de
    lancer une génération ou d'ouvrir un rapport, **Then** il est invité à se connecter et
    aucune génération n'est lancée.
@@ -202,7 +208,15 @@ avec un avertissement.
   supprimés ; les rapports, qui ne contiennent aucune donnée personnelle, restent en cache.
 - **Point situé sur une limite communale** : rattaché à la commune où il se trouve ; les
   points hors commune ne sont pas inclus.
-- **Génération trop longue** : interrompue au-delà d'une durée maximale, en échec explicite.
+- **Génération trop longue** : interrompue au-delà d'une durée maximale, en échec explicite ;
+  les autres communes du lot ne sont pas affectées.
+- **Lot vide** au déclenchement : aucun traitement, arrêt immédiat, coût négligeable.
+- **File plus longue qu'un lot** : les demandes restantes passent au lot suivant, dans
+  l'ordre d'arrivée ; la position et l'heure estimée affichées sont mises à jour.
+- **Budget quotidien d'IA insuffisant** pour tout le lot : les communes qui dépasseraient le
+  budget restent en file pour le lendemain, le demandeur en est informé.
+- **Un déclenchement démarre alors que le lot précédent n'est pas fini** : il ne traite que
+  les demandes non prises en charge ; une même demande n'est jamais traitée deux fois.
 
 ## Requirements *(mandatory)*
 
@@ -236,10 +250,20 @@ avec un avertissement.
 
 - **FR-007**: Le service DOIT générer le rapport d'une commune sans intervention manuelle, en
   trois étapes (acquisition, calcul, rapport) dont l'avancement est visible du demandeur.
+- **FR-007a**: Une demande sans rapport en cache DOIT être placée dans une file d'attente
+  persistante ; les demandes sont traitées **par lots**, déclenchés à intervalle régulier
+  (toutes les 15 minutes), dans l'ordre d'arrivée, à raison de 10 communes par lot au plus.
+  Aucune ressource de calcul ne tourne entre deux lots (principe II).
+- **FR-007b**: Au sein d'un lot, les données communes à toute la région DOIVENT être
+  acquises et préparées une seule fois, puis partagées entre les communes du lot.
+- **FR-007c**: Le demandeur DOIT voir sa position dans la file et une heure estimée de
+  traitement, et DOIT être prévenu par e-mail de la fin (succès ou échec) de sa demande.
+- **FR-007d**: Une demande DOIT être prise en charge par un seul lot ; un échec sur une
+  commune NE DOIT pas interrompre les autres communes du lot.
 - **FR-008**: Le service DOIT renvoyer un rapport existant, sans recalcul, lorsque la
   commune, les versions des sources et la version de méthode sont identiques.
-- **FR-009**: Le service NE DOIT lancer qu'une génération à la fois par commune et par
-  empreinte ; les demandes concurrentes y sont rattachées.
+- **FR-009**: Le service NE DOIT conserver qu'une demande par commune et par empreinte, en
+  file ou en cours ; les demandes concurrentes y sont rattachées.
 - **FR-010**: Le service DOIT identifier les points d'une commune : arrêts de bus desservis,
   carrefours à feux et giratoires traversés par au moins une ligne de bus.
 - **FR-011**: Le service DOIT calculer pour chaque point les facteurs de la méthode du
@@ -261,8 +285,9 @@ avec un avertissement.
   ouverte la plus récente à moins de 30 m, avec sa date et un lien.
 - **FR-016**: Chaque point DOIT avoir un identifiant stable d'une génération à l'autre, pour
   y rattacher plus tard des relevés terrain (principe VI).
-- **FR-017**: Une génération DOIT être interrompue au-delà de 30 minutes et marquée en
-  échec.
+- **FR-017**: La génération d'une commune DOIT être interrompue au-delà de 30 minutes et
+  marquée en échec ; un lot entier DOIT s'arrêter au-delà de 3 heures, les communes non
+  traitées retournant en tête de file.
 
 **Rapport**
 
@@ -295,16 +320,18 @@ avec un avertissement.
 - **FR-027**: Un compte inactif depuis 12 mois DOIT être supprimé automatiquement ; un
   utilisateur DOIT pouvoir supprimer son compte lui-même. L'information RGPD (finalité,
   durée, droits) DOIT être présentée avant la création du compte.
-- **FR-028**: Les e-mails de connexion DOIVENT être envoyés par un service hébergé dans
-  l'Union européenne et ne contenir que le lien et son délai de validité.
+- **FR-028**: Les e-mails de connexion et de notification DOIVENT être envoyés par un service hébergé dans
+  l'Union européenne et ne contenir que le strict nécessaire (lien, délai de validité, nom de la commune).
 
 ### Key Entities
 
 - **Commune** : code INSEE, nom, département, contour ; obtenue à partir d'un code postal.
 - **Compte** : adresse e-mail, date de création, date de dernière connexion.
 - **Lien de connexion** : compte visé, date d'émission, date d'expiration, utilisé ou non.
-- **Demande de génération** : compte demandeur, commune, état (en attente, acquisition, calcul, rapport,
-  terminée, en échec), horodatages, empreinte, lien de suivi.
+- **Demande de génération** : comptes demandeurs, commune, état (en file, acquisition,
+  calcul, rapport, terminée, en échec), position, heure estimée, horodatages, empreinte, lot.
+- **Lot** : déclenchement, demandes prises en charge, données régionales partagées, durée,
+  coût, résultat par commune.
 - **Empreinte de rapport** : commune + version de méthode + versions des sources ; clé du
   cache.
 - **Point** : identifiant stable, type (arrêt, carrefour à feux, giratoire), nom, position,
@@ -321,8 +348,12 @@ avec un avertissement.
 
 - **SC-001**: Un demandeur obtient le rapport d'une commune déjà générée en moins de
   10 secondes après validation du formulaire.
-- **SC-002**: 95 % des communes d'Île-de-France de moins de 100 000 habitants sont générées
-  en moins de 15 minutes.
+- **SC-002**: En fonctionnement normal (file de moins de 10 demandes), 95 % des rapports de
+  communes de moins de 100 000 habitants sont disponibles moins de 45 minutes après la
+  demande, attente du lot comprise.
+- **SC-002b**: Le temps de calcul d'un lot de 10 communes est inférieur d'au moins 30 % à la
+  somme des temps de calcul de ces communes traitées séparément.
+- **SC-002c**: 100 % des demandeurs dont la demande aboutit ou échoue reçoivent un e-mail.
 - **SC-003**: Le rapport de Courbevoie retrouve au moins 80 % des P1 du prototype parmi ses
   P1, tout écart restant étant expliqué par une différence de source ou de méthode
   documentée.
@@ -334,8 +365,8 @@ avec un avertissement.
 - **SC-006**: 100 % des soumissions sans preuve antibot valide, hors Île-de-France ou au-delà
   des quotas sont refusées sans génération lancée ni e-mail envoyé.
 - **SC-007**: Le coût d'IA ne dépasse jamais 2 € par rapport ni 20 € par jour.
-- **SC-008**: Aucun coût d'hébergement de calcul n'est facturé lorsqu'aucune génération
-  n'est en cours (principe II).
+- **SC-008**: Aucun coût d'hébergement de calcul n'est facturé entre deux lots ; un
+  déclenchement sur file vide dure moins de 30 secondes (principe II).
 - **SC-009**: Un demandeur qui découvre le service lance sa première génération en moins de
   3 minutes, connexion par e-mail comprise, sans aide.
 - **SC-010**: 100 % des tentatives de génération ou de consultation sans session valide sont
@@ -353,6 +384,9 @@ avec un avertissement.
 - Type de route : classement administratif de la base topographique nationale, recoupé avec
   la référence de route du référentiel collaboratif ; le gestionnaire se déduit du
   classement (État ou concessionnaire, département, commune, privé).
+- Intervalle entre lots (15 min), taille de lot (10 communes), durée maximale d'un lot
+  (3 h) : valeurs de départ réglables ; l'intervalle pourra être allongé si la demande reste
+  faible.
 - Quotas, plafonds et durées (5/jour/compte, 50/jour, 3 et 10 liens/h, 15 min, 7 jours,
   12 mois, 2 €, 20 €/jour, 30 min, 30 m) sont des valeurs de départ réglables sans
   modification de la spec.
