@@ -84,32 +84,32 @@ SC-004, SC-006, SC-010, SC-012).
 
 ### Tests pour US1 (à écrire d'abord)
 
-- [ ] T022 [P] [US1] Écrire `tools/figer_fixtures.py` et figer dans `tests/fixtures/courbevoie/` les extractions de toutes les sources pour Courbevoie (IDFM, OSM, BD TOPO, altimétrie, îlots de chaleur, orthophotos, Panoramax), plus les attendus extraits de `docs/reference/prototype-courbevoie-v2.html` (points, rangs, priorités)
+- [X] T022 [P] [US1] Écrire `tools/figer_fixtures.py` et figer dans `tests/fixtures/courbevoie/` les extractions de toutes les sources pour Courbevoie (IDFM, OSM, BD TOPO, altimétrie, îlots de chaleur, orthophotos, Panoramax), plus les attendus extraits de `docs/reference/prototype-courbevoie-v2.html` (points, rangs, priorités)
 - [ ] T023 [P] [US1] Écrire `tests/adaptateurs/test_sources.py` : chaque adaptateur, sur les extractions figées, produit les champs attendus avec licence, URL et date
-- [ ] T024 [P] [US1] Écrire `tests/unit/test_facteurs.py` et `tests/unit/test_score.py` (effets de la méthode 1.0, bornes, priorités 20/40/40, déterminisme)
-- [ ] T025 [P] [US1] Écrire `tests/non_regression/test_courbevoie.py` : **SC-003** (≥ 80 % des P1 du prototype parmi les P1, écarts listés avec leur cause) et **SC-004** (deux exécutions ⇒ classement identique à 100 %)
+- [X] T024 [P] [US1] Écrire `tests/unit/test_facteurs.py` et `tests/unit/test_score.py` (effets de la méthode 1.0, bornes, priorités 20/40/40, déterminisme)
+- [X] T025 [P] [US1] Écrire `tests/non_regression/test_courbevoie.py` : **SC-003** (≥ 80 % des P1 du prototype parmi les P1, écarts listés avec leur cause) et **SC-004** (deux exécutions ⇒ classement identique à 100 %)
 - [ ] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; commune sans ligne de bus ⇒ rapport produit indiquant « aucun point à relever » ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
 - [ ] T027 [P] [US1] Écrire `tests/api/test_parcours.py` : parcours du tableau quickstart §2 (hors antibot et quotas, testés en US2)
 
 ### Sources (adaptateurs)
 
-- [ ] T028 [P] [US1] Implémenter `src/bitumap/sources/idfm.py` : `arrets`, `offre_hebdomadaire_moyenne_hors_vacances` (bus/jour moyen hors vacances, pointe horaire), `referentiel-des-lignes` (**ODbL**) ; portée régionale
-- [ ] T029 [P] [US1] Implémenter `src/bitumap/sources/osm.py` : extrait Geofabrik Île-de-France lu avec `osmium` : `highway=traffic_signals`, `junction=roundabout`, relations `route=bus`, `surface`, `ref`, ouvrages d'art ; portée régionale
-- [ ] T030 [P] [US1] Implémenter `src/bitumap/sources/bdtopo.py` : WFS `BDTOPO_V3:troncon_de_route` (`cpx_classement_administratif`, `cpx_gestionnaire`, `cpx_numero`, `importance`, `urbain`) et `BDTOPO_V3:batiment` (hauteurs) ; portée communale
-- [ ] T031 [P] [US1] Implémenter `src/bitumap/sources/altimetrie.py` : API altimétrie IGN (`ign_rge_alti_wld`), altitudes à ±30 m de chaque point
-- [ ] T032 [P] [US1] Implémenter `src/bitumap/sources/chaleur.py` : aléa de jour Institut Paris Region (0–16), portée régionale, cache long
-- [ ] T033 [P] [US1] Implémenter `src/bitumap/sources/ortho.py` : infrarouge couleur (indice de végétation pour les arbres) et vignettes 512×512 px des orthophotos historiques par point
-- [ ] T034 [P] [US1] Implémenter `src/bitumap/sources/panoramax.py` : recherche STAC par emprise, photo la plus récente à moins de 30 m, **licence relevée photo par photo** (FR-015)
+- [X] T028 [P] [US1] Implémenter `src/bitumap/sources/idfm.py` : `arrets`, `offre_hebdomadaire_moyenne_hors_vacances` (bus/jour moyen hors vacances, pointe horaire), `referentiel-des-lignes` (**ODbL**) ; portée régionale
+- [X] T029 [P] [US1] Implémenter `src/bitumap/sources/osm.py` : extrait Geofabrik Île-de-France lu avec `osmium` : `highway=traffic_signals`, `junction=roundabout`, relations `route=bus`, `surface`, `ref`, ouvrages d'art ; portée régionale
+- [X] T030 [P] [US1] Implémenter `src/bitumap/sources/bdtopo.py` : WFS `BDTOPO_V3:troncon_de_route` (`cpx_classement_administratif`, `cpx_gestionnaire`, `cpx_numero`, `importance`, `urbain`) et `BDTOPO_V3:batiment` (hauteurs) ; portée communale
+- [X] T031 [P] [US1] Implémenter `src/bitumap/sources/altimetrie.py` : API altimétrie IGN (`ign_rge_alti_wld`), altitudes à ±30 m de chaque point
+- [X] T032 [P] [US1] Implémenter `src/bitumap/sources/chaleur.py` : aléa de jour Institut Paris Region (0–16), portée régionale, cache long
+- [X] T033 [P] [US1] Implémenter `src/bitumap/sources/ortho.py` : infrarouge couleur (indice de végétation pour les arbres) et vignettes 512×512 px des orthophotos historiques par point
+- [X] T034 [P] [US1] Implémenter `src/bitumap/sources/panoramax.py` : recherche STAC par emprise, photo la plus récente à moins de 30 m, **licence relevée photo par photo** (FR-015)
 
 ### Points, facteurs, score
 
-- [ ] T035 [US1] Implémenter `src/bitumap/points/construction.py` : arrêts desservis dans la commune, carrefours à feux et giratoires traversés par au moins une ligne ; identifiants stables `A{id_arret}`, `F{id nœud OSM}`, `G{id chemin OSM}` (FR-010, FR-016) ; exclusion des points hors commune
-- [ ] T036 [P] [US1] Implémenter `src/bitumap/facteurs/charge.py` : bus/jour en échelle logarithmique ; carrefour : voie la plus chargée + moitié de la seconde
-- [ ] T037 [P] [US1] Implémenter `src/bitumap/facteurs/sollicitation.py` : arrêt ×1,0, feu ×0,8, giratoire ×0,7 ; arrêt à moins de 40 m d'un feu ×1,2 ; ≥ 20 bus/h en pointe ×1,1
-- [ ] T038 [P] [US1] Implémenter `src/bitumap/facteurs/site.py` : pente ≥ 3 % jusqu'à ×1,32 ; béton ou pavés ×0,5 ; pente > 9 % jugée douteuse et ignorée ; ouvrage d'art signalé
-- [ ] T039 [P] [US1] Implémenter `src/bitumap/facteurs/ensoleillement.py` (méthode 1.0) : heures de soleil direct 8 h–20 h à la mi-juillet (pvlib), ombres des bâtiments BD TOPO et des arbres (infrarouge) ; effet ×0,8 à ×1,2 ; limites documentées
-- [ ] T040 [P] [US1] Implémenter `src/bitumap/facteurs/chaleur.py` : aléa 0–16 ⇒ ×0,92 à ×1,08 ; « non évalué » si source indisponible
-- [ ] T041 [US1] Implémenter `src/bitumap/score/combinaison.py` : produit des facteurs, normalisation 0–100, rangs, priorités P1 20 % / P2 40 % / P3 reste (FR-011, FR-012) **figées à ce stade** ; puis application de l'âge de l'enrobé aux P1 (×0,85 si réfection il y a 5 à 12 ans, ×1,05 au-delà de 12 ans, inchangé sous 5 ans) qui ne modifie que le score et le rang **à l'intérieur des P1** : un point ne change jamais de priorité à cause de l'IA (SC-012, principe V) ; test dédié dans `tests/unit/test_score.py`
+- [X] T035 [US1] Implémenter `src/bitumap/points/construction.py` : arrêts desservis dans la commune, carrefours à feux et giratoires traversés par au moins une ligne ; identifiants stables `A{id_arret}`, `F{id nœud OSM}`, `G{id chemin OSM}` (FR-010, FR-016) ; exclusion des points hors commune
+- [X] T036 [P] [US1] Implémenter `src/bitumap/facteurs/charge.py` : bus/jour en échelle logarithmique ; carrefour : voie la plus chargée + moitié de la seconde
+- [X] T037 [P] [US1] Implémenter `src/bitumap/facteurs/sollicitation.py` : arrêt ×1,0, feu ×0,8, giratoire ×0,7 ; arrêt à moins de 40 m d'un feu ×1,2 ; ≥ 20 bus/h en pointe ×1,1
+- [X] T038 [P] [US1] Implémenter `src/bitumap/facteurs/site.py` : pente ≥ 3 % jusqu'à ×1,32 ; béton ou pavés ×0,5 ; pente > 9 % jugée douteuse et ignorée ; ouvrage d'art signalé
+- [X] T039 [P] [US1] Implémenter `src/bitumap/facteurs/ensoleillement.py` (méthode 1.0) : heures de soleil direct 8 h–20 h à la mi-juillet (pvlib), ombres des bâtiments BD TOPO et des arbres (infrarouge) ; effet ×0,8 à ×1,2 ; limites documentées
+- [X] T040 [P] [US1] Implémenter `src/bitumap/facteurs/chaleur.py` : aléa 0–16 ⇒ ×0,92 à ×1,08 ; « non évalué » si source indisponible
+- [X] T041 [US1] Implémenter `src/bitumap/score/combinaison.py` : produit des facteurs, normalisation 0–100, rangs, priorités P1 20 % / P2 40 % / P3 reste (FR-011, FR-012) **figées à ce stade** ; puis application de l'âge de l'enrobé aux P1 (×0,85 si réfection il y a 5 à 12 ans, ×1,05 au-delà de 12 ans, inchangé sous 5 ans) qui ne modifie que le score et le rang **à l'intérieur des P1** : un point ne change jamais de priorité à cause de l'IA (SC-012, principe V) ; test dédié dans `tests/unit/test_score.py`
 
 ### IA vision (âge de l'enrobé)
 

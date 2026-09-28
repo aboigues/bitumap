@@ -62,6 +62,10 @@ ignore = ["RUF001", "RUF002", "RUF003"]  # typographie française (apostrophes, 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-m 'not reseau' --strict-markers"
+filterwarnings = [
+    # avertissement interne à rasterio (transform.from_origin), sans effet sur les résultats
+    "ignore::PendingDeprecationWarning:rasterio.*",
+]
 markers = [
     "reseau: appelle de vraies API externes (exclu par défaut)",
     "base: nécessite la base PostgreSQL locale (compose)",

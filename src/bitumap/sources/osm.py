@@ -40,7 +40,7 @@ class DonneesOsm:
     voies_bus: (
         gpd.GeoDataFrame
     )  # way_id, lignes, nb_itineraires, nom, ref, highway, surface, pont, sens_unique
-    feux: gpd.GeoDataFrame  # node_id
+    feux: gpd.GeoDataFrame  # node_id, pieton
     giratoires: gpd.GeoDataFrame  # way_id, nom
 
 
@@ -88,7 +88,11 @@ def extraire_region(pbf: Path) -> DonneesOsm:
         if obj.is_node():
             if obj.tags.get("highway") == "traffic_signals":
                 feux.append(
-                    {"node_id": obj.id, "geometry": Point(obj.location.lon, obj.location.lat)}
+                    {
+                        "node_id": obj.id,
+                        "pieton": est_feu_pieton(obj.tags),
+                        "geometry": Point(obj.location.lon, obj.location.lat),
+                    }
                 )
             continue
         est_bus = obj.id in lignes_par_voie
@@ -155,6 +159,15 @@ def extraction_communale(
             "regionale",
         ),
         lire_emprise(fichier_regional, emprise),
+    )
+
+
+def est_feu_pieton(tags) -> bool:
+    """Feu de traversée piétonne seule (pas un carrefour) : exclu des « feux » de la méthode."""
+    return (
+        tags.get("crossing") in ("traffic_signals", "signals")
+        or tags.get("traffic_signals") in ("crossing_only", "pedestrian_crossing")
+        or tags.get("crossing:signals") == "yes"
     )
 
 
