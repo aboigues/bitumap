@@ -46,8 +46,8 @@ entre deux appels.
 
 ### III. Souveraineté et traçabilité des sources
 
-- Hébergement chez un fournisseur français (Scaleway ou OVHcloud), calcul et données stockés
-  en France.
+- Hébergement chez **Scaleway**, région `fr-par` (Paris), dans le projet dédié `BITUMAP` :
+  calcul et données stockés en France. Aucune ressource bitumap dans un autre projet.
 - Seules des sources ouvertes sont utilisées en V1 : IDFM, OpenStreetMap, IGN (RGE ALTI,
   BD TOPO, orthophotos), Institut Paris Region, Panoramax.
 - Chaque rapport DOIT indiquer pour chaque source : nom, licence, URL et date d'extraction.
@@ -158,6 +158,14 @@ dans `main`, en particulier pour la sécurité et la méthode de score.
   base légale documentée (RGPD).
 - Les secrets (clés API, accès stockage) sont fournis par variables d'environnement ou
   gestionnaire de secrets du fournisseur, jamais dans le dépôt.
+- Infrastructure as code : toute ressource Scaleway est décrite en **OpenTofu** ; aucune
+  création ni modification manuelle dans la console. Seul le socle d'amorçage (projet,
+  application IAM de déploiement, bucket d'état) est créé par le script versionné et
+  idempotent `infra/bootstrap/bootstrap.sh`.
+- État OpenTofu : distant, dans le bucket d'état privé et versionné du projet `BITUMAP`,
+  chiffré côté client (chiffrement d'état OpenTofu) ; jamais commité.
+- L'application IAM de déploiement est limitée au projet `BITUMAP`, sans droit IAM ; ses clés
+  expirent au plus tard à 180 jours.
 - Dépendances et images de base : dernière version stable vérifiée au moment de l'ajout.
 
 ## Flux de développement
@@ -183,4 +191,4 @@ dans `main`, en particulier pour la sécurité et la méthode de score.
 - Chaque revue de PR vérifie la conformité aux principes ; la version de méthode de score
   (principe IV) est distincte de la version de cette constitution.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-28 | **Last Amended**: 2026-09-28
+**Version**: 1.4.0 | **Ratified**: 2026-09-28 | **Last Amended**: 2026-09-28

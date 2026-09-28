@@ -33,4 +33,25 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
-_Aucune entrée pour l'instant._
+### LL-001 — Arrêt silencieux du bootstrap Scaleway en relance (2026-09-28) — Close
+
+- **Contexte** : développement, première relance de `infra/bootstrap/bootstrap.sh` pour
+  vérifier son idempotence.
+- **Symptôme** : la relance s'arrête après l'étape 3, sans message ni sortie JSON ; l'étape
+  « bucket d'état » n'est pas exécutée.
+- **Causes racines** :
+  1. Pourquoi l'arrêt ? `jq` échoue (`startswith() requires string inputs`) et `set -e` +
+     `pipefail` stoppent le script.
+  2. Pourquoi `jq` échoue ? `scw object bucket list -o json` renvoie la clé `Name` (majuscule,
+     format S3) et non `name` comme les autres commandes `scw`.
+  3. Pourquoi ne l'a-t-on pas vu ? La première exécution crée le bucket sans passer par ce
+     filtre (liste vide) ; seule la relance lit la liste.
+  4. Pourquoi aucun message ? L'erreur `jq` était redirigée (`2>/dev/null`) et le script
+     n'avait pas de piège `ERR`.
+- **Correctif** : filtre `(.Name // .name)` ; piège `trap … ERR` + `errtrace` qui affiche la
+  ligne et la commande en échec.
+- **Mesure préventive** : tout script d'infrastructure DOIT avoir un piège `ERR` et être
+  exécuté **deux fois** avant sa PR (idempotence), ce qui est désormais noté dans
+  `infra/bootstrap/README.md`. Aucun doublon n'avait été créé : l'arrêt est survenu avant la
+  création.
+- **Références** : branche `chore/scaleway-bootstrap`.
