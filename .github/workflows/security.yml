@@ -1,0 +1,228 @@
+# Contrôles de sécurité bloquants (constitution, principe I ; spec 001).
+# Contrat des noms de jobs : specs/001-security-ci-baseline/contracts/required-checks.md
+# Scanners tiers lancés depuis leur image épinglée par digest (.github/scanners/*.Dockerfile),
+# sans jeton GitHub transmis au conteneur (research R1).
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"   # hebdomadaire : réanalyse complète de main (FR-007)
+    - cron: "47 5 * * *"   # quotidien : expiration des exceptions (FR-015)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exceptions:
+    name: exceptions
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tests du validateur
+        run: python3 -m unittest discover -s tests/security -v
+      - name: Validation du registre d'exceptions
+        run: python3 scripts/security/check_exceptions.py
+
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write     # commentaire dans la PR
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lecture des GHSA tolérés (validés par le job exceptions)
+        id: ghsas
+        run: |
+          list=$(grep -vE '^[[:space:]]*(#|$)' .security/allowed-ghsas.txt | paste -sd, - || true)
+          echo "list=${list}" >> "$GITHUB_OUTPUT"
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+          allow-ghsas: ${{ steps.ghsas.outputs.list }}
+
+  secrets:
+    name: secrets
+    if: github.event_name != 'schedule' || github.event.schedule == '17 5 * * 1'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write  # publication des résultats SARIF (Security → Code scanning)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Gitleaks (historique complet, secrets masqués)
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/gitleaks.Dockerfile)
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP:/out" \
+            "$image" git /repo --redact --no-banner \
+            --gitleaks-ignore-path /repo/.gitleaksignore \
+            --report-format sarif --report-path /out/gitleaks.sarif
+      - name: Publication des résultats
+        if: always() && hashFiles(format('{0}/gitleaks.sarif', runner.temp)) != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/gitleaks.sarif
+          category: gitleaks
+
+  vulnerabilities-iac:
+    name: vulnerabilities-iac
+    if: github.event_name != 'schedule' || github.event.schedule == '17 5 * * 1'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write  # publication des résultats SARIF (Security → Code scanning)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trivy — rapport complet (non bloquant)
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
+            -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
+            fs --cache-dir /cache --scanners vuln,misconfig --skip-dirs .git \
+            --format sarif --output /out/trivy.sarif .
+      - name: Publication des résultats
+        if: always() && hashFiles(format('{0}/trivy.sarif', runner.temp)) != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/trivy.sarif
+          category: trivy
+      - name: Trivy — dépôt, bloquant ≥ HIGH
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
+            fs --cache-dir /cache --skip-db-update --scanners vuln,misconfig --skip-dirs .git \
+            --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore .
+      - name: Trivy — images de conteneur, bloquant ≥ HIGH (principe I)
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          mapfile -t dockerfiles < <(find . -name Dockerfile -not -path './.git/*' -not -path './.github/*')
+          if [ "${#dockerfiles[@]}" -eq 0 ]; then
+            echo "Aucune image à analyser (aucun Dockerfile applicatif)."
+            exit 0
+          fi
+          for i in "${!dockerfiles[@]}"; do
+            df="${dockerfiles[$i]}"
+            tag="bitumap-scan:${i}"
+            echo "Construction locale (sans publication) de ${df}"
+            docker build -t "$tag" -f "$df" "$(dirname "$df")"
+            docker save "$tag" -o "$RUNNER_TEMP/image-${i}.tar"
+            docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
+              -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
+              image --cache-dir /cache --skip-db-update --input "/out/image-${i}.tar" \
+              --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore
+          done
+
+  workflows-audit:
+    name: workflows-audit
+    if: github.event_name != 'schedule' || github.event.schedule == '17 5 * * 1'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write  # publication des résultats SARIF (Security → Code scanning)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: zizmor — rapport complet (non bloquant)
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/zizmor.Dockerfile)
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -w /src "$image" \
+            --offline --config .github/zizmor.yml --persona pedantic --format sarif . \
+            > "$RUNNER_TEMP/zizmor.sarif" || true
+      - name: Publication des résultats
+        if: always() && hashFiles(format('{0}/zizmor.sarif', runner.temp)) != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/zizmor.sarif
+          category: zizmor
+      - name: zizmor — règles de durcissement, bloquant quelle que soit la gravité (FR-014)
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/zizmor.Dockerfile)
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -w /src "$image" \
+            --offline --config .github/zizmor.yml --persona pedantic --format json . \
+            > "$RUNNER_TEMP/zizmor.json" || true
+          jq -e 'type == "array"' "$RUNNER_TEMP/zizmor.json" > /dev/null
+          blocking=$(jq '[.[] | select(.ident | IN("unpinned-uses","excessive-permissions","template-injection","dangerous-triggers","artipacked"))]' "$RUNNER_TEMP/zizmor.json")
+          count=$(jq 'length' <<< "$blocking")
+          if [ "$count" -gt 0 ]; then
+            jq -r '.[] | "::error::\(.ident) — \(.desc)"' <<< "$blocking"
+            exit 1
+          fi
+          echo "Aucune violation des règles de durcissement."
+
+  sensitive-paths:
+    # Informatif, NON requis : sur une PR, ce job s'exécute depuis la version de la PR
+    # et ne protège donc pas contre une PR qui le modifie (spec, cas limite).
+    name: sensitive-paths
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write     # commentaire dans la PR
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Signalement des zones sensibles modifiées
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          marker='<!-- bitumap:sensitive-paths -->'
+          mapfile -t zones < <(awk '!/^#/ && NF {sub(/^\//, "", $1); print $1}' .github/CODEOWNERS)
+          [ "${#zones[@]}" -gt 0 ] || { echo "::error::aucune zone lue dans .github/CODEOWNERS"; exit 1; }
+          changed=$(gh pr diff "$PR_NUMBER" --repo "$REPO" --name-only)
+          hits=""
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            for zone in "${zones[@]}"; do
+              [ -z "$zone" ] && continue   # une zone vide correspondrait à tout
+              case "$file" in "$zone"*) hits+="- \`${file}\`"$'\n'; break ;; esac
+            done
+          done <<< "$changed"
+          existing=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+          if [ -z "$hits" ]; then
+            [ -n "$existing" ] && gh api -X DELETE "repos/$REPO/issues/comments/$existing" > /dev/null
+            echo "Aucune zone sensible modifiée."
+            exit 0
+          fi
+          body=$(printf '%s\n%s\n\n%s\n%s\n%s\n%s\n' \
+            "$marker" \
+            "### ⚠️ Zones sensibles modifiées — relecture humaine obligatoire" \
+            "$hits" \
+            "Sur une PR, GitHub exécute **les workflows contenus dans la PR** : une modification de" \
+            "\`.github/\` peut neutraliser un contrôle tout en le laissant au vert. Relire le diff de" \
+            "ces fichiers avant de fusionner (constitution, principes I et IX).")
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -f body="$body" > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -f body="$body" > /dev/null
+          fi
+          printf 'Zones sensibles modifiées :\n%s' "$hits"

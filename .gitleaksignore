@@ -1,0 +1,2 @@
+# Détections ignorées par Gitleaks (une empreinte par ligne). Chaque empreinte DOIT avoir une
+# exception active de l'outil `gitleaks` dans .security/exceptions.toml.

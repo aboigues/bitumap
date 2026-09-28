@@ -1,0 +1,7 @@
+[[exception]]
+id = "EXC-001"
+tool = "trivy"
+finding = "CVE-2026-0001"
+reason = "Test"
+created = 2026-10-01
+expires = 2026-10-31

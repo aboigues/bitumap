@@ -1,0 +1,7 @@
+# Configuration zizmor (research R7, spec FR-013).
+# Toute action, y compris celles de GitHub, DOIT être épinglée par SHA de commit complet.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "*": hash-pin

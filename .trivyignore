@@ -1,0 +1,2 @@
+# Vulnérabilités ignorées par Trivy. Chaque ligne DOIT avoir la forme `ID exp:AAAA-MM-JJ`
+# et une exception active de l'outil `trivy` dans .security/exceptions.toml (même date).

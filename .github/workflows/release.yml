@@ -1,0 +1,93 @@
+# Livraison (spec US3, FR-010, FR-011) : déclenchée par un tag vX.Y.Z poussé par le mainteneur.
+# La version GitHub n'est créée que si l'analyse et le SBOM ont réussi.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: scan
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trivy — dépôt, bloquant ≥ HIGH
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
+            fs --cache-dir /cache --scanners vuln,misconfig --skip-dirs .git \
+            --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore .
+      - name: Trivy — images de conteneur, bloquant ≥ HIGH
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          mapfile -t dockerfiles < <(find . -name Dockerfile -not -path './.git/*' -not -path './.github/*')
+          if [ "${#dockerfiles[@]}" -eq 0 ]; then
+            echo "Aucune image à analyser (aucun Dockerfile applicatif)."
+            exit 0
+          fi
+          for i in "${!dockerfiles[@]}"; do
+            df="${dockerfiles[$i]}"
+            tag="bitumap-release:${i}"
+            docker build -t "$tag" -f "$df" "$(dirname "$df")"
+            docker save "$tag" -o "$RUNNER_TEMP/image-${i}.tar"
+            docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
+              -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
+              image --cache-dir /cache --skip-db-update --input "/out/image-${i}.tar" \
+              --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore
+          done
+
+  sbom:
+    name: sbom
+    needs: scan
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: SBOM CycloneDX
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" -w /src "$image" \
+            fs --skip-dirs .git --format cyclonedx --output "/out/bitumap-${TAG}.cdx.json" .
+          mv "$RUNNER_TEMP/bitumap-${TAG}.cdx.json" .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: bitumap-${{ github.ref_name }}.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish
+    needs: [scan, sbom]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write   # création de la version GitHub et ajout du SBOM
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom
+      - name: Création de la version avec le SBOM
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release create "$TAG" "bitumap-${TAG}.cdx.json" \
+            --repo "$REPO" --verify-tag --generate-notes --title "$TAG"

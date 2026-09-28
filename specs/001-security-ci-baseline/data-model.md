@@ -64,4 +64,5 @@ correspondante ; généré à partir du commit tagué.
 | `/.security/`, `/SECURITY.md`, `/.trivyignore`, `/.gitleaksignore` | exceptions et politique |
 | `/scripts/security/` | validateur |
 | `/LESSON-LEARNED.md` | retours d'expérience (principe VIII) |
+| `/infra/` | amorçage Scaleway et IaC (droits IAM, principe I) |
 | méthode de score (chemin défini par la feature correspondante) | principe IV |

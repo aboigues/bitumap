@@ -1,0 +1,9 @@
+[[exception]]
+id = "EXC-001"
+tool = "trivy"
+finding = "CVE-2026-0001"
+reason = "Test"
+owner = "aboigues"
+created = 2026-09-01
+expires = 2026-10-01
+
