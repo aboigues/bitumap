@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titre %}bitumap{% endblock %}</title>
+  <link rel="stylesheet" href="/statique/style.css">
+</head>
+<body>
+  <header class="entete">
+    <a class="marque" href="/">bitumap</a>
+    <span class="sous-titre">Risque d'orniérage des enrobés, réseau bus d'Île-de-France</span>
+    {% if session %}
+    <form method="post" action="/deconnexion" class="deconnexion">
+      <input type="hidden" name="csrf" value="{{ session.csrf }}">
+      <button type="submit">Se déconnecter</button>
+    </form>
+    {% endif %}
+  </header>
+  <main id="contenu">
+    {% block contenu %}{% endblock %}
+  </main>
+  <footer class="pied">
+    <a href="/confidentialite">Données personnelles</a>
+  </footer>
+</body>
+</html>
