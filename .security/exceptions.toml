@@ -1,0 +1,19 @@
+# Registre des exceptions de sécurité (constitution, principe I ; spec FR-015).
+# Contrat : specs/001-security-ci-baseline/contracts/exceptions-registry.md
+#
+# Règles :
+#   - durée maximale 90 jours ; une exception expirée fait échouer le contrôle `exceptions` ;
+#   - toute entrée de .trivyignore, .gitleaksignore ou .security/allowed-ghsas.txt DOIT avoir
+#     ici une exception active du même outil ;
+#   - une alerte CodeQL ignorée dans l'interface porte en commentaire l'identifiant EXC-NNN.
+#
+# Exemple (commenté) :
+#
+# [[exception]]
+# id = "EXC-001"
+# tool = "trivy"                 # trivy | gitleaks | codeql | dependency-review
+# finding = "CVE-2026-12345"     # CVE, GHSA, empreinte Gitleaks ou n° d'alerte CodeQL
+# reason = "Faux positif : fonction vulnérable non appelée ; atténuation : …"
+# owner = "aboigues"
+# created = 2026-10-01
+# expires = 2026-12-30

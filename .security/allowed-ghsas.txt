@@ -1,0 +1,2 @@
+# Avis GHSA tolérés par dependency-review (un par ligne). Chaque GHSA DOIT avoir une
+# exception active de l'outil `dependency-review` dans .security/exceptions.toml.

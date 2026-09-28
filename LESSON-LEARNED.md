@@ -33,6 +33,27 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-003 — Rapports SARIF jamais publiés malgré des contrôles verts (2026-09-28) — Close
+
+- **Contexte** : CI, première exécution de `security.yml` sur la PR #5.
+- **Symptôme** : les 8 contrôles sont verts, mais Security → Code scanning ne contient que
+  CodeQL ; les rapports Gitleaks, Trivy et zizmor n'ont pas été publiés, sans aucune erreur.
+- **Causes racines** :
+  1. Pourquoi pas publiés ? L'étape d'envoi était sautée : sa condition était fausse.
+  2. Pourquoi fausse ? `hashFiles()` ne lit que l'espace de travail (`GITHUB_WORKSPACE`) ; les
+     rapports étaient écrits dans `runner.temp`, donc `hashFiles` renvoyait toujours ''.
+  3. Pourquoi écrits hors de l'espace de travail ? Le dépôt est monté en lecture seule dans
+     les conteneurs de scan (choix de sécurité volontaire).
+  4. Pourquoi non détecté en local ? actionlint et zizmor valident la syntaxe, pas la
+     sémantique de `hashFiles` ; et un saut d'étape n'est pas un échec.
+- **Correctif** : étape explicite `[ -s "$RUNNER_TEMP/<outil>.sarif" ]` exposant une sortie
+  `present`, condition d'envoi sur cette sortie.
+- **Mesure préventive** : le quickstart (§2) exige de vérifier, après chaque première
+  exécution, que chaque outil apparaît dans la liste des analyses Code scanning
+  (`gh api repos/aboigues/bitumap/code-scanning/analyses`). Règle générale : un contrôle
+  vert ne prouve pas qu'il a produit son effet ; vérifier la sortie attendue.
+- **Références** : PR #5.
+
 ### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Close
 
 - **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive

@@ -28,3 +28,15 @@ Prototype de référence : `docs/reference/prototype-courbevoie-v2.html`.
   `scw -p bitumap` (droits limités au projet). Le profil `telemach` (administration) ne sert
   qu'à `infra/bootstrap/bootstrap.sh`, lancé par un humain.
 - Aucune ressource créée à la main : tout passe par OpenTofu (constitution).
+
+## Sécurité CI
+
+- Contrôles requis sur `main` (noms de jobs) : `analyze (actions)`, `dependency-review`,
+  `secrets`, `vulnerabilities-iac`, `workflows-audit`, `exceptions`. Détail :
+  `specs/001-security-ci-baseline/contracts/required-checks.md`.
+- Avant de pousser un workflow : zizmor (`.github/zizmor.yml`) et actionlint en local, via
+  Docker, avec les images de `.github/scanners/` ; conteneurs lancés avec `--user` (non root).
+- Actions : SHA complet + tag en commentaire ; uniquement `actions/*` et `github/*`.
+- Ajouter une exception = dans la **même PR** : entrée `.security/exceptions.toml` (≤ 90 j)
+  + ligne dans `.trivyignore`, `.gitleaksignore` ou `.security/allowed-ghsas.txt` ;
+  `python3 scripts/security/check_exceptions.py` doit passer.

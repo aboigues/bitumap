@@ -1,0 +1,13 @@
+# Zones sensibles (spec FR-017, data-model.md) : revue du propriétaire obligatoire.
+# Le job informatif « sensitive-paths » lit ce fichier pour signaler ces zones dans les PR.
+/.github/                 @aboigues
+/.claude/                 @aboigues
+/CLAUDE.md                @aboigues
+/.specify/memory/         @aboigues
+/.security/               @aboigues
+/SECURITY.md              @aboigues
+/.trivyignore             @aboigues
+/.gitleaksignore          @aboigues
+/scripts/security/        @aboigues
+/LESSON-LEARNED.md        @aboigues
+/infra/                   @aboigues

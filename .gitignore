@@ -4,3 +4,10 @@
 .terraform/
 *.tfplan
 crash.log
+
+# Sorties des scanners et artefacts locaux
+*.sarif
+*.cdx.json
+__pycache__/
+*.pyc
+.venv/

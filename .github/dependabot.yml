@@ -1,12 +1,34 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# Mises à jour automatiques (spec FR-008 ; principe IX : aucune fusion automatique).
+# Écosystèmes à ajouter plus tard :
+#   - Python (« uv » ou « pip ») avec le premier code applicatif (feature 002) ;
+#   - « opentofu » (répertoire de l'IaC) avec les premiers fichiers .tf (feature 002).
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-      
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    # Délai avant d'adopter une nouvelle version (versions piégées vite retirées) ;
+    # les mises à jour de sécurité ne sont pas retardées.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels: [dependencies, security]
+
+  # Images des scanners, épinglées par digest dans .github/scanners/*.Dockerfile.
+  - package-ecosystem: docker
+    directory: /.github/scanners
+    schedule:
+      interval: monthly
+    groups:
+      scanners:
+        patterns: ["*"]
+    # Délai avant d'adopter une nouvelle version (versions piégées vite retirées) ;
+    # les mises à jour de sécurité ne sont pas retardées.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels: [dependencies, security]
