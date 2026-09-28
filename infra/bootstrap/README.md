@@ -19,11 +19,14 @@ les politiques passe par ce script, exécuté par un humain avec le profil d'adm
 ## Exécution
 
 ```bash
-ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
+cp .env.example .env          # une fois ; renseigner ADMIN_PROFILE (fichier non versionné)
+infra/bootstrap/bootstrap.sh
+# ou, sans .env : ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
 ```
 
 - `ADMIN_PROFILE` est obligatoire : c'est le profil scw local d'administration. Son nom
-  n'est pas versionné (dépôt public).
+  n'est pas versionné (dépôt public) : il vient de `.env` ou de la variable d'environnement,
+  qui est prioritaire. `.env` est lu comme des données, jamais exécuté.
 - Idempotent : relancer ne recrée rien et ne régénère pas la clé.
 - **Avant toute PR modifiant ce script** : l'exécuter deux fois de suite, la seconde doit
   n'afficher que des « déjà présent » (LL-001).

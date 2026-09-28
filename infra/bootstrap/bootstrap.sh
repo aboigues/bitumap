@@ -8,12 +8,19 @@
 #   4. le bucket d'état OpenTofu, privé et versionné.
 #
 # Toute autre ressource DOIT être décrite en OpenTofu.
-# Usage : ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
+# Usage : infra/bootstrap/bootstrap.sh            (ADMIN_PROFILE lu dans .env)
+#         ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
 # (profil scw local disposant des droits d'administration de l'organisation ; son nom
 #  n'est volontairement pas versionné)
 set -euo pipefail
 
-ADMIN_PROFILE="${ADMIN_PROFILE:?à définir : profil scw local, droits admin sur organisation Scaleway}"
+# Lecture de ADMIN_PROFILE depuis .env s'il n'est pas déjà défini. Le fichier est lu comme
+# des données (clé=valeur), jamais exécuté (pas de `source`).
+ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.env"
+if [ -z "${ADMIN_PROFILE:-}" ] && [ -f "$ENV_FILE" ]; then
+  ADMIN_PROFILE=$(sed -n 's/^ADMIN_PROFILE=\([A-Za-z0-9_-]*\)[[:space:]]*$/\1/p' "$ENV_FILE" | tail -1)
+fi
+ADMIN_PROFILE="${ADMIN_PROFILE:?à définir dans .env ou en variable : profil scw local, droits admin sur organisation Scaleway}"
 PROJECT_NAME="BITUMAP"
 APP_NAME="bitumap-tofu"
 POLICY_NAME="bitumap-tofu-project"
