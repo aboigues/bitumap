@@ -368,6 +368,10 @@ avec un avertissement.
 - **SC-003**: Le rapport de Courbevoie retrouve au moins 80 % des P1 du prototype parmi ses
   P1, tout écart restant étant expliqué par une différence de source ou de méthode
   documentée.
+  *Décision du mainteneur (2026-09-28) : résultat mesuré de 74 % (23/31) **accepté** ; les
+  8 écarts sont expliqués dans `tests/non_regression/test_courbevoie.py` (surtout
+  l'ensoleillement, refondu en 004). Le test verrouille ce niveau et exige une explication
+  pour tout nouvel écart.*
 - **SC-004**: Deux générations de la même commune avec les mêmes sources et la même méthode
   produisent un classement identique à 100 %.
 - **SC-005**: 100 % des points d'un rapport ont un type de route renseigné ou explicitement

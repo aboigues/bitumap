@@ -25,7 +25,8 @@ FIXTURES = RACINE / "tests" / "fixtures" / "courbevoie"
 PROTOTYPE = RACINE / "docs" / "reference" / "prototype-courbevoie-v2.html"
 
 # Mesuré le 2026-09-28 : 74 % (23/31). Les 8 P1 non retrouvés sont expliqués ci-dessous.
-# L'objectif SC-003 (80 %) n'est pas atteint : écart signalé au mainteneur.
+# L'objectif SC-003 (80 %) n'est pas atteint : écart accepté par le mainteneur le 2026-09-28
+# (ensoleillement refondu en 004).
 SEUIL_P1 = 0.74
 ECARTS_EXPLIQUES = {
     "A23729": "ensoleillement (7,5 h contre 8,5 h), score à 96 % du seuil P1",
