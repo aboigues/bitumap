@@ -153,6 +153,7 @@ Formats : [contracts/report-bundle.md](contracts/report-bundle.md).
 | `id` | stable (FR-016) : arrêt = `A{id_arret IDFM}` ; carrefour = `F{id nœud OSM}` ; giratoire = `G{id chemin OSM}` |
 | `type` | `arret`, `feu`, `giratoire` |
 | `nom`, `voie`, `lat`, `lon` | |
+| `lignes`, `direction` | arrêts seulement ; `direction` = terminus desservis depuis le quai, `null` si non déterminée (FR-030), sans effet sur le score |
 | `route` | `{classement, gestionnaire, numero, source, statut}` ; `classement` ∈ {autoroute, nationale, départementale, communale, communale_presumee, privee, indetermine} ; `statut` ∈ {concordant, a_verifier, indetermine} |
 | `facteurs[]` | `{nom, valeur, unite, effet, provenance ∈ {mesure, estime, ia}, statut ∈ {evalue, non_evalue, a_confirmer}, explication}` |
 | `score` | 0–100, arrondi, déterministe |
