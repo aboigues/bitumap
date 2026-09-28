@@ -56,8 +56,8 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Close
 
-- **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive
-  (`C:\Users\PC\kDrive\...`), passage de la branche `001-security-ci-baseline` à `main`.
+- **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive,
+  passage de la branche `001-security-ci-baseline` à `main`.
 - **Symptôme** : les fichiers de `specs/001-security-ci-baseline/` réapparaissent (avec des fins
   de ligne CRLF) sur une branche où ils n'existent pas, et sont commités par erreur dans
   `chore/scaleway-bootstrap` ; supprimés, ils reviennent en moins de 20 s.

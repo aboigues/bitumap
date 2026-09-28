@@ -8,10 +8,12 @@
 #   4. le bucket d'état OpenTofu, privé et versionné.
 #
 # Toute autre ressource DOIT être décrite en OpenTofu.
-# Usage : ADMIN_PROFILE=telemach infra/bootstrap/bootstrap.sh
+# Usage : ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
+# (profil scw local disposant des droits d'administration de l'organisation ; son nom
+#  n'est volontairement pas versionné)
 set -euo pipefail
 
-ADMIN_PROFILE="${ADMIN_PROFILE:-telemach}"
+ADMIN_PROFILE="${ADMIN_PROFILE:?à définir : profil scw local, droits admin sur organisation Scaleway}"
 PROJECT_NAME="BITUMAP"
 APP_NAME="bitumap-tofu"
 POLICY_NAME="bitumap-tofu-project"

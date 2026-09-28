@@ -19,9 +19,11 @@ les politiques passe par ce script, exécuté par un humain avec le profil d'adm
 ## Exécution
 
 ```bash
-ADMIN_PROFILE=telemach infra/bootstrap/bootstrap.sh
+ADMIN_PROFILE=<profil-admin> infra/bootstrap/bootstrap.sh
 ```
 
+- `ADMIN_PROFILE` est obligatoire : c'est le profil scw local d'administration. Son nom
+  n'est pas versionné (dépôt public).
 - Idempotent : relancer ne recrée rien et ne régénère pas la clé.
 - **Avant toute PR modifiant ce script** : l'exécuter deux fois de suite, la seconde doit
   n'afficher que des « déjà présent » (LL-001).
@@ -33,8 +35,8 @@ Ajouter le jeu de permissions dans `PERMISSION_SETS`, puis mettre à jour la pol
 existante (le script ne modifie pas une politique déjà créée) :
 
 ```bash
-scw -p telemach iam policy list policy-name=bitumap-tofu-project
-scw -p telemach iam rule update policy-id=<id> rules.0.project-ids.0=<projet> \
+scw -p "$ADMIN_PROFILE" iam policy list policy-name=bitumap-tofu-project
+scw -p "$ADMIN_PROFILE" iam rule update policy-id=<id> rules.0.project-ids.0=<projet> \
   rules.0.permission-set-names.0=... # liste complète
 ```
 

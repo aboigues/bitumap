@@ -25,7 +25,7 @@ Prototype de référence : `docs/reference/prototype-courbevoie-v2.html`.
 ## Scaleway
 
 - Projet `BITUMAP`, région `fr-par`. Profil scw pour OpenTofu et les commandes courantes :
-  `scw -p bitumap` (droits limités au projet). Le profil `telemach` (administration) ne sert
+  `scw -p bitumap` (droits limités au projet). Le profil d'administration (nom non versionné) ne sert
   qu'à `infra/bootstrap/bootstrap.sh`, lancé par un humain.
 - Aucune ressource créée à la main : tout passe par OpenTofu (constitution).
 
