@@ -88,8 +88,8 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T023 [P] [US1] Écrire `tests/adaptateurs/test_sources.py` : chaque adaptateur, sur les extractions figées, produit les champs attendus avec licence, URL et date
 - [X] T024 [P] [US1] Écrire `tests/unit/test_facteurs.py` et `tests/unit/test_score.py` (effets de la méthode 1.0, bornes, priorités 20/40/40, déterminisme)
 - [X] T025 [P] [US1] Écrire `tests/non_regression/test_courbevoie.py` : **SC-003** (≥ 80 % des P1 du prototype parmi les P1, écarts listés avec leur cause) et **SC-004** (deux exécutions ⇒ classement identique à 100 %)
-- [ ] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; commune sans ligne de bus ⇒ rapport produit indiquant « aucun point à relever » ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
-- [ ] T027 [P] [US1] Écrire `tests/api/test_parcours.py` : parcours du tableau quickstart §2 (hors antibot et quotas, testés en US2)
+- [X] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; commune sans ligne de bus ⇒ rapport produit indiquant « aucun point à relever » ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
+- [X] T027 [P] [US1] Écrire `tests/api/test_parcours.py` : parcours du tableau quickstart §2 (hors antibot et quotas, testés en US2)
 
 ### Sources (adaptateurs)
 
@@ -121,19 +121,19 @@ SC-004, SC-006, SC-010, SC-012).
 
 ### Lot
 
-- [ ] T047 [US1] Implémenter `src/bitumap/lot/prise_en_charge.py` : requête `FOR UPDATE SKIP LOCKED` de `contracts/lot-job.md`, taille `BITUMAP_LOT_TAILLE`, remise en file des demandes d'un lot de plus de 3 h, report au lendemain si le budget IA est insuffisant
-- [ ] T048 [US1] Implémenter `src/bitumap/lot/regional.py` : acquisition unique par lot des sources régionales (IDFM, OSM, îlots de chaleur) depuis le cache si à jour ; rafraîchissement au plus une fois par jour, puis mise à jour de la table `source_version` lue par l'API ; mesure de `lot.duree_regionale_s` (FR-007b)
-- [ ] T049 [US1] Implémenter `src/bitumap/lot/commune.py` : étapes `acquisition` → `calcul` → `rapport` avec mise à jour de `demande.etape`, délai maximal de 30 min, isolement des erreurs, sources indispensables vs optionnelles (contracts/lot-job.md)
-- [ ] T050 [US1] Implémenter `src/bitumap/lot/__main__.py` : enregistrement du lot, boucle des communes, notifications par e-mail à **chaque** compte rattaché (succès ou échec), codes de sortie 0/1, option `--isoler` (mesure SC-002b)
+- [X] T047 [US1] Implémenter `src/bitumap/lot/prise_en_charge.py` : requête `FOR UPDATE SKIP LOCKED` de `contracts/lot-job.md`, taille `BITUMAP_LOT_TAILLE`, remise en file des demandes d'un lot de plus de 3 h, report au lendemain si le budget IA est insuffisant
+- [X] T048 [US1] Implémenter `src/bitumap/lot/regional.py` : acquisition unique par lot des sources régionales (IDFM, OSM, îlots de chaleur) depuis le cache si à jour ; rafraîchissement au plus une fois par jour, puis mise à jour de la table `source_version` lue par l'API ; mesure de `lot.duree_regionale_s` (FR-007b)
+- [X] T049 [US1] Implémenter `src/bitumap/lot/commune.py` : étapes `acquisition` → `calcul` → `rapport` avec mise à jour de `demande.etape`, délai maximal de 30 min, isolement des erreurs, sources indispensables vs optionnelles (contracts/lot-job.md)
+- [X] T050 [US1] Implémenter `src/bitumap/lot/__main__.py` : enregistrement du lot, boucle des communes, notifications par e-mail à **chaque** compte rattaché (succès ou échec), codes de sortie 0/1, option `--isoler` (mesure SC-002b)
 - [X] T051 [US1] Implémenter `src/bitumap/rapport/rendu.py` et le gabarit de base `src/bitumap/rapport/gabarits/rapport.html.j2` : synthèse, liste classée, fiche, méthode, sources (complétés en US3) ; écriture de `points.geojson`, `sources.json`, `journal.json`, puis `rapport.html`
 
 ### API et pages
 
-- [ ] T052 [US1] Implémenter `src/bitumap/api/communes.py` : `GET /communes?code_postal=` (session requise, erreurs de `contracts/http-api.md`)
-- [ ] T053 [US1] Implémenter `src/bitumap/api/demandes.py` : `POST /demandes` (cache valide ⇒ `303` vers le rapport ; **cache valide** = rapport dont l'empreinte correspond aux versions courantes de `source_version` et produit depuis moins de `BITUMAP_CACHE_RAPPORT_JOURS` (30) jours ; demande active de même empreinte ⇒ rattachement sans décompte ; sinon création `en_file`), `GET /demandes`, `GET /demandes/{id}` (position, heure estimée = prochain déclenchement + ⌈position/10⌉ × durée moyenne d'un lot, étape)
-- [ ] T090 [P] [US1] Écrire `tests/api/test_cache.py` : rapport à jour servi sans nouvelle demande ; rapport de plus de 30 jours ou dont une source a une version plus récente ⇒ nouvelle demande `en_file` ; changement de modèle d'IA ⇒ nouvelle empreinte
-- [ ] T054 [US1] Implémenter `src/bitumap/api/rapports.py` : `GET /rapports/{insee}/{empreinte}` et `/points.geojson`, session requise, fichier lu dans le stockage privé et renvoyé par l'API, `Cache-Control: private, no-store` (FR-021)
-- [ ] T055 [US1] Créer les pages `src/bitumap/api/gabarits/` : accueil (e-mail ou code postal), choix de la commune, suivi (rafraîchi toutes les 30 s), mes demandes ; accessibles au clavier et au lecteur d'écran, lisibles sur téléphone
+- [X] T052 [US1] Implémenter `src/bitumap/api/communes.py` : `GET /communes?code_postal=` (session requise, erreurs de `contracts/http-api.md`)
+- [X] T053 [US1] Implémenter `src/bitumap/api/demandes.py` : `POST /demandes` (cache valide ⇒ `303` vers le rapport ; **cache valide** = rapport dont l'empreinte correspond aux versions courantes de `source_version` et produit depuis moins de `BITUMAP_CACHE_RAPPORT_JOURS` (30) jours ; demande active de même empreinte ⇒ rattachement sans décompte ; sinon création `en_file`), `GET /demandes`, `GET /demandes/{id}` (position, heure estimée = prochain déclenchement + ⌈position/10⌉ × durée moyenne d'un lot, étape)
+- [X] T090 [P] [US1] Écrire `tests/api/test_cache.py` : rapport à jour servi sans nouvelle demande ; rapport de plus de 30 jours ou dont une source a une version plus récente ⇒ nouvelle demande `en_file` ; changement de modèle d'IA ⇒ nouvelle empreinte
+- [X] T054 [US1] Implémenter `src/bitumap/api/rapports.py` : `GET /rapports/{insee}/{empreinte}` et `/points.geojson`, session requise, fichier lu dans le stockage privé et renvoyé par l'API, `Cache-Control: private, no-store` (FR-021)
+- [X] T055 [US1] Créer les pages `src/bitumap/api/gabarits/` : accueil (e-mail ou code postal), choix de la commune, suivi (rafraîchi toutes les 30 s), mes demandes ; accessibles au clavier et au lecteur d'écran, lisibles sur téléphone
 
 **Checkpoint**: MVP : un utilisateur connecté obtient le rapport de Courbevoie ; SC-003 et SC-004 verts
 

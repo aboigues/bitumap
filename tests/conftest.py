@@ -83,3 +83,59 @@ def connecter(client, courriels, email="agent@exemple.fr"):
     assert reponse.status_code == 303
     page = client.get("/").text
     return page.split('name="csrf" value="', 1)[1].split('"', 1)[0]
+
+
+@pytest.fixture
+def s3(monkeypatch):
+    """Stockage objet simulé (moto) avec les buckets du service."""
+    from moto import mock_aws
+
+    from bitumap import stockage
+    from bitumap.config import reglages
+
+    monkeypatch.setattr(reglages(), "s3_endpoint", None)
+    monkeypatch.setattr(reglages(), "s3_region", "eu-west-3")
+    stockage.reinitialiser_client()
+    with mock_aws():
+        client = stockage._client()
+        for bucket in (reglages().bucket_rapports, reglages().bucket_cache):
+            client.create_bucket(
+                Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-3"}
+            )
+        yield client
+    stockage.reinitialiser_client()
+
+
+@pytest.fixture
+def territoire(monkeypatch):
+    """API Géo simulée : 92400 → Courbevoie ; 95000 → 4 communes."""
+    from bitumap.api import demandes
+    from bitumap.territoire import Commune, ErreurTerritoire
+
+    communes = {
+        "92400": [Commune("92026", "Courbevoie", "92")],
+        "95000": [
+            Commune("95074", "Boisemont", "95"),
+            Commune("95127", "Cergy", "95"),
+            Commune("95450", "Neuville-sur-Oise", "95"),
+            Commune("95500", "Pontoise", "95"),
+        ],
+    }
+    par_insee = {c.insee: c for liste in communes.values() for c in liste}
+
+    def du_code_postal(code):
+        from bitumap.territoire import valider_format
+
+        valider_format(code)
+        if code not in communes:
+            raise ErreurTerritoire("code_inexistant", "Ce code postal n'existe pas.")
+        return communes[code]
+
+    def par_code_insee(insee):
+        if insee not in par_insee:
+            raise ErreurTerritoire("commune_invalide", "Commune inconnue.")
+        return par_insee[insee]
+
+    monkeypatch.setattr(demandes, "communes_du_code_postal", du_code_postal)
+    monkeypatch.setattr(demandes, "commune_par_insee", par_code_insee)
+    return par_insee

@@ -62,6 +62,20 @@ def ecrire_rapport(insee: str, empreinte: str, fichiers: dict[str, tuple[bytes, 
         ecrire(bucket, prefixe + "rapport.html", contenu, type_contenu)
 
 
+def date_rapport(insee: str, empreinte: str):
+    """Date de production du rapport (``None`` s'il n'existe pas)."""
+    try:
+        tete = _client().head_object(
+            Bucket=reglages().bucket_rapports,
+            Key=prefixe_rapport(insee, empreinte) + "rapport.html",
+        )
+    except ClientError as erreur:
+        if erreur.response["Error"]["Code"] in {"NoSuchKey", "404"}:
+            return None
+        raise
+    return tete["LastModified"]
+
+
 def rapport_complet(insee: str, empreinte: str) -> bool:
     return existe(reglages().bucket_rapports, prefixe_rapport(insee, empreinte) + "rapport.html")
 

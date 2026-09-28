@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Mes demandes</h1>
+{% if demandes %}
+<table>
+  <thead><tr><th>Commune</th><th>Date</th><th>État</th><th></th></tr></thead>
+  <tbody>
+  {% for d in demandes %}
+  <tr><td>{{ d.commune_nom }}</td><td>{{ d.cree_le.strftime("%d/%m/%Y %H:%M") }}</td>
+    <td>{{ {"en_file": "en file", "en_cours": "en cours", "terminee": "terminée", "en_echec": "en échec"}[d.etat] }}</td>
+    <td>{% if d.etat == "terminee" %}<a href="/rapports/{{ d.commune_insee }}/{{ d.empreinte }}">rapport</a>
+        {% else %}<a href="/demandes/{{ d.id }}">suivi</a>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p>Aucune demande pour l'instant.</p>{% endif %}
+<p><a href="/">Nouvelle demande</a></p>
+{% endblock %}

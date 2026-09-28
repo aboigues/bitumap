@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Code postal {{ code_postal }}</h1>
+{% if communes|length > 1 %}<p>Ce code postal couvre {{ communes|length }} communes : choisissez la vôtre.</p>{% endif %}
+<form method="post" action="/demandes" class="carte">
+  <input type="hidden" name="csrf" value="{{ session.csrf }}">
+  <fieldset>
+    <legend>Commune</legend>
+    {% for c in communes %}
+    <label><input type="radio" name="insee" value="{{ c.insee }}" required {% if loop.first and communes|length == 1 %}checked{% endif %}>
+      {{ c.nom }} ({{ c.departement }})</label><br>
+    {% endfor %}
+  </fieldset>
+  {% block antibot %}{% endblock %}
+  <button type="submit">Demander le rapport</button>
+</form>
+<p><a href="/">Autre code postal</a></p>
+{% endblock %}

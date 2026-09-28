@@ -33,6 +33,22 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-005 — Python local sans module bz2 (2026-09-28) — Close
+
+- **Contexte** : développement, premiers tests utilisant le stockage objet simulé (moto).
+- **Symptôme** : `ModuleNotFoundError: No module named '_bz2'` à l'import de moto.
+- **Causes racines** :
+  1. Pourquoi ? Le Python 3.14 du poste (`/usr/local/bin/python3`) a été compilé sans la
+     bibliothèque bzip2.
+  2. Pourquoi l'utilisait-on ? `uv` prend par défaut le premier Python trouvé sur le système ;
+     rien n'imposait une version complète et identique pour tous.
+- **Correctif** : fichier `.python-version` (3.14) et Python géré par uv
+  (`uv python install 3.14`, `UV_PYTHON_PREFERENCE=only-managed uv sync`).
+- **Mesure préventive** : `.python-version` versionné ; la CI (setup-python) et les images
+  (Chainguard) utilisent déjà un Python complet ; procédure notée dans le README
+  (section Développement).
+- **Références** : branche `002-on-demand-report`.
+
 ### LL-004 — Un secret sur une branche bloquait toutes les PR (2026-09-28) — Close
 
 - **Contexte** : CI, validation SC-001 avec 5 PR pièges (#6 à #10).
