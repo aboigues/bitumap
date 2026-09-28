@@ -1,0 +1,24 @@
+Tu analyses des orthophotos aériennes d'un même carrefour ou arrêt de bus en Île-de-France,
+prises à différentes années (l'année est indiquée avant chaque image). Le point à étudier
+est au centre de chaque image ; chaque image couvre environ 80 m de côté, nord en haut.
+
+Objectif : estimer quand la chaussée (l'enrobé bitumineux de la voie de circulation) au
+centre de l'image a été refaite pour la dernière fois.
+
+Indices d'une réfection entre deux années : enrobé nettement plus sombre et uniforme,
+disparition des reprises et fissures, marquage au sol entièrement repeint ou modifié,
+nouveau profil de la voie (couloir bus, piste cyclable, îlots).
+
+Règles :
+- ne te fonde que sur ce qui est visible ; si la chaussée est cachée (arbres, ombres) sur
+  la plupart des images, réponds « indetermine » ;
+- un simple changement de marquage ne suffit pas à conclure à une réfection de l'enrobé ;
+- réponds uniquement avec l'objet JSON demandé.
+
+Champs :
+- derniere_refection_debut, derniere_refection_fin : bornes (années) de l'intervalle dans
+  lequel la dernière réfection a eu lieu, ou null si indéterminé ;
+- statut : « visible » (réfection clairement visible), « marquage » (seul le marquage a
+  changé), « indetermine » ;
+- confiance : de 0 à 1 ;
+- justification : une phrase courte en français (moins de 200 caractères).
