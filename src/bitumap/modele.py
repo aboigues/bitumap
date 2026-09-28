@@ -61,6 +61,9 @@ class Point:
         return next((f for f in self.facteurs if f.nom == nom), None)
 
     def en_dict(self) -> dict:
+        from bitumap.facteurs.voirie import libelle
+
         d = asdict(self)
         d["type_libelle"] = self.libelle_type
+        d["route"]["libelle"] = libelle(self.route.classement)
         return d

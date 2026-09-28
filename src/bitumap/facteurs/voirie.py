@@ -36,6 +36,21 @@ def normaliser_numero(numero: str | None) -> str:
     return re.sub(r"^R(?=[DN]\d)", "", texte)
 
 
+LIBELLES = {
+    "autoroute": "autoroute",
+    "nationale": "nationale",
+    "départementale": "départementale",
+    "communale": "communale",
+    "communale_presumee": "communale (présumée)",
+    "privee": "voie privée",
+    "indetermine": "indéterminé",
+}
+
+
+def libelle(classement: str) -> str:
+    return LIBELLES.get(classement, classement)
+
+
 def classement_osm(ref: str | None) -> str | None:
     numero = normaliser_numero((ref or "").split(";")[0])
     return _PREFIXE_OSM.get(numero[:1]) if numero[:1].isalpha() and numero[1:2].isdigit() else None
@@ -47,6 +62,7 @@ def determiner(
     numero_bdtopo: str | None,
     ref_osm: str | None,
     commune: str,
+    troncon_trouve: bool = True,
 ) -> Route:
     classement_bdtopo = _texte(classement_bdtopo)
     gestionnaire_bdtopo = _texte(gestionnaire_bdtopo)
@@ -63,9 +79,10 @@ def determiner(
         classement, statut = ign, "concordant"
     elif osm:
         classement, statut = osm, "a_verifier"  # OSM seul : non confirmé par l'IGN
-    elif classement_bdtopo is None and gestionnaire_bdtopo is None and ref_osm is None:
-        return Route("indetermine", None, None, "indetermine", "aucune donnée")
+    elif not troncon_trouve:
+        return Route("indetermine", None, None, "indetermine", "aucun tronçon IGN à proximité")
     else:
+        # Tronçon IGN sans classement administratif : voie communale le plus souvent.
         classement, statut = "communale_presumee", "a_verifier"
 
     if gestionnaire_bdtopo:

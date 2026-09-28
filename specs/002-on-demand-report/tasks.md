@@ -125,7 +125,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T048 [US1] Implémenter `src/bitumap/lot/regional.py` : acquisition unique par lot des sources régionales (IDFM, OSM, îlots de chaleur) depuis le cache si à jour ; rafraîchissement au plus une fois par jour, puis mise à jour de la table `source_version` lue par l'API ; mesure de `lot.duree_regionale_s` (FR-007b)
 - [ ] T049 [US1] Implémenter `src/bitumap/lot/commune.py` : étapes `acquisition` → `calcul` → `rapport` avec mise à jour de `demande.etape`, délai maximal de 30 min, isolement des erreurs, sources indispensables vs optionnelles (contracts/lot-job.md)
 - [ ] T050 [US1] Implémenter `src/bitumap/lot/__main__.py` : enregistrement du lot, boucle des communes, notifications par e-mail à **chaque** compte rattaché (succès ou échec), codes de sortie 0/1, option `--isoler` (mesure SC-002b)
-- [ ] T051 [US1] Implémenter `src/bitumap/rapport/rendu.py` et le gabarit de base `src/bitumap/rapport/gabarits/rapport.html.j2` : synthèse, liste classée, fiche, méthode, sources (complétés en US3) ; écriture de `points.geojson`, `sources.json`, `journal.json`, puis `rapport.html`
+- [X] T051 [US1] Implémenter `src/bitumap/rapport/rendu.py` et le gabarit de base `src/bitumap/rapport/gabarits/rapport.html.j2` : synthèse, liste classée, fiche, méthode, sources (complétés en US3) ; écriture de `points.geojson`, `sources.json`, `journal.json`, puis `rapport.html`
 
 ### API et pages
 
@@ -164,9 +164,9 @@ SC-004, SC-006, SC-010, SC-012).
 **Independent Test**: rapport Courbevoie : toutes les sections de `contracts/report-bundle.md`, filtres par type de route, aucun point sans type de route, lisible hors connexion et sur téléphone
 
 - [ ] T063 [P] [US3] Écrire `tests/unit/test_voirie.py` : boulevard Georges Clemenceau ⇒ `départementale` / `Hauts-de-Seine` / `D9B` / `concordant` ; classement BD TOPO vide ⇒ `communale_presumee` ; référence OSM divergente ⇒ `a_verifier` ; aucune donnée ⇒ `indetermine`
-- [ ] T064 [US3] Implémenter `src/bitumap/facteurs/voirie.py` : classement ∈ {autoroute, nationale, départementale, communale, communale_presumee, privee, indetermine}, gestionnaire (`cpx_gestionnaire`, sinon la commune), numéro, statut ∈ {concordant, a_verifier, indetermine} ; affiché et filtrable, **sans effet sur le score** en 002 (FR-013)
-- [ ] T065 [P] [US3] Implémenter `src/bitumap/rapport/carte_svg.py` : contour communal, voies très fréquentées par les bus (épaisseur selon la charge), points colorés par priorité et formés par type, sélection ⇒ fiche
-- [ ] T066 [US3] Compléter `src/bitumap/rapport/gabarits/rapport.html.j2` : sections 1 à 7 de `contracts/report-bundle.md`, synthèse par priorité, type de point et type de route, filtres, fiche complète (FR-018, FR-019 : provenance mesuré / estimé / IA, « non évalué »), avertissement FR-022, styles et script en ligne, thème clair et sombre, mise en page téléphone
+- [X] T064 [US3] Implémenter `src/bitumap/facteurs/voirie.py` : classement ∈ {autoroute, nationale, départementale, communale, communale_presumee, privee, indetermine}, gestionnaire (`cpx_gestionnaire`, sinon la commune), numéro, statut ∈ {concordant, a_verifier, indetermine} ; affiché et filtrable, **sans effet sur le score** en 002 (FR-013)
+- [X] T065 [P] [US3] Implémenter `src/bitumap/rapport/carte_svg.py` : contour communal, voies très fréquentées par les bus (épaisseur selon la charge), points colorés par priorité et formés par type, sélection ⇒ fiche
+- [X] T066 [US3] Compléter `src/bitumap/rapport/gabarits/rapport.html.j2` : sections 1 à 7 de `contracts/report-bundle.md`, synthèse par priorité, type de point et type de route, filtres, fiche complète (FR-018, FR-019 : provenance mesuré / estimé / IA, « non évalué »), avertissement FR-022, styles et script en ligne, thème clair et sombre, mise en page téléphone
 - [ ] T067 [P] [US3] Écrire `tests/rapport/test_rendu.py` : aucune ressource externe chargée (seuls des liens cliquables), sections présentes, 100 % des points avec `route.classement`, sources avec licence, lien et date, résultats IA marqués « à confirmer »
 - [ ] T068 [P] [US3] Écrire `tools/echantillon_voirie.py` : tire 50 points au hasard (graine fixe) avec leur type de route, pour la vérification manuelle de SC-005 (≥ 90 % exacts)
 

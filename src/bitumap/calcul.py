@@ -24,6 +24,7 @@ from bitumap.sources.fournisseur import Fournisseur
 MARGE_EMPRISE_DEG = 0.003  # ≈ 250 m autour de la commune
 DISTANCE_PENTE_M = 30
 DISTANCE_CHAUSSEE_M = 30  # au-delà, le point est gardé tel quel
+RAYON_TRONCON_M = 25
 
 
 @dataclass
@@ -55,6 +56,27 @@ def _points_pente(ligne, geo_l93) -> tuple[tuple[float, float], tuple[float, flo
     a = ligne.interpolate(max(0.0, s - DISTANCE_PENTE_M))
     b = ligne.interpolate(min(ligne.length, s + DISTANCE_PENTE_M))
     return (a.x, a.y), (b.x, b.y)
+
+
+def _normaliser_nom(nom) -> str:
+    texte = "" if nom is None or nom != nom else str(nom)
+    return "".join(ch for ch in texte.lower() if ch.isalnum())
+
+
+def _troncon_de_la_voie(troncons_l93, chaussee, voie):
+    """Tronçon IGN de la voie empruntée par le bus : parmi les tronçons à moins de 25 m de la
+    chaussée, celui qui porte le nom de la voie bus (OSM), sinon le plus proche."""
+    distances = troncons_l93.distance(chaussee)
+    proches = troncons_l93[distances <= RAYON_TRONCON_M]
+    nom = _normaliser_nom(voie.nom) if voie is not None else ""
+    if nom and not proches.empty:
+        memes = proches[
+            proches.get("nom_voie_ban_gauche", "").map(_normaliser_nom).eq(nom)
+            | proches.get("nom_voie_ban_droite", "").map(_normaliser_nom).eq(nom)
+        ]
+        if not memes.empty:
+            return memes.loc[memes.distance(chaussee).idxmin()]
+    return troncons_l93.loc[distances.idxmin()]
 
 
 def calculer_commune(
@@ -174,7 +196,7 @@ def calculer_commune(
             p.facteurs.append(chaleur.calculer(None, None))
 
         if troncons_l93 is not None and not troncons_l93.empty:
-            t = troncons_l93.loc[troncons_l93.distance(g).idxmin()]
+            t = _troncon_de_la_voie(troncons_l93, chaussee, voie)
             p.route = voirie.determiner(
                 t.get("cpx_classement_administratif"),
                 t.get("cpx_gestionnaire"),
