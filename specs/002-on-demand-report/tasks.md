@@ -114,7 +114,7 @@ SC-004, SC-006, SC-010, SC-012).
 ### IA vision (âge de l'enrobé)
 
 - [X] T042 [P] [US1] Implémenter `src/bitumap/ia/client.py` : client `openai` pointé sur Scaleway Generative APIs, modèle `BITUMAP_IA_MODELE`, sortie contrainte par schéma JSON (période, confiance, justification), délai maximal
-- [X] T043 [P] [US1] Implémenter `src/bitumap/ia/budget.py` : **réservation avant chaque appel** dans `cout_ia_jour` et dans le budget du rapport, ajustement après, coût = jetons × tarifs configurés ; plafonds 2 €/rapport et 20 €/jour (FR-024)
+- [X] T043 [P] [US1] Implémenter `src/bitumap/ia/budget.py` : **réservation avant chaque appel** dans `cout_ia_jour` et dans le budget du rapport, ajustement après, coût = jetons × tarifs configurés ; plafonds 2 €/rapport et 5 €/jour (FR-024)
 - [X] T044 [P] [US1] Implémenter `src/bitumap/ia/cache.py` : cache par point indexé par (point, millésimes d'orthophoto, modèle, version du prompt) dans `ia_cache_point` ; un succès du cache ne coûte rien (R7-bis)
 - [X] T045 [US1] Implémenter `src/bitumap/ia/age_enrobe.py` et `src/bitumap/ia/prompts/age_enrobe_v1.txt` : P1 uniquement, 6 millésimes, validation du schéma, réponse invalide ⇒ « non évalué », statut « à confirmer » avec modèle et date, réponse brute écrite dans `ia/{point_id}.json` (FR-014)
 - [X] T046 [P] [US1] Écrire `tests/unit/test_ia.py` (respx) : réponse hors schéma ⇒ non évalué ; budget épuisé ⇒ aucun appel ; succès du cache ⇒ aucun appel ; effet borné à ×0,85–×1,05

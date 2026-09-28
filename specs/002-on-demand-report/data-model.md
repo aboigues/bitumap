@@ -98,7 +98,7 @@ en_file ──(budget IA du jour épuisé)──▶ en_file (reportée au lendem
 | Champ | Type | Règles |
 |---|---|---|
 | `jour` | date | clé |
-| `montant_eur` | décimal | réservation **avant** chaque appel, ajustement après ; ≤ 20 € (FR-024) ; somme du mois civil comparée au seuil d'alerte de 5 € (FR-029) |
+| `montant_eur` | décimal | réservation **avant** chaque appel, ajustement après ; ≤ 5 € (FR-024) ; somme du mois civil comparée au seuil d'alerte de 5 € (FR-029) |
 
 ### source_version
 

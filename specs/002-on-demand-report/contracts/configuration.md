@@ -18,7 +18,7 @@ dépôt ni dans `.env`.
 | `BITUMAP_LOT_TAILLE` | 10 | FR-007a |
 | `BITUMAP_COMMUNE_DELAI_MAX_MIN` | 30 | FR-017 |
 | `BITUMAP_IA_PLAFOND_RAPPORT_EUR` | 2 | FR-024 |
-| `BITUMAP_IA_PLAFOND_JOUR_EUR` | 20 | FR-024 |
+| `BITUMAP_IA_PLAFOND_JOUR_EUR` | 5 | FR-024 |
 | `BITUMAP_IA_MODELE` | issu de l'évaluation (R7) | FR-014 |
 | `BITUMAP_ALERTE_MENSUELLE_EUR` | 5 | FR-029 : seuil d'alerte, sans blocage |
 | `BITUMAP_CACHE_RAPPORT_JOURS` | 30 | FR-008 : validité d'un rapport en cache |
@@ -28,6 +28,11 @@ dépôt ni dans `.env`.
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |
 | `BITUMAP_EMAIL_EXPEDITEUR` | adresse sur le domaine vérifié | FR-028 |
 | `BITUMAP_URL_PUBLIQUE` | URL du service | liens des e-mails |
+
+**Aucune valeur secrète par défaut** (revue de la PR #14) : `BITUMAP_DB_URL`,
+`BITUMAP_ALTCHA_HMAC` et `BITUMAP_SEL_ORIGINE` sont obligatoires. En local, ils viennent de
+`.env` (non versionné, lu par l'application et par `docker compose`) ; en CI, de secrets
+GitHub ; en production, de Secret Manager.
 
 L'intervalle entre lots (15 min) et la durée maximale d'un lot (3 h) sont réglés dans
 OpenTofu (planification et `timeout` du job).

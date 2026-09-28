@@ -1,6 +1,6 @@
 """Budget de l'IA (FR-024, FR-029) : réservation avant chaque appel, ajustement après.
 
-Plafonds : par rapport (2 €) et par jour (20 €) ; au-delà, aucun appel. Seuil d'alerte
+Plafonds : par rapport (2 €) et par jour (5 €) ; au-delà, aucun appel. Seuil d'alerte
 mensuel (5 €) : un e-mail au mainteneur, une seule fois par mois, sans blocage.
 """
 

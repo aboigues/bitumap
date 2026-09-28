@@ -120,7 +120,7 @@ Scénarios (rapport type Courbevoie) :
 
 Conséquences :
 
-- Les plafonds (2 €/rapport, 20 €/jour) ne sont jamais approchés en usage normal : ils
+- Les plafonds (2 €/rapport, 5 €/jour depuis la revue de la PR #14) ne sont pas approchés en usage normal : ils
   protègent contre les abus et les erreurs (boucle, image trop grande), pas contre l'usage.
 - Le **choix du modèle** pèse ×11 (medium vs small) ; le **mode de traitement** (lot ou un par
   un) ne change pas le coût de l'IA : il y a autant de points à analyser.

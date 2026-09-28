@@ -38,7 +38,7 @@ Generative APIs, Cockpit ; IaC OpenTofu
 charge normale (SC-002) ; lot de 10 communes ≥ 30 % plus rapide que 10 générations isolées
 (SC-002b)
 
-**Constraints**: 0 € de calcul au repos ; coût IA ≤ 2 €/rapport et ≤ 20 €/jour ; commune
+**Constraints**: 0 € de calcul au repos ; coût IA ≤ 2 €/rapport et ≤ 5 €/jour ; commune
 ≤ 30 min, lot ≤ 3 h ; e-mail et IA hébergés dans l'UE ; méthode déterministe
 
 **Scale/Scope**: 1 300 communes + 20 arrondissements de Paris ; quelques dizaines de

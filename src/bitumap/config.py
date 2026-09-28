@@ -14,7 +14,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Reglages(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="BITUMAP_", extra="ignore")
+    # En local, les valeurs viennent aussi de .env (non versionné) ; aucune valeur secrète par
+    # défaut dans le code (revue de la PR #14).
+    model_config = SettingsConfigDict(
+        env_prefix="BITUMAP_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # Quotas (FR-005)
     quota_generation_compte_jour: int = 5
@@ -41,7 +45,7 @@ class Reglages(BaseSettings):
     ia_tarif_entree_eur_mtok: Decimal = Decimal("0.15")
     ia_tarif_sortie_eur_mtok: Decimal = Decimal("0.35")
     ia_plafond_rapport_eur: Decimal = Decimal("2")
-    ia_plafond_jour_eur: Decimal = Decimal("20")
+    ia_plafond_jour_eur: Decimal = Decimal("5")
     alerte_mensuelle_eur: Decimal = Decimal("5")
 
     # Cache et sources (FR-008, FR-015)
@@ -62,9 +66,9 @@ class Reglages(BaseSettings):
     projet_scaleway: str = ""  # identifiant du projet BITUMAP (fourni par OpenTofu)
 
     # Secrets (Secret Manager en production, jamais dans le dépôt)
-    db_url: SecretStr = SecretStr("postgresql://bitumap:bitumap-local@127.0.0.1:55432/bitumap")
-    altcha_hmac: SecretStr = SecretStr("cle-de-developpement-uniquement")
-    sel_origine: SecretStr = SecretStr("sel-de-developpement-uniquement")
+    db_url: SecretStr
+    altcha_hmac: SecretStr
+    sel_origine: SecretStr
     s3_cle_acces: SecretStr | None = None
     s3_cle_secrete: SecretStr | None = None
     tem_cle: SecretStr | None = None

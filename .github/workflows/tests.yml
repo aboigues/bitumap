@@ -18,6 +18,9 @@ jobs:
   tests:
     name: tests
     runs-on: ubuntu-26.04
+    # Secret CI_POSTGRES_PASSWORD rangé dans l'environnement « ci-tests » : accessible à ce
+    # seul job (zizmor : secrets-outside-env ; revue de la PR #14).
+    environment: ci-tests
     permissions:
       contents: read
     services:
@@ -25,15 +28,13 @@ jobs:
         image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_USER: bitumap
-          POSTGRES_PASSWORD: bitumap-ci
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
           POSTGRES_DB: bitumap
         ports:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U bitumap"
           --health-interval 2s --health-timeout 2s --health-retries 30
-    env:
-      BITUMAP_DB_URL_TEST: postgresql://bitumap:bitumap-ci@127.0.0.1:5432/bitumap
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,4 +51,9 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
       - name: Tests
-        run: uv run pytest -v
+        env:
+          # Mot de passe de la base de test : secret GitHub (revue de la PR #14).
+          CI_POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+        run: |
+          export BITUMAP_DB_URL_TEST="postgresql://bitumap:${CI_POSTGRES_PASSWORD}@127.0.0.1:5432/bitumap"
+          uv run pytest -v

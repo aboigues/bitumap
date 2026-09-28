@@ -316,7 +316,7 @@ avec un avertissement.
 
 - **FR-023**: Chaque génération DOIT produire un journal : durée par étape, nombre de
   points, sources et dates, nombre et coût des analyses d'IA, avertissements, erreurs.
-- **FR-024**: Le coût d'IA DOIT être plafonné à 2 € par rapport et à 20 € par jour pour
+- **FR-024**: Le coût d'IA DOIT être plafonné à 2 € par rapport et à 5 € par jour pour
   l'ensemble du service ; les plafonds atteints produisent un rapport partiel signalé ou un
   refus, jamais une dépense supplémentaire.
 - **FR-029**: Le mainteneur DOIT être alerté, une seule fois par mois civil, dès que le coût
@@ -375,7 +375,7 @@ avec un avertissement.
   des types renseignés sont exacts.
 - **SC-006**: 100 % des soumissions sans preuve antibot valide, hors Île-de-France ou au-delà
   des quotas sont refusées sans génération lancée ni e-mail envoyé.
-- **SC-007**: Le coût d'IA ne dépasse jamais 2 € par rapport ni 20 € par jour.
+- **SC-007**: Le coût d'IA ne dépasse jamais 2 € par rapport ni 5 € par jour.
 - **SC-008**: Aucun coût d'hébergement de calcul n'est facturé entre deux lots ; un
   déclenchement sur file vide dure moins de 30 secondes (principe II).
 - **SC-009**: Un demandeur qui découvre le service lance sa première génération en moins de
@@ -401,7 +401,7 @@ avec un avertissement.
   (3 h) : valeurs de départ réglables ; l'intervalle pourra être allongé si la demande reste
   faible.
 - Quotas, plafonds et durées (5/jour/compte, 50/jour, 3 et 10 liens/h, 15 min, 7 jours,
-  12 mois, 2 €, 20 €/jour, 5 €/mois d'alerte, 30 jours de validité d'un rapport, 30 min,
+  12 mois, 2 €, 5 €/jour, 5 €/mois d'alerte, 30 jours de validité d'un rapport, 30 min,
   30 m) sont des valeurs de départ réglables sans modification de la spec.
 - Inscription ouverte à toute adresse e-mail ; une liste d'adresses ou de domaines autorisés
   pourra être ajoutée si des abus sont constatés (hors périmètre 002).
