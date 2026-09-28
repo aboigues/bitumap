@@ -131,7 +131,7 @@ visiteur non connecté ne peut pas l'ouvrir.
    très fréquentées par les bus, une liste classée par rang, des filtres par priorité, par
    type de point et par type de route.
 2. **Given** un point sélectionné, **When** sa fiche s'affiche, **Then** elle indique :
-   rang, priorité, score, type de point, nom, voie, **type de route et gestionnaire**,
+   rang, priorité, score, type de point, nom, **direction** (arrêts), voie, **type de route et gestionnaire**,
    passages de bus par jour et en pointe, lignes, pente, revêtement, ensoleillement, îlot de
    chaleur, âge estimé de l'enrobé le cas échéant, photo de rue récente le cas échéant, et
    la liste des facteurs qui ont pesé sur son score avec leur valeur.
@@ -149,6 +149,11 @@ visiteur non connecté ne peut pas l'ouvrir.
    connexion (fichier autonome), hormis le fond de carte.
 7. **Given** un rapport, **When** il est ouvert sur un téléphone, **Then** il reste lisible
    et utilisable (terrain).
+8. **Given** plusieurs quais portant le même nom d'arrêt (un par direction, parfois plusieurs
+   dans une même direction), **When** le demandeur les voit dans la liste, la carte ou la
+   fiche, **Then** chacun se distingue sans ambiguïté par sa **direction**, sa voie, ses
+   lignes et l'identifiant IDFM du quai (exemple : « Paix - Verdun » à Courbevoie compte
+   trois quais classés P1, P1 et P2).
 
 ---
 
@@ -309,6 +314,11 @@ avec un avertissement.
   utilisateur connecté peut consulter tout rapport déjà généré (le cache est partagé). Il
   n'existe pas de liste publique des rapports ; chaque utilisateur voit la liste de ses
   propres demandes.
+- **FR-030**: Chaque arrêt DOIT être désigné, dans la liste, la carte et la fiche, par son
+  nom, sa **direction** (terminus desservis depuis ce quai), sa voie, ses lignes et
+  l'identifiant IDFM du quai. Une direction inconnue est affichée « direction non
+  déterminée », jamais devinée. La direction est descriptive : elle ne modifie ni le score ni
+  le classement.
 - **FR-022**: Le rapport DOIT rappeler qu'il classe des points à relever en priorité et ne
   mesure pas l'état réel de la chaussée.
 
@@ -368,6 +378,10 @@ avec un avertissement.
 - **SC-003**: Le rapport de Courbevoie retrouve au moins 80 % des P1 du prototype parmi ses
   P1, tout écart restant étant expliqué par une différence de source ou de méthode
   documentée.
+  *Décision du mainteneur (2026-09-28) : résultat mesuré de 74 % (23/31) **accepté** ; les
+  8 écarts sont expliqués dans `tests/non_regression/test_courbevoie.py` (surtout
+  l'ensoleillement, refondu en 004). Le test verrouille ce niveau et exige une explication
+  pour tout nouvel écart.*
 - **SC-004**: Deux générations de la même commune avec les mêmes sources et la même méthode
   produisent un classement identique à 100 %.
 - **SC-005**: 100 % des points d'un rapport ont un type de route renseigné ou explicitement

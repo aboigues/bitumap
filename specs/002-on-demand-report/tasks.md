@@ -168,6 +168,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [X] T065 [P] [US3] Implémenter `src/bitumap/rapport/carte_svg.py` : contour communal, voies très fréquentées par les bus (épaisseur selon la charge), points colorés par priorité et formés par type, sélection ⇒ fiche
 - [X] T066 [US3] Compléter `src/bitumap/rapport/gabarits/rapport.html.j2` : sections 1 à 7 de `contracts/report-bundle.md`, synthèse par priorité, type de point et type de route, filtres, fiche complète (FR-018, FR-019 : provenance mesuré / estimé / IA, « non évalué »), avertissement FR-022, styles et script en ligne, thème clair et sombre, mise en page téléphone
 - [ ] T067 [P] [US3] Écrire `tests/rapport/test_rendu.py` : aucune ressource externe chargée (seuls des liens cliquables), sections présentes, 100 % des points avec `route.classement`, sources avec licence, lien et date, résultats IA marqués « à confirmer »
+- [ ] T093 [US3] **Direction des quais (FR-030)** : choisir la source (horaires GTFS d'IDFM, terminus par quai, ou relations de lignes de bus OpenStreetMap), en vérifiant sa licence et sa couverture, et consigner la décision dans `research.md` (R11) ; test d'abord dans `tests/unit/test_direction.py` (les trois quais « Paix - Verdun » de Courbevoie ont des désignations distinctes ; direction inconnue ⇒ `null`, affichée « direction non déterminée ») ; puis ajout de `direction` au point, désignation « nom · direction · voie · lignes » et identifiant du quai dans la liste, la fiche et l'infobulle de la carte ; fixtures Courbevoie complétées par `tools/figer_fixtures.py` ; si la source est versionnée, l'ajouter à l'empreinte
 - [ ] T068 [P] [US3] Écrire `tools/echantillon_voirie.py` : tire 50 points au hasard (graine fixe) avec leur type de route, pour la vérification manuelle de SC-005 (≥ 90 % exacts)
 
 **Checkpoint**: rapport équivalent au prototype, enrichi du type de route
@@ -221,7 +222,7 @@ leur place d'exécution ; leur numéro ne suit donc pas l'ordre du fichier.
   T003 (les Dockerfiles doivent exister).
 - **US1 (T022–T055)** : tests T022–T027 en premier ; adaptateurs T028–T034 en parallèle ; T035 → facteurs T036–T040 en parallèle → T041 ; IA T042–T044 en parallèle → T045 ; lot T047 → T048 → T049 → T050 ; T051 après T041 et T045 ; API T052 → T053 → T054 → T055.
 - **US2 (T056–T062)** : dépend de T017 (connexion) et T053 (demandes) ; indépendante du pipeline de calcul.
-- **US3 (T063–T068)** : dépend de T030 (BD TOPO) et T051 (rendu de base).
+- **US3 (T063–T068, T093)** : dépend de T030 (BD TOPO) et T051 (rendu de base) ; T093 dépend aussi de T028 (offre IDFM).
 - **US1** : T090 avant T053 (tests d'abord).
 - **US4 (T069–T073, T091)** : dépend de T043, T045 et T050 ; T073 exige le mainteneur (vérité terrain) ; T091 après T043.
 - **Phase 7** : T092 après T075.
