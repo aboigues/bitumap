@@ -12,7 +12,7 @@ affiché `workflow / job`.
 |---|---|---|---|---|
 | `codeql / analyze (actions)` | `analyze (actions)` | `codeql.yml` | PR, push `main`, hebdo | analyse en erreur (le blocage des alertes passe par la règle *code scanning* ci-dessous) |
 | `security / dependency-review` | `dependency-review` | `security.yml` | PR | dépendance ajoutée avec vulnérabilité ≥ high, ou licence interdite |
-| `security / secrets` | `secrets` | `security.yml` | PR, push `main`, hebdo | secret détecté par Gitleaks non couvert par une exception active |
+| `security / secrets` | `secrets` | `security.yml` | PR, push `main`, hebdo | secret détecté par Gitleaks non couvert par une exception active — sur PR : commits de la PR ; ailleurs : tout l'historique, toutes branches |
 | `security / vulnerabilities-iac` | `vulnerabilities-iac` | `security.yml` | PR, push `main`, hebdo | Trivy `vuln,misconfig` ≥ HIGH (dépôt, et images construites depuis chaque `Dockerfile` applicatif) non couvert par une exception active |
 | `security / workflows-audit` | `workflows-audit` | `security.yml` | PR, push `main`, hebdo | zizmor, **toute gravité** (exception FR-005 / FR-014) : action non épinglée, permissions excessives, injection, déclencheur dangereux, identifiants persistés |
 | `security / exceptions` | `exceptions` | `security.yml` | PR, push `main`, hebdo (+ quotidien) | registre invalide, exception expirée ou > 90 j, ignore orphelin |

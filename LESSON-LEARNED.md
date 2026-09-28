@@ -33,6 +33,26 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-004 — Un secret sur une branche bloquait toutes les PR (2026-09-28) — Close
+
+- **Contexte** : CI, validation SC-001 avec 5 PR pièges (#6 à #10).
+- **Symptôme** : le contrôle `secrets` échoue sur les 5 PR, alors que seule la #6 contient
+  un secret.
+- **Causes racines** :
+  1. Pourquoi les autres PR échouent ? Gitleaks y trouve le secret de la branche
+     `trap/secret`.
+  2. Pourquoi le voit-il ? `actions/checkout` avec `fetch-depth: 0` récupère toutes les
+     branches, et `gitleaks git` analyse par défaut `git log --all`.
+  3. Pourquoi ce choix ? La spec (FR-003) demandait l'analyse de l'historique, sans préciser
+     la portée par événement.
+- **Correctif** : sur `pull_request`, Gitleaks n'analyse que `base.sha..head.sha` ; sur
+  `main`, en hebdomadaire et à la demande, il garde l'historique complet de toutes les
+  branches. Un secret poussé n'importe où reste détecté au plus tard sous 7 jours.
+- **Mesure préventive** : test de portée (branche propre → 0, branche fautive → 1,
+  historique complet → 1) documenté dans la PR ; comportement décrit dans
+  `research.md` (R4) et `contracts/required-checks.md`.
+- **Références** : PR #6 à #10 (fermées), branche `fix/gitleaks-pr-scope`.
+
 ### LL-003 — Rapports SARIF jamais publiés malgré des contrôles verts (2026-09-28) — Close
 
 - **Contexte** : CI, première exécution de `security.yml` sur la PR #5.

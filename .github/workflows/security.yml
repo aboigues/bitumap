@@ -68,13 +68,27 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Gitleaks (historique complet, secrets masqués)
+      # Portée (LL-004) : sur une PR, uniquement ses propres commits (une branche fautive ne
+      # bloque pas les autres PR) ; sur main, en hebdomadaire et à la demande, tout l'historique
+      # de toutes les branches (défaut de Gitleaks : git log --all).
+      - name: Gitleaks (secrets masqués)
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           image=$(awk '/^FROM/{print $2}' .github/scanners/gitleaks.Dockerfile)
+          scope=()
+          if [ "$EVENT" = "pull_request" ]; then
+            scope=(--log-opts="--no-merges ${BASE_SHA}..${HEAD_SHA}")
+            echo "Portée : commits de la PR (${BASE_SHA:0:7}..${HEAD_SHA:0:7})"
+          else
+            echo "Portée : historique complet, toutes les branches"
+          fi
           docker run --rm --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             -v "$PWD:/repo:ro" -v "$RUNNER_TEMP:/out" \
-            "$image" git /repo --redact --no-banner \
+            "$image" git /repo --redact --no-banner "${scope[@]}" \
             --gitleaks-ignore-path /repo/.gitleaksignore \
             --report-format sarif --report-path /out/gitleaks.sarif
       # hashFiles() ne voit que l'espace de travail : présence du rapport testée explicitement (LL-003).
