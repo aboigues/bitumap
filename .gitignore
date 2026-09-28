@@ -11,3 +11,8 @@ crash.log
 __pycache__/
 *.pyc
 .venv/
+
+# Variables locales (jamais de secret versionné) : seul .env.example est suivi
+.env
+.env.*
+!.env.example
