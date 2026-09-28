@@ -163,6 +163,26 @@ Conséquences :
 
 Figées dans `pyproject.toml` / `uv.lock` et `infra/tofu/versions.tf`.
 
+## R9-bis. Image de base des conteneurs (décision du 2026-09-28)
+
+- **Constat** : avec `python:3.14-slim` (Debian 13), Trivy relevait 46 vulnérabilités élevées ou
+  critiques : 2 corrigeables (`msgpack` et `setuptools`, embarqués dans `pip`) et **44 sans
+  aucun correctif Debian** (`util-linux`, `ncurses`, `systemd`, `perl-base`…), qui auraient
+  bloqué toutes les PR indéfiniment.
+- **Décision (mainteneur)** : image de base **minimale** Chainguard (Wolfi) :
+  `cgr.dev/chainguard/python:latest-dev` pour construire, `cgr.dev/chainguard/python:latest`
+  pour exécuter (Python 3.14.7), **épinglées par digest**, construction en deux étapes. Image
+  d'exécution sans shell ni gestionnaire de paquets, non root (65532), code propriété de root
+  (lecture seule pour l'application).
+- **Résultat mesuré** : **0 vulnérabilité, toutes gravités**, sur `api` et `job` ; 1,1 Go
+  (dépendances géospatiales : GDAL 3.12, PROJ, SciPy, pandas) ; bibliothèques natives vérifiées.
+- **Alternatives écartées** : bloquer seulement le corrigeable (`--ignore-unfixed`) ; une
+  exception par vulnérabilité (44 entrées renouvelées tous les 90 jours).
+- **Points d'attention** : l'offre gratuite de Chainguard ne publie que les étiquettes `latest` :
+  le digest épinglé est mis à jour par Dependabot (écosystème `docker`, répertoire `/docker`) ;
+  fournisseur d'images américain, utilisé seulement à la construction (aucune donnée transmise,
+  principe III non concerné).
+
 ## R10. Infrastructure et déploiement
 
 - OpenTofu, backend S3 sur le bucket d'état, **verrouillage natif** `use_lockfile = true`

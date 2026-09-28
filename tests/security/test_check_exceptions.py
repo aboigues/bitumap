@@ -69,20 +69,23 @@ class RegistreInvalide(unittest.TestCase):
 
     def test_trivyignore_orphelin(self):
         self.assert_erreur(
-            "valid.toml", ".trivyignore: CVE-2026-9999 sans exception trivy active",
+            "valid.toml",
+            ".trivyignore: CVE-2026-9999 sans exception trivy active",
             root="root_orphan",
         )
 
     def test_date_exp_differente(self):
         self.assert_erreur(
-            "valid.toml", ".trivyignore: CVE-2026-0001 exp:2026-11-30 ≠ expires 2026-10-31",
+            "valid.toml",
+            ".trivyignore: CVE-2026-0001 exp:2026-11-30 ≠ expires 2026-10-31",
             root="root_exp_mismatch",
         )
 
     def test_ghsa_orphelin(self):
         self.assert_erreur(
             "valid.toml",
-            ".security/allowed-ghsas.txt: GHSA-zzzz-zzzz-zzzz sans exception dependency-review active",
+            ".security/allowed-ghsas.txt: GHSA-zzzz-zzzz-zzzz sans exception "
+            "dependency-review active",
             root="root_ghsa_orphan",
         )
 

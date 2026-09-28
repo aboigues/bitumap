@@ -1,0 +1,68 @@
+[project]
+name = "bitumap"
+version = "0.1.0"
+description = "Diagnostic à la demande du risque d'orniérage des enrobés sur le réseau bus d'Île-de-France"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "uvicorn>=0.54.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "jinja2>=3.1.6",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.6",
+    "psycopg-pool>=3.3.3",
+    "boto3>=1.43.103",
+    "openai>=3.19.2",
+    "altcha>=2.1.0",
+    "numpy>=2.5.3",
+    "shapely>=2.1.2",
+    "pyproj>=3.8.0",
+    "geopandas>=1.1.4",
+    "rasterio>=1.5.1",
+    "pvlib>=0.16.1",
+    "osmium>=4.3.1",
+    "pillow>=12.3.0",
+]
+
+[project.scripts]
+bitumap-migrer = "bitumap.db.migrer:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+    "respx>=0.23.1",
+    "moto[s3]>=5.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bitumap"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = [".specify"]  # scripts fournis par Spec Kit, non maintenus ici
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # typographie française (apostrophes, espaces insécables)
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S603"]
+"tools/**" = ["S603", "S607"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not reseau' --strict-markers"
+markers = [
+    "reseau: appelle de vraies API externes (exclu par défaut)",
+    "base: nécessite la base PostgreSQL locale (compose)",
+]

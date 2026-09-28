@@ -1,0 +1,18 @@
+# Contexte de construction minimal : seuls pyproject.toml, uv.lock, README.md et src/ sont copiés.
+.git/
+.github/
+.claude/
+.specify/
+.venv/
+.env
+.env.*
+**/__pycache__/
+*.pyc
+tests/
+specs/
+docs/
+infra/
+tools/
+var/
+*.sarif
+*.cdx.json

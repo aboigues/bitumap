@@ -142,7 +142,7 @@ jobs:
       - name: Trivy — images de conteneur, bloquant ≥ HIGH (principe I)
         run: |
           image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
-          mapfile -t dockerfiles < <(find . -name Dockerfile -not -path './.git/*' -not -path './.github/*')
+          mapfile -t dockerfiles < <(find . \( -name Dockerfile -o -name '*.Dockerfile' \) -not -path './.git/*' -not -path './.github/*' | sort)
           if [ "${#dockerfiles[@]}" -eq 0 ]; then
             echo "Aucune image à analyser (aucun Dockerfile applicatif)."
             exit 0
@@ -151,12 +151,14 @@ jobs:
             df="${dockerfiles[$i]}"
             tag="bitumap-scan:${i}"
             echo "Construction locale (sans publication) de ${df}"
-            docker build -t "$tag" -f "$df" "$(dirname "$df")"
+            echo "::group::Image analysée : ${df}"
+            docker build -t "$tag" -f "$df" .   # contexte : racine du dépôt (LL-003, T089)
             docker save "$tag" -o "$RUNNER_TEMP/image-${i}.tar"
             docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
               -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
               image --cache-dir /cache --skip-db-update --input "/out/image-${i}.tar" \
               --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore
+            echo "::endgroup::"
           done
 
   workflows-audit:
