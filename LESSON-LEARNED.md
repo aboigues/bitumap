@@ -33,6 +33,29 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Ouverte
+
+- **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive
+  (`C:\Users\PC\kDrive\...`), passage de la branche `001-security-ci-baseline` à `main`.
+- **Symptôme** : les fichiers de `specs/001-security-ci-baseline/` réapparaissent (avec des fins
+  de ligne CRLF) sur une branche où ils n'existent pas, et sont commités par erreur dans
+  `chore/scaleway-bootstrap` ; supprimés, ils reviennent en moins de 20 s.
+- **Causes racines** :
+  1. Pourquoi réapparaissent-ils ? Le client kDrive interprète la suppression faite par
+     `git switch` comme une divergence et restaure sa copie en ligne.
+  2. Pourquoi a-t-on commité ? `git add -A` prend tout ce qui est non suivi, sans relecture de
+     la liste avant le commit.
+  3. Pourquoi le dépôt est-il dans kDrive ? Emplacement historique du dossier de travail ; la
+     sauvegarde est en réalité assurée par GitHub.
+- **Correctif** : fichiers retirés de la branche par un commit dédié (sans force-push,
+  principe IX).
+- **Mesure préventive** : déplacer le dépôt hors de tout dossier synchronisé (système de
+  fichiers WSL, ex. `~/dev/bitumap`) ; d'ici là, n'ajouter que des chemins explicites
+  (jamais `git add -A`) et relire `git status` avant chaque commit. La leçon sera close une
+  fois le dépôt déplacé.
+- **Références** : branche `chore/scaleway-bootstrap`, commit « fix: retirer les fichiers de la
+  001 recréés par la synchronisation kDrive ».
+
 ### LL-001 — Arrêt silencieux du bootstrap Scaleway en relance (2026-09-28) — Close
 
 - **Contexte** : développement, première relance de `infra/bootstrap/bootstrap.sh` pour
