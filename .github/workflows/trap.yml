@@ -1,0 +1,7 @@
+name: piege
+on: workflow_dispatch
+jobs:
+  a:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
