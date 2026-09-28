@@ -1,0 +1,365 @@
+# Feature Specification: Rapport de risque d'orniérage à la demande
+
+**Feature Branch**: `002-on-demand-report`
+
+**Created**: 2026-09-28
+
+**Status**: Draft
+
+**Input**: User description: "Formulaire d'entrée qui valide le code postal, avec une protection antibot, avant de lancer la génération. Reprendre les aspects intéressants du prototype Courbevoie et compléter avec le type de route (départementale, communale, etc.). Périmètre de la fonctionnalité 002 dans le README : formulaire (code postal, choix de la commune, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire."
+
+## Contexte
+
+Le prototype (`docs/reference/prototype-courbevoie-v2.html`) a été produit à la main pour
+Courbevoie : 153 points (arrêts de bus, carrefours à feux, giratoires) classés en priorités
+P1 / P2 / P3 selon la charge des bus, la sollicitation, le site, la chaleur et l'âge de
+l'enrobé. Cette fonctionnalité rend ce diagnostic **reproductible et disponible à la
+demande pour n'importe quelle commune d'Île-de-France**, sans intervention manuelle.
+
+Hors périmètre, prévus ensuite (README, feuille de route) : relevés terrain (003), méthode v2
+avec ensoleillement et îlots de chaleur revus et type de route intégré au score (004),
+échelle du département et export PDF (005).
+
+## User Scenarios & Testing *(mandatory)*
+
+Acteurs :
+
+- **Demandeur** : agent de collectivité, bureau d'études ou exploitant de réseau qui veut le
+  diagnostic d'une commune.
+- **Mainteneur** : responsable du service ; surveille coûts, quotas et incidents.
+
+### User Story 1 - Obtenir le rapport d'une commune à partir d'un code postal (Priority: P1)
+
+Le demandeur ouvre le service et se connecte avec son adresse e-mail en cliquant sur le
+lien de connexion qu'il reçoit (sans mot de passe). Il saisit ensuite un code postal
+d'Île-de-France, choisit la commune concernée si le code postal en couvre plusieurs, puis
+lance la génération. Il suit
+l'avancement sur une page d'attente et obtient un lien vers le rapport complet dès qu'il est
+prêt.
+
+**Why this priority**: c'est la raison d'être du service ; sans elle, rien d'autre n'a de
+valeur.
+
+**Independent Test**: se connecter par lien e-mail, saisir `92400`, lancer la génération, obtenir un rapport de Courbevoie
+comparable au prototype (mêmes types de points, priorités, carte, fiches, méthode, sources).
+
+**Acceptance Scenarios**:
+
+1. **Given** un demandeur non connecté, **When** il saisit son adresse e-mail et valide
+   la preuve antibot, **Then** il reçoit un lien de connexion à usage unique valable
+   15 minutes ; en le suivant, il est connecté.
+2. **Given** le code postal `92400`, **When** le demandeur connecté le saisit, **Then** la commune
+   Courbevoie lui est proposée et il peut lancer la génération.
+3. **Given** le code postal `95000`, **When** il le saisit, **Then** les 4 communes
+   correspondantes lui sont proposées et il doit en choisir une avant de lancer la
+   génération.
+4. **Given** une génération lancée, **When** le demandeur suit l'avancement, **Then** il voit
+   l'étape en cours (acquisition, calcul, rapport) et, à la fin, un lien vers le rapport.
+5. **Given** le demandeur a fermé la page, **When** il revient et se reconnecte,
+   **Then** il retrouve la liste de ses générations, leur état et les rapports terminés.
+6. **Given** un rapport déjà produit pour cette commune avec les mêmes sources et la même
+   version de méthode, **When** un demandeur le redemande, **Then** le rapport existant est
+   servi immédiatement, sans nouveau calcul ni coût.
+
+---
+
+### User Story 2 - Être protégé contre les abus (Priority: P1)
+
+Le service refuse les saisies invalides et les demandes automatisées, et limite le nombre de
+générations pour qu'un abus ne puisse ni saturer le service ni faire exploser son coût.
+
+**Why this priority**: principe I (sécurité d'abord) et principe II (coût maîtrisé) ; une
+génération consomme des ressources payantes, dont un modèle d'IA.
+
+**Independent Test**: soumettre des codes postaux invalides, hors Île-de-France, des requêtes
+sans preuve antibot et des rafales de demandes ; vérifier les refus et l'absence de
+génération lancée.
+
+**Acceptance Scenarios**:
+
+1. **Given** une saisie qui n'est pas un code postal à 5 chiffres, **When** elle est
+   envoyée, **Then** elle est refusée avec un message explicite, sans appel externe.
+2. **Given** un code postal valide hors Île-de-France (ex. `69001`), **When** il est
+   envoyé, **Then** il est refusé avec un message indiquant le périmètre couvert.
+3. **Given** un code postal au bon format mais inexistant, **When** il est envoyé, **Then**
+   il est refusé.
+4. **Given** une demande de génération sans preuve antibot valide, ou avec une preuve déjà
+   utilisée, **When** elle arrive, **Then** elle est refusée et aucune génération n'est
+   lancée.
+5. **Given** le quota de générations atteint (par compte ou global), **When** une nouvelle
+   génération est demandée, **Then** elle est refusée avec l'heure à laquelle réessayer ;
+   les rapports déjà en cache restent consultables.
+6. **Given** une commune déjà en cours de génération, **When** une seconde demande arrive
+   pour elle, **Then** elle est rattachée à la génération en cours au lieu d'en lancer une
+   deuxième.
+7. **Given** un visiteur non connecté ou dont la session a expiré, **When** il tente de
+   lancer une génération ou d'ouvrir un rapport, **Then** il est invité à se connecter et
+   aucune génération n'est lancée.
+8. **Given** des demandes répétées de lien de connexion (même adresse ou même origine),
+   **When** la limite est dépassée, **Then** elles sont refusées ; la réponse est identique
+   que l'adresse ait déjà un compte ou non (pas de fuite sur l'existence d'un compte).
+9. **Given** un lien de connexion déjà utilisé ou expiré, **When** il est suivi, **Then** il
+   est refusé et le demandeur peut en demander un nouveau.
+
+---
+
+### User Story 3 - Lire et exploiter le rapport (Priority: P1)
+
+Le demandeur consulte un rapport qui reprend les apports du prototype : vue d'ensemble
+chiffrée, carte des points, liste classée et filtrable, fiche détaillée de chaque point,
+méthode, sources et limites. Chaque point indique en plus **le type de la route** (nationale,
+départementale, communale, voie privée…) et **son gestionnaire**, pour savoir à qui
+transmettre le rapport.
+
+**Why this priority**: le rapport est le livrable ; son exploitabilité conditionne l'usage
+terrain.
+
+**Independent Test**: sur le rapport de Courbevoie, vérifier la présence et la cohérence de
+chaque élément listé ci-dessous et comparer le classement au prototype ; vérifier qu'un
+visiteur non connecté ne peut pas l'ouvrir.
+
+**Acceptance Scenarios**:
+
+1. **Given** un rapport, **When** le demandeur l'ouvre, **Then** il voit : le nombre de
+   points par priorité et par type, une carte de la commune avec les points et les voies
+   très fréquentées par les bus, une liste classée par rang, des filtres par priorité, par
+   type de point et par type de route.
+2. **Given** un point sélectionné, **When** sa fiche s'affiche, **Then** elle indique :
+   rang, priorité, score, type de point, nom, voie, **type de route et gestionnaire**,
+   passages de bus par jour et en pointe, lignes, pente, revêtement, ensoleillement, îlot de
+   chaleur, âge estimé de l'enrobé le cas échéant, photo de rue récente le cas échéant, et
+   la liste des facteurs qui ont pesé sur son score avec leur valeur.
+3. **Given** le type de route d'un point, **When** les deux référentiels disponibles
+   divergent ou sont muets, **Then** la fiche l'indique (« indéterminé » ou « à vérifier »)
+   plutôt que d'afficher une valeur incertaine comme sûre.
+4. **Given** un rapport, **When** le demandeur lit la section méthode, **Then** il y trouve
+   la version de la méthode, chaque facteur et son effet, les règles de priorité et les
+   **limites connues**, dont celles de l'ensoleillement et des îlots de chaleur (à
+   approfondir en 004).
+5. **Given** un rapport, **When** le demandeur lit la section sources, **Then** chaque
+   source figure avec sa licence, son lien et sa date d'extraction, et les résultats issus
+   d'un modèle d'IA sont marqués « à confirmer » avec le modèle et la date.
+6. **Given** un rapport, **When** le demandeur l'enregistre, **Then** il reste lisible hors
+   connexion (fichier autonome), hormis le fond de carte.
+7. **Given** un rapport, **When** il est ouvert sur un téléphone, **Then** il reste lisible
+   et utilisable (terrain).
+
+---
+
+### User Story 4 - Maîtriser les coûts et suivre le service (Priority: P2)
+
+Le mainteneur connaît, pour chaque rapport, sa durée, son coût d'IA, les sources utilisées
+et les éventuels avertissements ; le service ne dépasse jamais les plafonds fixés.
+
+**Why this priority**: principes II et V ; nécessaire avant d'ouvrir le service, mais pas au
+premier rapport de démonstration.
+
+**Independent Test**: générer deux rapports et vérifier le journal de chacun ; forcer le
+plafond de coût d'IA et vérifier que le rapport est produit sans les analyses restantes,
+avec un avertissement.
+
+**Acceptance Scenarios**:
+
+1. **Given** un rapport terminé, **When** le mainteneur consulte son journal, **Then** il y
+   trouve durée, nombre de points, nombre d'analyses d'IA, coût d'IA, sources et dates,
+   avertissements.
+2. **Given** le plafond de coût d'IA d'un rapport atteint, **When** la génération continue,
+   **Then** les points restants sont marqués « âge de l'enrobé non évalué » et le rapport
+   l'indique ; aucune dépense supplémentaire n'a lieu.
+3. **Given** le budget global quotidien atteint, **When** une génération est demandée,
+   **Then** elle est refusée avec un message explicite et le mainteneur est alerté.
+4. **Given** une génération en échec, **When** le mainteneur consulte le journal, **Then** il
+   trouve l'étape et la source en cause ; le demandeur a reçu un message compréhensible sans
+   détail technique.
+
+---
+
+### Edge Cases
+
+- **Code postal à cheval sur deux départements** ou commune nouvelle : la liste proposée est
+  celle du référentiel officiel au moment de la demande.
+- **Commune sans ligne de bus** ou sans aucun point : le rapport est produit et l'indique
+  (« aucun point à relever ») plutôt que d'échouer.
+- **Paris (75)** : 20 arrondissements, codes postaux par arrondissement ; la commune est
+  Paris entière. [Hypothèse : Paris est traitée arrondissement par arrondissement si la
+  volumétrie l'exige — à confirmer au plan.]
+- **Source indisponible** pendant la génération : nouvelle tentative ; si une source
+  optionnelle (photos de rue, îlots de chaleur) reste indisponible, le rapport est produit
+  avec le facteur marqué « non évalué » et un avertissement ; si une source indispensable
+  (arrêts et offre de bus, voirie) est indisponible, la génération échoue proprement.
+- **Données sources mises à jour** entre deux demandes : l'empreinte change, un nouveau
+  rapport est produit ; l'ancien reste accessible par son lien.
+- **Deux demandes simultanées** pour la même commune : une seule génération (US2-6).
+- **Réponse d'IA invalide ou hors bornes** : ignorée, point marqué « non évalué ».
+- **Adresse e-mail erronée** : aucun lien n'arrive ; le demandeur peut corriger et
+  redemander, dans la limite fixée (US2-8).
+- **Lien de connexion ouvert sur un autre appareil** que celui de la demande : accepté (usage
+  terrain : demande sur ordinateur, lecture sur téléphone).
+- **Rapport téléchargé puis transmis** à un tiers : le fichier autonome reste lisible par ce
+  tiers ; le rapport rappelle qu'il est destiné à son demandeur et à la collectivité
+  concernée.
+- **Demande d'effacement de compte** : l'adresse et l'historique des demandes sont
+  supprimés ; les rapports, qui ne contiennent aucune donnée personnelle, restent en cache.
+- **Point situé sur une limite communale** : rattaché à la commune où il se trouve ; les
+  points hors commune ne sont pas inclus.
+- **Génération trop longue** : interrompue au-delà d'une durée maximale, en échec explicite.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+**Saisie et validation**
+
+- **FR-001**: Le service DOIT accepter un code postal et refuser, sans appel externe, toute
+  saisie qui n'est pas composée de 5 chiffres.
+- **FR-002**: Le service DOIT refuser les codes postaux hors des départements
+  d'Île-de-France (75, 77, 78, 91, 92, 93, 94, 95) et les codes inexistants dans le
+  référentiel officiel des communes.
+- **FR-003**: Le service DOIT proposer toutes les communes d'Île-de-France couvertes par le
+  code postal et exiger le choix d'une commune lorsqu'il y en a plusieurs.
+- **FR-004**: Le service DOIT exiger une preuve antibot valide, à usage unique et à durée de
+  vie limitée, avant d'envoyer un lien de connexion et avant de lancer une génération ; la protection DOIT fonctionner sans service
+  tiers, sans cookie de suivi et rester accessible (clavier, lecteur d'écran).
+- **FR-005**: Le service DOIT limiter les générations par compte (5 par jour) et au total
+  (50 par jour), et les demandes de lien de connexion par adresse (3 par heure) et par
+  origine (10 par heure) ; les consultations de rapports existants par un utilisateur
+  connecté ne sont pas limitées par ces quotas.
+- **FR-006**: Le service DOIT authentifier le demandeur avant toute génération et toute
+  consultation de rapport, par lien de connexion envoyé à son adresse e-mail : sans mot de
+  passe, à usage unique, valable 15 minutes ; la session ouverte expire après 7 jours.
+  Toute adresse e-mail valide peut créer un compte (constitution, principe I : point
+  d'appel authentifié).
+- **FR-006b**: Les réponses aux demandes de lien de connexion NE DOIVENT pas révéler si une
+  adresse possède déjà un compte.
+
+**Génération**
+
+- **FR-007**: Le service DOIT générer le rapport d'une commune sans intervention manuelle, en
+  trois étapes (acquisition, calcul, rapport) dont l'avancement est visible du demandeur.
+- **FR-008**: Le service DOIT renvoyer un rapport existant, sans recalcul, lorsque la
+  commune, les versions des sources et la version de méthode sont identiques.
+- **FR-009**: Le service NE DOIT lancer qu'une génération à la fois par commune et par
+  empreinte ; les demandes concurrentes y sont rattachées.
+- **FR-010**: Le service DOIT identifier les points d'une commune : arrêts de bus desservis,
+  carrefours à feux et giratoires traversés par au moins une ligne de bus.
+- **FR-011**: Le service DOIT calculer pour chaque point les facteurs de la méthode du
+  prototype (charge, sollicitation, site, ensoleillement, îlot de chaleur, âge de l'enrobé
+  pour les P1) et un score déterministe versionné ; même entrée ⇒ même classement.
+- **FR-012**: Le service DOIT attribuer les priorités par rang : P1 = 20 % des points les
+  plus exposés, P2 = 40 % suivants, P3 = le reste.
+- **FR-013**: Le service DOIT déterminer pour chaque point le **type de route**
+  (autoroute, nationale, départementale, communale, voie privée, indéterminé) et le
+  **gestionnaire** correspondant, en croisant deux référentiels ouverts et en signalant les
+  divergences. En 002, ce type est affiché et filtrable mais n'entre pas dans le score.
+- **FR-014**: Le service DOIT estimer par analyse d'images historiques par IA la période de
+  la dernière réfection de l'enrobé, **uniquement pour les points P1** (priorités établies
+  avant ce facteur, comme dans le prototype) ; le résultat est marqué « à confirmer » avec
+  le modèle et la date, ne modifie le score que dans les bornes de la méthode (×0,85 à
+  ×1,05), est mis en cache avec le rapport et respecte le plafond de coût (FR-024). Le
+  modèle d'IA DOIT être hébergé en France (constitution, principe III).
+- **FR-015**: Le service DOIT rattacher à chaque point, quand elle existe, la photo de rue
+  ouverte la plus récente à moins de 30 m, avec sa date et un lien.
+- **FR-016**: Chaque point DOIT avoir un identifiant stable d'une génération à l'autre, pour
+  y rattacher plus tard des relevés terrain (principe VI).
+- **FR-017**: Une génération DOIT être interrompue au-delà de 30 minutes et marquée en
+  échec.
+
+**Rapport**
+
+- **FR-018**: Le rapport DOIT contenir : synthèse chiffrée, carte, liste classée filtrable
+  (priorité, type de point, type de route), fiche par point (FR-011, FR-013, FR-015),
+  méthode avec version et limites, sources avec licence, lien et date d'extraction.
+- **FR-019**: Le rapport DOIT distinguer les valeurs mesurées, estimées et issues d'IA, et
+  marquer « non évalué » tout facteur indisponible.
+- **FR-020**: Le rapport DOIT être un document autonome, consultable hors connexion à
+  l'exception du fond de carte, lisible sur ordinateur et sur téléphone.
+- **FR-021**: Seuls les utilisateurs connectés DOIVENT pouvoir consulter un rapport ; tout
+  utilisateur connecté peut consulter tout rapport déjà généré (le cache est partagé). Il
+  n'existe pas de liste publique des rapports ; chaque utilisateur voit la liste de ses
+  propres demandes.
+- **FR-022**: Le rapport DOIT rappeler qu'il classe des points à relever en priorité et ne
+  mesure pas l'état réel de la chaussée.
+
+**Exploitation**
+
+- **FR-023**: Chaque génération DOIT produire un journal : durée par étape, nombre de
+  points, sources et dates, nombre et coût des analyses d'IA, avertissements, erreurs.
+- **FR-024**: Le coût d'IA DOIT être plafonné à 2 € par rapport et à 20 € par jour pour
+  l'ensemble du service ; les plafonds atteints produisent un rapport partiel signalé ou un
+  refus, jamais une dépense supplémentaire.
+- **FR-025**: Les messages d'erreur montrés au demandeur NE DOIVENT contenir aucun détail
+  technique ; le détail est dans le journal.
+- **FR-026**: Le service NE DOIT conserver comme données personnelles que l'adresse e-mail
+  du compte, la date de dernière connexion et la liste des demandes de l'utilisateur ; les
+  identifiants d'origine utilisés pour la limitation de débit sont conservés 24 h au plus.
+- **FR-027**: Un compte inactif depuis 12 mois DOIT être supprimé automatiquement ; un
+  utilisateur DOIT pouvoir supprimer son compte lui-même. L'information RGPD (finalité,
+  durée, droits) DOIT être présentée avant la création du compte.
+- **FR-028**: Les e-mails de connexion DOIVENT être envoyés par un service hébergé dans
+  l'Union européenne et ne contenir que le lien et son délai de validité.
+
+### Key Entities
+
+- **Commune** : code INSEE, nom, département, contour ; obtenue à partir d'un code postal.
+- **Compte** : adresse e-mail, date de création, date de dernière connexion.
+- **Lien de connexion** : compte visé, date d'émission, date d'expiration, utilisé ou non.
+- **Demande de génération** : compte demandeur, commune, état (en attente, acquisition, calcul, rapport,
+  terminée, en échec), horodatages, empreinte, lien de suivi.
+- **Empreinte de rapport** : commune + version de méthode + versions des sources ; clé du
+  cache.
+- **Point** : identifiant stable, type (arrêt, carrefour à feux, giratoire), nom, position,
+  voie, type de route, gestionnaire, facteurs, score, rang, priorité.
+- **Facteur** : nom, valeur, effet sur le score, provenance (mesuré, estimé, IA), statut
+  (évalué, non évalué, à confirmer).
+- **Source** : nom, licence, lien, date d'extraction.
+- **Rapport** : empreinte, version de méthode, points, synthèse, méthode, sources, limites.
+- **Journal de génération** : durées, coûts, avertissements, erreurs.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: Un demandeur obtient le rapport d'une commune déjà générée en moins de
+  10 secondes après validation du formulaire.
+- **SC-002**: 95 % des communes d'Île-de-France de moins de 100 000 habitants sont générées
+  en moins de 15 minutes.
+- **SC-003**: Le rapport de Courbevoie retrouve au moins 80 % des P1 du prototype parmi ses
+  P1, tout écart restant étant expliqué par une différence de source ou de méthode
+  documentée.
+- **SC-004**: Deux générations de la même commune avec les mêmes sources et la même méthode
+  produisent un classement identique à 100 %.
+- **SC-005**: 100 % des points d'un rapport ont un type de route renseigné ou explicitement
+  marqué « indéterminé » ; sur un échantillon de 50 points vérifiés à la main, au moins 90 %
+  des types renseignés sont exacts.
+- **SC-006**: 100 % des soumissions sans preuve antibot valide, hors Île-de-France ou au-delà
+  des quotas sont refusées sans génération lancée ni e-mail envoyé.
+- **SC-007**: Le coût d'IA ne dépasse jamais 2 € par rapport ni 20 € par jour.
+- **SC-008**: Aucun coût d'hébergement de calcul n'est facturé lorsqu'aucune génération
+  n'est en cours (principe II).
+- **SC-009**: Un demandeur qui découvre le service lance sa première génération en moins de
+  3 minutes, connexion par e-mail comprise, sans aide.
+- **SC-010**: 100 % des tentatives de génération ou de consultation sans session valide sont
+  refusées.
+- **SC-011**: 95 % des e-mails de connexion arrivent en moins de 1 minute.
+- **SC-012**: Sur un échantillon de 30 points P1 dont la date de réfection est connue, l'IA
+  donne la bonne période dans au moins 70 % des cas et ne fait jamais changer un point de
+  priorité à elle seule.
+
+## Assumptions
+
+- Référentiel des codes postaux et communes : API Géo officielle (données ouvertes).
+- Méthode de départ = méthode du prototype v2, versionnée « 1.0 » ; ses limites
+  (ensoleillement, îlots de chaleur) sont affichées et traitées en 004.
+- Type de route : classement administratif de la base topographique nationale, recoupé avec
+  la référence de route du référentiel collaboratif ; le gestionnaire se déduit du
+  classement (État ou concessionnaire, département, commune, privé).
+- Quotas, plafonds et durées (5/jour/compte, 50/jour, 3 et 10 liens/h, 15 min, 7 jours,
+  12 mois, 2 €, 20 €/jour, 30 min, 30 m) sont des valeurs de départ réglables sans
+  modification de la spec.
+- Inscription ouverte à toute adresse e-mail ; une liste d'adresses ou de domaines autorisés
+  pourra être ajoutée si des abus sont constatés (hors périmètre 002).
+- L'estimation de l'âge de l'enrobé reprend la lecture du prototype : comparaison
+  d'orthophotos de plusieurs années sur l'emprise du point.
+- Échelle d'une commune seulement ; départements en 005.
+- Le fond de carte provient d'un service public français ; il nécessite une connexion.
+- La constitution impose antibot, quotas, hébergement en France et journal des coûts.
