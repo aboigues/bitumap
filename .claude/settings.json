@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push origin main)",
+      "Bash(git push origin main *)",
+      "Bash(git push * main)",
+      "Bash(git push * main:*)",
+      "Bash(git push * HEAD:main)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh pr review * --approve *)",
+      "Bash(gh pr review * --approve)",
+      "Bash(gh pr review --approve *)",
+      "Bash(gh pr review -a *)",
+      "Bash(gh api * /branches/*/protection*)",
+      "Bash(gh api */rulesets*)",
+      "Bash(gh ruleset *)",
+      "Bash(gh repo edit *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-main.sh",
+            "timeout": 10,
+            "statusMessage": "Vérification principe IX (main protégée)"
+          }
+        ]
+      }
+    ]
+  }
+}
