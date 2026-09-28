@@ -47,7 +47,11 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
     sur `main` et sur chaque PR.
   - Mises à jour : Dependabot (`.github/dependabot.yml`), écosystèmes `github-actions` et
     `docker` en mensuel groupé ; alertes et mises à jour de sécurité activées côté dépôt
-    (action humaine). Écosystème `pip`/`uv` ajouté avec le premier code applicatif.
+    (action humaine, **activées le 2026-09-28**). Écosystèmes Python et `opentofu`
+    (pris en charge par Dependabot depuis décembre 2025) ajoutés avec les premiers fichiers
+    correspondants.
+  - Le `dependabot.yml` actuel (modèle GitHub des PR #3/#4, `package-ecosystem: ""`) est
+    invalide et sera remplacé.
 - **Alternatives** : OSV-Scanner : bon outil, mais doublon de Trivy déjà retenu pour
   l'infrastructure et le SBOM (principe VII : un outil de moins).
 
@@ -69,8 +73,9 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
   même digest sur `ghcr.io/aquasecurity/trivy`), scanners `vuln,misconfig`,
   `--severity HIGH,CRITICAL --exit-code 1`, plus une passe non bloquante toutes gravités en
   SARIF. Un dépôt sans cible produit un résultat vide et réussit (scénario US3-3).
-  Les images de conteneur seront analysées dans le workflow de livraison quand un Dockerfile
-  applicatif existera.
+  Les images de conteneur sont analysées **sur chaque PR et push** (constitution, principe I)
+  dès qu'un `Dockerfile` applicatif existe : construction locale sans publication puis
+  `trivy image` ; et à nouveau dans le workflow de livraison.
 - **Note** : version postérieure à l'incident R1 et exécutée par digest ; la version
   compromise (v0.69.4) est hors de portée.
 
@@ -86,7 +91,12 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
   (`ghcr.io/zizmorcore/zizmor@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101`),
   mode `--pedantic` limité aux règles `unpinned-uses`, `excessive-permissions`,
   `template-injection`, `dangerous-triggers`, `artipacked`. Échec bloquant sur toute
-  détection. Complété par la requête CodeQL `actions`.
+  détection, quelle que soit sa gravité (exception à FR-005 au titre de FR-014), exécution
+  `--offline`. Complété par la requête CodeQL `actions`.
+- **Limite connue** : sur `pull_request`, GitHub exécute les workflows de la PR ; une PR peut
+  donc neutraliser un contrôle. Parade : relecture humaine obligatoire des zones sensibles,
+  rendue visible par le job informatif `sensitive-paths`. Les « required workflows » exécutés
+  depuis `main` n'existent que pour les rulesets d'organisation.
 - `permissions: {}` au niveau de chaque workflow, permissions accordées job par job.
 - `persist-credentials: false` sur chaque `actions/checkout`.
 - Déclencheurs : `pull_request` (jamais `pull_request_target`), `push` sur `main`,
@@ -98,7 +108,9 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
   dépendance) et validateur `scripts/security/check_exceptions.py` (bibliothèque standard
   Python uniquement), exécuté comme contrôle requis. Il échoue si une exception est expirée,
   dépasse 90 jours, manque d'un champ, ou si un fichier d'ignorance d'outil (`.trivyignore`,
-  `.gitleaksignore`) contient une entrée absente du registre.
+  `.gitleaksignore`, `.security/allowed-ghsas.txt`) contient une entrée absente du registre.
+  La liste `allow-ghsas` de dependency-review est lue depuis ce dernier fichier : une
+  exception expirée redevient donc bloquante automatiquement.
 - Les alertes CodeQL ignorées le sont dans l'interface avec un commentaire obligatoire
   renvoyant à l'identifiant du registre (vérification manuelle mensuelle, documentée dans le
   quickstart).
@@ -112,6 +124,8 @@ Versions vérifiées le 2026-09-28 via l'API GitHub et les registres de conteneu
   Épingler la version évite une bascule silencieuse. Python 3 et Docker sont fournis par
   l'image.
 - `actions/checkout` v7.0.1 → `3d3c42e5aac5ba805825da76410c181273ba90b1`.
+- `actions/upload-artifact` v7.0.1 → `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+- `actions/download-artifact` v8.0.1 → `3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c`.
 
 ## R10. Gouvernance GitHub (actions humaines, principe IX)
 

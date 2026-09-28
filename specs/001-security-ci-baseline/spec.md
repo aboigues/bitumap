@@ -119,8 +119,10 @@ automatiquement.
 
 1. **Given** un visiteur du dépôt, **When** il consulte l'onglet sécurité, **Then** il trouve
    la politique de signalement, le canal privé et le délai de première réponse.
-2. **Given** une PR qui modifie un fichier d'une zone sensible, **When** elle est ouverte,
-   **Then** le mainteneur désigné est automatiquement demandé en revue.
+2. **Given** une PR qui modifie un fichier d'une zone sensible, **When** elle est ouverte ou
+   mise à jour, **Then** un commentaire unique de la PR liste les fichiers sensibles modifiés
+   et rappelle la relecture obligatoire ; si l'auteur n'est pas le propriétaire désigné,
+   celui-ci est en plus demandé automatiquement en revue.
 
 ---
 
@@ -132,9 +134,11 @@ automatiquement.
   obligatoire avec plan d'atténuation, sinon blocage maintenu.
 - **Secret déjà poussé** dans l'historique : l'alerte déclenche la révocation du secret
   (le retirer du code ne suffit pas) et une entrée `LESSON-LEARNED.md`.
-- **Workflow modifié par une PR** pour se désactiver ou élargir ses permissions : la
-  modification exige la revue du mainteneur (zone sensible) et les contrôles requis restent
-  ceux de la branche protégée, pas ceux de la PR.
+- **Workflow modifié par une PR** pour se désactiver ou élargir ses permissions : sur une PR,
+  GitHub exécute la version des workflows **contenue dans la PR** ; une PR peut donc
+  neutraliser un contrôle en gardant son nom. Parade : toute PR touchant une zone sensible
+  (dont `.github/`) est signalée de façon visible et exige la relecture humaine du diff de
+  ces fichiers avant fusion ; aucune automatisation ne remplace cette relecture.
 - **PR ouverte depuis un fork** : les contrôles s'exécutent sans accès aux secrets du dépôt.
 - **Action tierce compromise ou retaguée** : les actions référencées sont épinglées par
   empreinte de commit, donc un nouveau tag malveillant n'est pas exécuté.
@@ -155,7 +159,8 @@ automatiquement.
 - **FR-004**: Le système DOIT analyser les images de conteneur et les fichiers
   d'infrastructure présents dans le dépôt, et réussir proprement s'il n'y en a pas.
 - **FR-005**: Toute détection de gravité critique ou élevée DOIT mettre la PR en échec ; les
-  gravités moyenne et faible DOIVENT être signalées sans bloquer.
+  gravités moyenne et faible DOIVENT être signalées sans bloquer. Exception : les règles de
+  durcissement des automatisations (FR-014) bloquent quelle que soit leur gravité.
 - **FR-006**: Les contrôles FR-001 à FR-004 DOIVENT être déclarés comme contrôles requis de
   la branche `main` : aucune fusion possible sans résultat vert, y compris pour le mainteneur.
 
@@ -188,7 +193,10 @@ automatiquement.
 
 - **FR-015**: Une exception à un blocage DOIT être enregistrée dans le dépôt avec
   l'identifiant du problème, la raison, le responsable et une date d'expiration de 90 jours
-  au plus ; une exception expirée DOIT redevenir bloquante.
+  au plus ; une exception expirée DOIT redevenir bloquante. Pour les outils dont
+  l'ignorance est déclarée dans le dépôt (analyse des dépendances, vulnérabilités, secrets),
+  ce retour au blocage est automatique ; pour les alertes d'analyse de code ignorées dans
+  l'interface, il est vérifié par une revue mensuelle du mainteneur.
 - **FR-016**: Le dépôt DOIT publier une politique de sécurité indiquant les versions
   supportées, le canal de signalement privé et un délai de première réponse de 7 jours.
 - **FR-017**: Le dépôt DOIT désigner un propriétaire obligatoire pour les zones sensibles :

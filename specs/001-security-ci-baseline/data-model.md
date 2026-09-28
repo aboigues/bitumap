@@ -34,7 +34,7 @@ Entrée de `.security/exceptions.toml` ; format dans
 États : `active` (aujourd'hui < `expires`) → `expired` (le contrôle échoue jusqu'au
 renouvellement motivé ou à la suppression).
 
-Cohérence : chaque entrée de `.trivyignore` / `.gitleaksignore` DOIT correspondre à une
+Cohérence : chaque entrée de `.trivyignore` / `.gitleaksignore` / `.security/allowed-ghsas.txt` DOIT correspondre à une
 exception `active` du même outil ; inversement une exception sans entrée d'ignorance n'est
 qu'un avertissement.
 
@@ -63,4 +63,5 @@ correspondante ; généré à partir du commit tagué.
 | `/.specify/memory/` | constitution |
 | `/.security/`, `/SECURITY.md`, `/.trivyignore`, `/.gitleaksignore` | exceptions et politique |
 | `/scripts/security/` | validateur |
+| `/LESSON-LEARNED.md` | retours d'expérience (principe VIII) |
 | méthode de score (chemin défini par la feature correspondante) | principe IV |

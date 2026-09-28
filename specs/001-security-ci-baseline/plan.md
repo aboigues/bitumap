@@ -80,7 +80,7 @@ specs/001-security-ci-baseline/
 .github/
 ├── workflows/
 │   ├── codeql.yml          # FR-001 : CodeQL (actions ; python plus tard)
-│   ├── security.yml        # FR-002..005, FR-007, FR-014, FR-015 : jobs parallèles
+│   ├── security.yml        # FR-002..005, FR-007, FR-014, FR-015 + job informatif sensitive-paths
 │   └── release.yml         # FR-010, FR-011 : scan bloquant + SBOM + création de la version
 ├── scanners/
 │   ├── trivy.Dockerfile    # FROM aquasec/trivy:0.74.0@sha256:…   (suivi Dependabot)
@@ -90,7 +90,8 @@ specs/001-security-ci-baseline/
 └── CODEOWNERS              # FR-017
 SECURITY.md                 # FR-016
 .security/
-└── exceptions.toml         # FR-015 : registre (vide au départ)
+├── exceptions.toml         # FR-015 : registre (vide au départ)
+└── allowed-ghsas.txt       # GHSA tolérés par dependency-review (validés par le registre)
 .trivyignore                # généré/contrôlé à partir du registre (vide au départ)
 .gitleaksignore             # idem
 scripts/security/

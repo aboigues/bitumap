@@ -25,7 +25,7 @@ Fichier vide (aucune `[[exception]]`) = valide.
 | Trivy | `.trivyignore` | `CVE-2026-12345 exp:2026-12-30` (même date que `expires`) |
 | Gitleaks | `.gitleaksignore` | empreinte `commit:fichier:règle:ligne` = `finding` |
 | CodeQL | interface GitHub | alerte ignorée avec commentaire `EXC-NNN` |
-| dependency-review | `.github/workflows/security.yml` (`allow-ghsas`) | GHSA = `finding` |
+| dependency-review | `.security/allowed-ghsas.txt` (lu par `security.yml`) | une ligne GHSA = `finding` |
 
 ## Interface du validateur
 
@@ -41,4 +41,4 @@ python3 scripts/security/check_exceptions.py [--registry PATH] [--root PATH] [--
 
 Erreurs détectées : champ manquant ou vide, `tool` inconnu, `id` dupliqué, dates invalides,
 `expires ≤ today` (expirée), `expires − created > 90 j`, entrée `.trivyignore` /
-`.gitleaksignore` sans exception active correspondante, date `exp:` différente de `expires`.
+`.gitleaksignore` / `.security/allowed-ghsas.txt` sans exception active correspondante, date `exp:` différente de `expires`.
