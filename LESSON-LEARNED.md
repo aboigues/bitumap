@@ -33,4 +33,50 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
-_Aucune entrée pour l'instant._
+### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Close
+
+- **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive
+  (`C:\Users\PC\kDrive\...`), passage de la branche `001-security-ci-baseline` à `main`.
+- **Symptôme** : les fichiers de `specs/001-security-ci-baseline/` réapparaissent (avec des fins
+  de ligne CRLF) sur une branche où ils n'existent pas, et sont commités par erreur dans
+  `chore/scaleway-bootstrap` ; supprimés, ils reviennent en moins de 20 s.
+- **Causes racines** :
+  1. Pourquoi réapparaissent-ils ? Le client kDrive interprète la suppression faite par
+     `git switch` comme une divergence et restaure sa copie en ligne.
+  2. Pourquoi a-t-on commité ? `git add -A` prend tout ce qui est non suivi, sans relecture de
+     la liste avant le commit.
+  3. Pourquoi le dépôt est-il dans kDrive ? Emplacement historique du dossier de travail ; la
+     sauvegarde est en réalité assurée par GitHub.
+- **Correctif** : fichiers retirés de la branche par un commit dédié (sans force-push,
+  principe IX).
+- **Mesure préventive** : le dossier du dépôt est **exclu de la synchronisation kDrive**
+  (exclusion suivie d'un redémarrage de kDrive et de la fermeture des fichiers ouverts, sans
+  quoi elle n'est pas appliquée). Vérifié par un aller-retour de branches sans recréation
+  après 45 s. Toujours : n'ajouter que des chemins explicites (jamais `git add -A`) et relire
+  `git status` avant chaque commit. Tout nouveau poste de travail : cloner hors de tout
+  dossier synchronisé (OneDrive, kDrive, Dropbox…).
+- **Références** : branche `chore/scaleway-bootstrap`, commit « fix: retirer les fichiers de la
+  001 recréés par la synchronisation kDrive ».
+
+### LL-001 — Arrêt silencieux du bootstrap Scaleway en relance (2026-09-28) — Close
+
+- **Contexte** : développement, première relance de `infra/bootstrap/bootstrap.sh` pour
+  vérifier son idempotence.
+- **Symptôme** : la relance s'arrête après l'étape 3, sans message ni sortie JSON ; l'étape
+  « bucket d'état » n'est pas exécutée.
+- **Causes racines** :
+  1. Pourquoi l'arrêt ? `jq` échoue (`startswith() requires string inputs`) et `set -e` +
+     `pipefail` stoppent le script.
+  2. Pourquoi `jq` échoue ? `scw object bucket list -o json` renvoie la clé `Name` (majuscule,
+     format S3) et non `name` comme les autres commandes `scw`.
+  3. Pourquoi ne l'a-t-on pas vu ? La première exécution crée le bucket sans passer par ce
+     filtre (liste vide) ; seule la relance lit la liste.
+  4. Pourquoi aucun message ? L'erreur `jq` était redirigée (`2>/dev/null`) et le script
+     n'avait pas de piège `ERR`.
+- **Correctif** : filtre `(.Name // .name)` ; piège `trap … ERR` + `errtrace` qui affiche la
+  ligne et la commande en échec.
+- **Mesure préventive** : tout script d'infrastructure DOIT avoir un piège `ERR` et être
+  exécuté **deux fois** avant sa PR (idempotence), ce qui est désormais noté dans
+  `infra/bootstrap/README.md`. Aucun doublon n'avait été créé : l'arrêt est survenu avant la
+  création.
+- **Références** : branche `chore/scaleway-bootstrap`.

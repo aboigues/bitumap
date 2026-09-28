@@ -21,3 +21,10 @@ Prototype de référence : `docs/reference/prototype-courbevoie-v2.html`.
   `.claude/settings.json` et `.claude/hooks/guard-main.sh`.
 - Principe VIII : tout bug ou incident rencontré ajoute une entrée à `LESSON-LEARNED.md`.
 - Dépendances : vérifier la dernière version stable avant tout ajout.
+
+## Scaleway
+
+- Projet `BITUMAP`, région `fr-par`. Profil scw pour OpenTofu et les commandes courantes :
+  `scw -p bitumap` (droits limités au projet). Le profil `telemach` (administration) ne sert
+  qu'à `infra/bootstrap/bootstrap.sh`, lancé par un humain.
+- Aucune ressource créée à la main : tout passe par OpenTofu (constitution).
