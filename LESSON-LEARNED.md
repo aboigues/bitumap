@@ -33,7 +33,7 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
-### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Ouverte
+### LL-002 — kDrive recrée les fichiers retirés par git (2026-09-28) — Close
 
 - **Contexte** : développement, dépôt cloné dans un dossier synchronisé par kDrive
   (`C:\Users\PC\kDrive\...`), passage de la branche `001-security-ci-baseline` à `main`.
@@ -49,10 +49,12 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
      sauvegarde est en réalité assurée par GitHub.
 - **Correctif** : fichiers retirés de la branche par un commit dédié (sans force-push,
   principe IX).
-- **Mesure préventive** : déplacer le dépôt hors de tout dossier synchronisé (système de
-  fichiers WSL, ex. `~/dev/bitumap`) ; d'ici là, n'ajouter que des chemins explicites
-  (jamais `git add -A`) et relire `git status` avant chaque commit. La leçon sera close une
-  fois le dépôt déplacé.
+- **Mesure préventive** : le dossier du dépôt est **exclu de la synchronisation kDrive**
+  (exclusion suivie d'un redémarrage de kDrive et de la fermeture des fichiers ouverts, sans
+  quoi elle n'est pas appliquée). Vérifié par un aller-retour de branches sans recréation
+  après 45 s. Toujours : n'ajouter que des chemins explicites (jamais `git add -A`) et relire
+  `git status` avant chaque commit. Tout nouveau poste de travail : cloner hors de tout
+  dossier synchronisé (OneDrive, kDrive, Dropbox…).
 - **Références** : branche `chore/scaleway-bootstrap`, commit « fix: retirer les fichiers de la
   001 recréés par la synchronisation kDrive ».
 
