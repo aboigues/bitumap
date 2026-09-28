@@ -1,0 +1,6 @@
+# OpenTofu : état et fichiers locaux (principe « Contraintes techniques » : état jamais commité)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+crash.log
