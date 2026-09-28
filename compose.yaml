@@ -1,0 +1,25 @@
+# Services de développement local (plan 002, quickstart §2). Images épinglées par digest.
+# Ports exposés sur 127.0.0.1 uniquement. Mot de passe lu dans .env (non versionné) :
+# BITUMAP_DB_PASSWORD, obligatoire (voir .env.example).
+services:
+  db:
+    # PostgreSQL 16 ; le schéma reste compatible PostgreSQL ≥ 14 (version de Serverless SQL
+    # Database à vérifier au déploiement : SELECT version()).
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    environment:
+      POSTGRES_USER: bitumap
+      POSTGRES_PASSWORD: ${BITUMAP_DB_PASSWORD:?à définir dans .env}
+      POSTGRES_DB: bitumap
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bitumap"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  s3:
+    # Stockage objet simulé (moto) pour le développement et les tests d'intégration.
+    image: motoserver/moto:5.2.3@sha256:91fd602a21f49cf9eb82fdf474015a3c131d40104c8297ea6a2ca920708ae32c
+    ports:
+      - "127.0.0.1:55000:5000"

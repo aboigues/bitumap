@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block contenu %}
+{% if session %}
+<h1>Demander un rapport</h1>
+<form method="get" action="/communes" class="carte">
+  <label for="code_postal">Code postal (Île-de-France)</label>
+  <input id="code_postal" name="code_postal" inputmode="numeric" pattern="[0-9]{5}"
+         maxlength="5" required autocomplete="postal-code">
+  <button type="submit">Chercher les communes</button>
+</form>
+<p><a href="/demandes">Mes demandes</a></p>
+{% else %}
+<h1>Connexion</h1>
+<p>Saisissez votre adresse e-mail : vous recevrez un lien de connexion, sans mot de passe.</p>
+<form method="post" action="/connexion" class="carte">
+  <label for="email">Adresse e-mail</label>
+  <input id="email" name="email" type="email" required autocomplete="email" maxlength="320">
+  <button type="submit">Recevoir un lien de connexion</button>
+</form>
+<p class="note">Avant de créer un compte, consultez la page
+  <a href="/confidentialite">données personnelles</a>.</p>
+{% endif %}
+{% endblock %}

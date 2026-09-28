@@ -1,7 +1,6 @@
 # Mises à jour automatiques (spec FR-008 ; principe IX : aucune fusion automatique).
-# Écosystèmes à ajouter plus tard :
-#   - Python (« uv » ou « pip ») avec le premier code applicatif (feature 002) ;
-#   - « opentofu » (répertoire de l'IaC) avec les premiers fichiers .tf (feature 002).
+# Écosystème à ajouter plus tard : « opentofu » (répertoire infra/tofu) avec les premiers
+# fichiers .tf (feature 002, phase 7).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -28,6 +27,32 @@ updates:
         patterns: ["*"]
     # Délai avant d'adopter une nouvelle version (versions piégées vite retirées) ;
     # les mises à jour de sécurité ne sont pas retardées.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels: [dependencies, security]
+
+  # Dépendances Python (uv.lock).
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      python:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels: [dependencies, security]
+
+  # Images de base des conteneurs applicatifs (docker/*.Dockerfile).
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: monthly
+    groups:
+      images:
+        patterns: ["*"]
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5

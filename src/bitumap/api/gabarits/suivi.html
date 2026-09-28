@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titre %}Suivi — {{ demande.commune_nom }}{% endblock %}
+{% block contenu %}
+{% if demande.etat in ("en_file", "en_cours") %}<meta http-equiv="refresh" content="30">{% endif %}
+<h1>Rapport de {{ demande.commune_nom }}</h1>
+{% if demande.etat == "en_file" %}
+  <p>Votre demande est en file d'attente, en position <strong>{{ demande.position }}</strong>.
+  {% if demande.reportee %}Le budget quotidien étant atteint, elle sera traitée demain.
+  {% else %}Traitement estimé vers <strong>{{ demande.heure_estimee.astimezone().strftime("%H:%M") }}</strong>.{% endif %}</p>
+  <p class="note">Vous recevrez un e-mail quand le rapport sera prêt ; vous pouvez fermer cette page.</p>
+{% elif demande.etat == "en_cours" %}
+  <p>Génération en cours : étape <strong>{{ {"acquisition": "acquisition des données", "calcul": "calcul des priorités", "rapport": "mise en forme du rapport"}.get(demande.etape, "démarrage") }}</strong>.</p>
+{% elif demande.etat == "terminee" %}
+  <p><a href="/rapports/{{ demande.commune_insee }}/{{ demande.empreinte }}">Ouvrir le rapport</a></p>
+{% else %}
+  <p role="alert">{{ demande.erreur_publique or "La génération n'a pas abouti." }}</p>
+{% endif %}
+<p><a href="/demandes">Mes demandes</a></p>
+{% endblock %}

@@ -16,3 +16,12 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Python : environnements et caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+var/
+
+# Outils locaux
+.playwright-mcp/

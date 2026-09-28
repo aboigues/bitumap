@@ -328,7 +328,9 @@ Prérequis : Docker, `gh`, [`uv`](https://docs.astral.sh/uv/), OpenTofu, `scw`.
 
 ```bash
 cp .env.example .env                       # configuration locale, non versionnée
-uv sync                                    # dépendances (dès la feature 002)
+uv python install 3.14                     # Python complet géré par uv (LL-005)
+UV_PYTHON_PREFERENCE=only-managed uv sync  # dépendances verrouillées
+docker compose up -d --wait db s3          # base PostgreSQL et stockage simulé
 uv run pytest                              # tests
 python3 -m unittest discover -s tests/security   # validateur d'exceptions
 ```

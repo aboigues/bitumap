@@ -105,10 +105,12 @@ def validate(registry: dict, root: Path, today: dt.date):
         elif exp is None:
             errors.append((".trivyignore", f"{finding} sans date exp:AAAA-MM-JJ"))
         elif exp != active["trivy"][finding].isoformat():
-            errors.append((
-                ".trivyignore",
-                f"{finding} exp:{exp} ≠ expires {active['trivy'][finding].isoformat()}",
-            ))
+            errors.append(
+                (
+                    ".trivyignore",
+                    f"{finding} exp:{exp} ≠ expires {active['trivy'][finding].isoformat()}",
+                )
+            )
 
     for line in read_lines(root / ".gitleaksignore"):
         if line not in active["gitleaks"]:
@@ -117,10 +119,12 @@ def validate(registry: dict, root: Path, today: dt.date):
     ghsas = read_lines(root / ".security" / "allowed-ghsas.txt")
     for line in ghsas:
         if line not in active["dependency-review"]:
-            errors.append((
-                ".security/allowed-ghsas.txt",
-                f"{line} sans exception dependency-review active",
-            ))
+            errors.append(
+                (
+                    ".security/allowed-ghsas.txt",
+                    f"{line} sans exception dependency-review active",
+                )
+            )
 
     # Exception active jamais utilisée : sans effet, donc simple avertissement (data-model.md).
     declared = {
@@ -131,7 +135,8 @@ def validate(registry: dict, root: Path, today: dt.date):
     for tool, used in declared.items():
         for finding in active[tool]:
             if finding not in used:
-                warnings.append((finding, f"exception {tool} active mais absente du fichier d'ignorance"))
+                message = f"exception {tool} active mais absente du fichier d'ignorance"
+                warnings.append((finding, message))
 
     return errors, warnings
 
