@@ -186,9 +186,9 @@ avec un avertissement.
   celle du référentiel officiel au moment de la demande.
 - **Commune sans ligne de bus** ou sans aucun point : le rapport est produit et l'indique
   (« aucun point à relever ») plutôt que d'échouer.
-- **Paris (75)** : 20 arrondissements, codes postaux par arrondissement ; la commune est
-  Paris entière. [Hypothèse : Paris est traitée arrondissement par arrondissement si la
-  volumétrie l'exige — à confirmer au plan.]
+- **Paris (75)** : 20 arrondissements, codes postaux par arrondissement ; Paris est traitée
+  **arrondissement par arrondissement** (décision du plan, research R6) : un rapport par
+  arrondissement.
 - **Source indisponible** pendant la génération : nouvelle tentative ; si une source
   optionnelle (photos de rue, îlots de chaleur) reste indisponible, le rapport est produit
   avec le facteur marqué « non évalué » et un avertissement ; si une source indispensable
@@ -213,8 +213,12 @@ avec un avertissement.
 - **Lot vide** au déclenchement : aucun traitement, arrêt immédiat, coût négligeable.
 - **File plus longue qu'un lot** : les demandes restantes passent au lot suivant, dans
   l'ordre d'arrivée ; la position et l'heure estimée affichées sont mises à jour.
-- **Budget quotidien d'IA insuffisant** pour tout le lot : les communes qui dépasseraient le
-  budget restent en file pour le lendemain, le demandeur en est informé.
+- **Budget quotidien d'IA** : s'il est **déjà épuisé au moment de la demande**, la demande est
+  refusée avec un message explicite (US4-3) ; s'il est **insuffisant pour tout un lot**, les
+  communes qui le dépasseraient restent en file pour le lendemain et le demandeur en est
+  informé.
+- **Coût mensuel** : le franchissement du seuil d'alerte mensuel (5 €) prévient le mainteneur
+  mais ne bloque rien (FR-029).
 - **Un déclenchement démarre alors que le lot précédent n'est pas fini** : il ne traite que
   les demandes non prises en charge ; une même demande n'est jamais traitée deux fois.
 
@@ -261,7 +265,9 @@ avec un avertissement.
 - **FR-007d**: Une demande DOIT être prise en charge par un seul lot ; un échec sur une
   commune NE DOIT pas interrompre les autres communes du lot.
 - **FR-008**: Le service DOIT renvoyer un rapport existant, sans recalcul, lorsque la
-  commune, les versions des sources et la version de méthode sont identiques.
+  commune, les versions courantes des sources, la version de méthode et le modèle d'IA sont
+  identiques et que le rapport date de moins de 30 jours. Les versions courantes des sources
+  sont mises à jour au plus une fois par jour.
 - **FR-009**: Le service NE DOIT conserver qu'une demande par commune et par empreinte, en
   file ou en cours ; les demandes concurrentes y sont rattachées.
 - **FR-010**: Le service DOIT identifier les points d'une commune : arrêts de bus desservis,
@@ -277,9 +283,10 @@ avec un avertissement.
   divergences. En 002, ce type est affiché et filtrable mais n'entre pas dans le score.
 - **FR-014**: Le service DOIT estimer par analyse d'images historiques par IA la période de
   la dernière réfection de l'enrobé, **uniquement pour les points P1** (priorités établies
-  avant ce facteur, comme dans le prototype) ; le résultat est marqué « à confirmer » avec
-  le modèle et la date, ne modifie le score que dans les bornes de la méthode (×0,85 à
-  ×1,05), est mis en cache avec le rapport et respecte le plafond de coût (FR-024). Le
+  et **figées** avant ce facteur) ; le résultat est marqué « à confirmer » avec
+  le modèle et la date, ne modifie le score et le rang que dans les bornes de la méthode
+  (×0,85 à ×1,05) et **à l'intérieur des P1** : il ne fait jamais changer un point de
+  priorité (principe V ; écart assumé avec le prototype), est mis en cache avec le rapport et respecte le plafond de coût (FR-024). Le
   modèle d'IA DOIT être hébergé en France (constitution, principe III).
 - **FR-015**: Le service DOIT rattacher à chaque point, quand elle existe, la photo de rue
   ouverte la plus récente à moins de 30 m, avec sa date et un lien.
@@ -312,6 +319,10 @@ avec un avertissement.
 - **FR-024**: Le coût d'IA DOIT être plafonné à 2 € par rapport et à 20 € par jour pour
   l'ensemble du service ; les plafonds atteints produisent un rapport partiel signalé ou un
   refus, jamais une dépense supplémentaire.
+- **FR-029**: Le mainteneur DOIT être alerté, une seule fois par mois civil, dès que le coût
+  du service atteint **5 €** sur le mois : d'une part le coût d'IA cumulé suivi par le
+  service, d'autre part la facturation totale du projet chez l'hébergeur (calcul, base,
+  stockage, e-mail, IA). Cette alerte ne bloque rien.
 - **FR-025**: Les messages d'erreur montrés au demandeur NE DOIVENT contenir aucun détail
   technique ; le détail est dans le journal.
 - **FR-026**: Le service NE DOIT conserver comme données personnelles que l'adresse e-mail
@@ -375,6 +386,8 @@ avec un avertissement.
 - **SC-012**: Sur un échantillon de 30 points P1 dont la date de réfection est connue, l'IA
   donne la bonne période dans au moins 70 % des cas et ne fait jamais changer un point de
   priorité à elle seule.
+- **SC-013**: Le mainteneur reçoit l'alerte mensuelle au plus tard le jour où le coût du mois
+  franchit 5 €, et jamais plus d'une alerte de chaque type par mois.
 
 ## Assumptions
 
@@ -388,12 +401,13 @@ avec un avertissement.
   (3 h) : valeurs de départ réglables ; l'intervalle pourra être allongé si la demande reste
   faible.
 - Quotas, plafonds et durées (5/jour/compte, 50/jour, 3 et 10 liens/h, 15 min, 7 jours,
-  12 mois, 2 €, 20 €/jour, 30 min, 30 m) sont des valeurs de départ réglables sans
-  modification de la spec.
+  12 mois, 2 €, 20 €/jour, 5 €/mois d'alerte, 30 jours de validité d'un rapport, 30 min,
+  30 m) sont des valeurs de départ réglables sans modification de la spec.
 - Inscription ouverte à toute adresse e-mail ; une liste d'adresses ou de domaines autorisés
   pourra être ajoutée si des abus sont constatés (hors périmètre 002).
 - L'estimation de l'âge de l'enrobé reprend la lecture du prototype : comparaison
   d'orthophotos de plusieurs années sur l'emprise du point.
 - Échelle d'une commune seulement ; départements en 005.
-- Le fond de carte provient d'un service public français ; il nécessite une connexion.
+- La carte du rapport est dessinée à partir des données (sans fond de carte) : le rapport est
+  entièrement lisible hors connexion (plan, research R8).
 - La constitution impose antibot, quotas, hébergement en France et journal des coûts.

@@ -20,6 +20,9 @@ dépôt ni dans `.env`.
 | `BITUMAP_IA_PLAFOND_RAPPORT_EUR` | 2 | FR-024 |
 | `BITUMAP_IA_PLAFOND_JOUR_EUR` | 20 | FR-024 |
 | `BITUMAP_IA_MODELE` | issu de l'évaluation (R7) | FR-014 |
+| `BITUMAP_ALERTE_MENSUELLE_EUR` | 5 | FR-029 : seuil d'alerte, sans blocage |
+| `BITUMAP_CACHE_RAPPORT_JOURS` | 30 | FR-008 : validité d'un rapport en cache |
+| `BITUMAP_EMAIL_MAINTENEUR` | **aucun dans le dépôt** : fourni par variable OpenTofu | destinataire des alertes |
 | `BITUMAP_IA_TARIF_ENTREE_EUR_MTOK`, `…_SORTIE_…` | tarif Scaleway en vigueur | calcul du coût |
 | `BITUMAP_PANORAMAX_RAYON_M` | 30 | FR-015 |
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |

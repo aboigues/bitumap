@@ -19,7 +19,7 @@ minimales) et le stockage objet (rapports immuables, cache des sources).
 | Champ | Type | Règles |
 |---|---|---|
 | `empreinte_jeton` | octets (SHA-256) | clé ; le jeton en clair n'est jamais stocké |
-| `compte_id` | uuid | → compte (créé à la première validation si inexistant) |
+| `compte_id` | uuid, **nul** | → compte ; nul tant que le lien n'a pas été validé, le compte étant créé à la première validation |
 | `email` | texte | adresse visée, pour créer le compte au premier usage |
 | `emis_le`, `expire_le` | horodatage | `expire_le = emis_le + 15 min` |
 | `utilise_le` | horodatage, nul | usage unique : mise à jour conditionnelle `WHERE utilise_le IS NULL` |
@@ -44,7 +44,7 @@ minimales) et le stockage objet (rapports immuables, cache des sources).
 
 | Champ | Type | Règles |
 |---|---|---|
-| `cle` | texte | `generation:compte:{id}:{jour}`, `generation:global:{jour}`, `lien:email:{empreinte}:{heure}`, `lien:origine:{empreinte_ip_salée}:{heure}` |
+| `cle` | texte | `generation:compte:{id}:{jour}`, `generation:global:{jour}`, `lien:email:{empreinte}:{heure}`, `lien:origine:{empreinte_ip_salée}:{heure}`, `defi:origine:{empreinte_ip_salée}:{heure}` |
 | `valeur` | entier | incrément atomique ; comparaison aux plafonds de `config` |
 | `expire_le` | horodatage | purge ; identifiants d'origine ≤ 24 h (FR-026) |
 
@@ -98,7 +98,34 @@ en_file ──(budget IA du jour épuisé)──▶ en_file (reportée au lendem
 | Champ | Type | Règles |
 |---|---|---|
 | `jour` | date | clé |
-| `montant_eur` | décimal | réservation **avant** chaque appel, ajustement après ; ≤ 20 € (FR-024) |
+| `montant_eur` | décimal | réservation **avant** chaque appel, ajustement après ; ≤ 20 € (FR-024) ; somme du mois civil comparée au seuil d'alerte de 5 € (FR-029) |
+
+### source_version
+
+| Champ | Type | Règles |
+|---|---|---|
+| `source` | texte | clé composée avec `portee` |
+| `portee` | texte | `regionale` ou code INSEE |
+| `date_extraction` | date | version courante, utilisée pour l'empreinte |
+| `rafraichie_le` | horodatage | rafraîchissement au plus une fois par jour, par les lots |
+
+L'API lit cette table pour décider si un rapport en cache est encore valide (FR-008) : même
+empreinte **et** rapport de moins de 30 jours.
+
+### alerte_envoyee
+
+| Champ | Type | Règles |
+|---|---|---|
+| `cle` | texte | clé ; `cout_mensuel_ia:{AAAA-MM}`, `budget_jour:{AAAA-MM-JJ}`, `lot_en_echec:{lot_id}` |
+| `envoyee_le` | horodatage | garantit une seule alerte par clé (FR-029, SC-013) |
+
+### ia_cache_point
+
+| Champ | Type | Règles |
+|---|---|---|
+| `point_id`, `millesimes`, `modele`, `version_prompt` | texte | clé composée (research R7-bis) |
+| `reponse` | JSON | réponse validée, réutilisée sans nouvel appel ni coût |
+| `cree_le` | horodatage | |
 
 ## Stockage objet
 
@@ -133,5 +160,11 @@ Formats : [contracts/report-bundle.md](contracts/report-bundle.md).
 
 ### Empreinte
 
-`sha256(insee | version_methode | trié(source:date_extraction) | version_prompt_ia)` ; tronquée
-à 16 caractères hexadécimaux dans les chemins.
+`sha256(insee | version_methode | trié(source:date_extraction) | modele_ia | version_prompt_ia)` ;
+tronquée à 16 caractères hexadécimaux dans les chemins. Le modèle d'IA en fait partie : en
+changer produit de nouveaux rapports (principe IV).
+
+### Priorités et IA
+
+Les priorités (P1 / P2 / P3) sont **figées avant** l'application de l'âge de l'enrobé ; ce
+facteur ne réordonne les points qu'à l'intérieur des P1 (FR-014, SC-012, principe V).

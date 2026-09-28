@@ -30,8 +30,9 @@ jamais de trace technique (FR-025).
 | `GET /demandes` | — | mes demandes : commune, état, date, lien | `401` |
 | `GET /demandes/{id}` | — | suivi : état, position, heure estimée, étape, lien final ; rafraîchissement automatique toutes les 30 s | `404` (demande inconnue ou non rattachée au compte), `401` |
 
-Règles `POST /demandes` : validation de l'antibot → quota compte → quota global → cache
-(empreinte calculée à partir des dates d'extraction connues) → rattachement à une demande
+Règles `POST /demandes` : validation de l'antibot → quota compte → quota global → budget IA
+du jour (déjà épuisé ⇒ `budget_ia_epuise`) → cache (empreinte calculée à partir de la table
+`source_version`, du modèle d'IA et de la version de méthode ; rapport de moins de 30 jours) → rattachement à une demande
 active de même empreinte (sans décompte du quota) → création `en_file`.
 
 Heure estimée = prochain déclenchement + ⌈position / 10⌉ × durée moyenne d'un lot récent.

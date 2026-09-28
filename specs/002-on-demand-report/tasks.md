@@ -47,6 +47,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T005 [P] Créer `.github/workflows/tests.yml` (job `name: tests` : `uv sync --frozen`, `ruff check`, `ruff format --check`, `pytest` avec service PostgreSQL) en respectant les règles de la 001 (permissions minimales, actions `actions/*` épinglées par SHA, `persist-credentials: false`, `runs-on: ubuntu-26.04`) ; vérifier en local avec zizmor et actionlint (CLAUDE.md)
 - [ ] T006 [P] Ajouter `python` à la matrice de `.github/workflows/codeql.yml` et les écosystèmes `uv` (répertoire `/`) et `docker` (répertoire `/docker`) avec cooldown 7 jours dans `.github/dependabot.yml`
 - [ ] T007 [P] Compléter `.gitignore` : `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `var/` (sorties locales)
+- [ ] T089 Corriger l'analyse des images dans `.github/workflows/security.yml` et `.github/workflows/release.yml` (constitution, principe I) : rechercher les fichiers `Dockerfile` **et** `*.Dockerfile` hors `.git/` et `.github/`, construire avec **la racine du dépôt comme contexte** (`docker build -f <fichier> .`), afficher le nom de chaque image analysée ; vérifier sur la PR, dans le journal, que les images `api` et `job` sont bien construites et analysées (un contrôle vert ne suffit pas, LL-003) ; zizmor et actionlint en local
 
 ---
 
@@ -57,7 +58,7 @@ SC-004, SC-006, SC-010, SC-012).
 **⚠️ CRITICAL**: aucune user story avant la fin de cette phase
 
 - [ ] T008 Implémenter `src/bitumap/config.py` (pydantic-settings) avec **toutes** les variables et valeurs par défaut de `contracts/configuration.md` ; les secrets en `SecretStr`, jamais journalisés
-- [ ] T009 Écrire `src/bitumap/db/migrations/001_schema.sql` selon data-model.md : tables `compte` (`email` unique, minuscules), `lien_connexion` (clé `empreinte_jeton` SHA-256, `expire_le = emis_le + 15 min`, `utilise_le` nul), `session`, `preuve_antibot` (clé `signature`), `compteur_quota`, `demande` (états `en_file`, `en_cours`, `terminee`, `en_echec` ; étapes `acquisition`, `calcul`, `rapport` ; `tentatives ≤ 2` ; **index unique partiel sur `empreinte` quand `etat` ∈ {en_file, en_cours}**), `demandeur_demande`, `lot` (`nb_demandes ≤ 10`), `cout_ia_jour`, `ia_cache_point` (clé : point, millésimes, modèle, version du prompt ; R7-bis)
+- [ ] T009 Écrire `src/bitumap/db/migrations/001_schema.sql` selon data-model.md : tables `compte` (`email` unique, minuscules), `lien_connexion` (clé `empreinte_jeton` SHA-256, `compte_id` **nullable** (compte créé à la première validation), `expire_le = emis_le + 15 min`, `utilise_le` nul), `source_version` (source, portée, date d'extraction courante, rafraîchie le), `alerte_envoyee` (clé, envoyée le : une alerte par mois au plus), `session`, `preuve_antibot` (clé `signature`), `compteur_quota`, `demande` (états `en_file`, `en_cours`, `terminee`, `en_echec` ; étapes `acquisition`, `calcul`, `rapport` ; `tentatives ≤ 2` ; **index unique partiel sur `empreinte` quand `etat` ∈ {en_file, en_cours}**), `demandeur_demande`, `lot` (`nb_demandes ≤ 10`), `cout_ia_jour`, `ia_cache_point` (clé : point, millésimes, modèle, version du prompt ; R7-bis)
 - [ ] T010 Implémenter `src/bitumap/db/connexion.py` (pool psycopg, transactions) et `src/bitumap/db/migrer.py` (applique les migrations dans l'ordre, table `schema_version`, idempotent)
 - [ ] T011 [P] Créer `tests/conftest.py` : base PostgreSQL de test (compose), S3 simulé (moto), horloge injectable, client HTTP FastAPI ; marqueur `reseau` pour les tests qui appellent de vraies API
 - [ ] T012 [P] Implémenter `src/bitumap/stockage.py` : buckets rapports et cache, `ecrire`, `lire`, `existe`, écriture de `rapport.html` **en dernier** (contracts/lot-job.md)
@@ -68,7 +69,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T017 Implémenter `src/bitumap/api/auth.py` : `POST /connexion` (réponse **identique** que le compte existe ou non, FR-006b), `GET /connexion/{jeton}` (jeton 32 octets, seule l'empreinte SHA-256 stockée, usage unique par `UPDATE … WHERE utilise_le IS NULL`, 15 min), session cookie `__Host-session` (`Secure`, `HttpOnly`, `SameSite=Lax`, 7 jours), jeton CSRF vérifié sur chaque `POST`, `POST /deconnexion`, dépendance `session_requise`
 - [ ] T018 Tests `tests/api/test_auth.py` : lien valide, réutilisé (410), expiré (410), autre appareil accepté, CSRF manquant refusé, réponse identique pour adresse connue et inconnue
 - [ ] T019 [P] Implémenter `src/bitumap/sources/base.py` : interface d'adaptateur (`acquerir(emprise) → extraction` avec licence, URL, date), client HTTP partagé, cache régional / communal (data-model.md, stockage objet)
-- [ ] T020 [P] Implémenter `src/bitumap/score/methode.py` (constante `VERSION_METHODE = "1.0"`) et `src/bitumap/lot/empreinte.py` : `sha256(insee | version_methode | trié(source:date_extraction) | version_prompt_ia)` tronquée à 16 caractères
+- [ ] T020 [P] Implémenter `src/bitumap/score/methode.py` (constante `VERSION_METHODE = "1.0"`) et `src/bitumap/lot/empreinte.py` : `sha256(insee | version_methode | trié(source:date_extraction) | modele_ia | version_prompt_ia)` tronquée à 16 caractères (le modèle d'IA fait partie de l'empreinte, principe IV)
 - [ ] T021 [P] Créer `src/bitumap/journal.py` : structure de `journal.json` (contracts/report-bundle.md), sans aucune donnée personnelle
 
 **Checkpoint**: base migrée, connexion par lien fonctionnelle en local, adaptateurs prêts à écrire
@@ -87,7 +88,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T023 [P] [US1] Écrire `tests/adaptateurs/test_sources.py` : chaque adaptateur, sur les extractions figées, produit les champs attendus avec licence, URL et date
 - [ ] T024 [P] [US1] Écrire `tests/unit/test_facteurs.py` et `tests/unit/test_score.py` (effets de la méthode 1.0, bornes, priorités 20/40/40, déterminisme)
 - [ ] T025 [P] [US1] Écrire `tests/non_regression/test_courbevoie.py` : **SC-003** (≥ 80 % des P1 du prototype parmi les P1, écarts listés avec leur cause) et **SC-004** (deux exécutions ⇒ classement identique à 100 %)
-- [ ] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
+- [ ] T026 [P] [US1] Écrire `tests/lot/test_lot.py` : file vide ⇒ fin < 30 s ; commune sans ligne de bus ⇒ rapport produit indiquant « aucun point à relever » ; deux lots concurrents ne prennent jamais la même demande ; échec d'une commune sans effet sur les autres ; demande rattachée à une demande active ; reprise après lot interrompu (`tentatives < 2`)
 - [ ] T027 [P] [US1] Écrire `tests/api/test_parcours.py` : parcours du tableau quickstart §2 (hors antibot et quotas, testés en US2)
 
 ### Sources (adaptateurs)
@@ -108,7 +109,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T038 [P] [US1] Implémenter `src/bitumap/facteurs/site.py` : pente ≥ 3 % jusqu'à ×1,32 ; béton ou pavés ×0,5 ; pente > 9 % jugée douteuse et ignorée ; ouvrage d'art signalé
 - [ ] T039 [P] [US1] Implémenter `src/bitumap/facteurs/ensoleillement.py` (méthode 1.0) : heures de soleil direct 8 h–20 h à la mi-juillet (pvlib), ombres des bâtiments BD TOPO et des arbres (infrarouge) ; effet ×0,8 à ×1,2 ; limites documentées
 - [ ] T040 [P] [US1] Implémenter `src/bitumap/facteurs/chaleur.py` : aléa 0–16 ⇒ ×0,92 à ×1,08 ; « non évalué » si source indisponible
-- [ ] T041 [US1] Implémenter `src/bitumap/score/combinaison.py` : produit des facteurs, normalisation 0–100, rangs, priorités P1 20 % / P2 40 % / P3 reste (FR-011, FR-012), puis application de l'âge de l'enrobé aux P1 (×0,85 si réfection il y a 5 à 12 ans, ×1,05 au-delà de 12 ans, inchangé sous 5 ans) et reclassement
+- [ ] T041 [US1] Implémenter `src/bitumap/score/combinaison.py` : produit des facteurs, normalisation 0–100, rangs, priorités P1 20 % / P2 40 % / P3 reste (FR-011, FR-012) **figées à ce stade** ; puis application de l'âge de l'enrobé aux P1 (×0,85 si réfection il y a 5 à 12 ans, ×1,05 au-delà de 12 ans, inchangé sous 5 ans) qui ne modifie que le score et le rang **à l'intérieur des P1** : un point ne change jamais de priorité à cause de l'IA (SC-012, principe V) ; test dédié dans `tests/unit/test_score.py`
 
 ### IA vision (âge de l'enrobé)
 
@@ -121,7 +122,7 @@ SC-004, SC-006, SC-010, SC-012).
 ### Lot
 
 - [ ] T047 [US1] Implémenter `src/bitumap/lot/prise_en_charge.py` : requête `FOR UPDATE SKIP LOCKED` de `contracts/lot-job.md`, taille `BITUMAP_LOT_TAILLE`, remise en file des demandes d'un lot de plus de 3 h, report au lendemain si le budget IA est insuffisant
-- [ ] T048 [US1] Implémenter `src/bitumap/lot/regional.py` : acquisition unique par lot des sources régionales (IDFM, OSM, îlots de chaleur) depuis le cache si à jour ; mesure de `lot.duree_regionale_s` (FR-007b)
+- [ ] T048 [US1] Implémenter `src/bitumap/lot/regional.py` : acquisition unique par lot des sources régionales (IDFM, OSM, îlots de chaleur) depuis le cache si à jour ; rafraîchissement au plus une fois par jour, puis mise à jour de la table `source_version` lue par l'API ; mesure de `lot.duree_regionale_s` (FR-007b)
 - [ ] T049 [US1] Implémenter `src/bitumap/lot/commune.py` : étapes `acquisition` → `calcul` → `rapport` avec mise à jour de `demande.etape`, délai maximal de 30 min, isolement des erreurs, sources indispensables vs optionnelles (contracts/lot-job.md)
 - [ ] T050 [US1] Implémenter `src/bitumap/lot/__main__.py` : enregistrement du lot, boucle des communes, notifications par e-mail à **chaque** compte rattaché (succès ou échec), codes de sortie 0/1, option `--isoler` (mesure SC-002b)
 - [ ] T051 [US1] Implémenter `src/bitumap/rapport/rendu.py` et le gabarit de base `src/bitumap/rapport/gabarits/rapport.html.j2` : synthèse, liste classée, fiche, méthode, sources (complétés en US3) ; écriture de `points.geojson`, `sources.json`, `journal.json`, puis `rapport.html`
@@ -129,7 +130,8 @@ SC-004, SC-006, SC-010, SC-012).
 ### API et pages
 
 - [ ] T052 [US1] Implémenter `src/bitumap/api/communes.py` : `GET /communes?code_postal=` (session requise, erreurs de `contracts/http-api.md`)
-- [ ] T053 [US1] Implémenter `src/bitumap/api/demandes.py` : `POST /demandes` (cache ⇒ `303` vers le rapport ; demande active de même empreinte ⇒ rattachement sans décompte ; sinon création `en_file`), `GET /demandes`, `GET /demandes/{id}` (position, heure estimée = prochain déclenchement + ⌈position/10⌉ × durée moyenne d'un lot, étape)
+- [ ] T053 [US1] Implémenter `src/bitumap/api/demandes.py` : `POST /demandes` (cache valide ⇒ `303` vers le rapport ; **cache valide** = rapport dont l'empreinte correspond aux versions courantes de `source_version` et produit depuis moins de `BITUMAP_CACHE_RAPPORT_JOURS` (30) jours ; demande active de même empreinte ⇒ rattachement sans décompte ; sinon création `en_file`), `GET /demandes`, `GET /demandes/{id}` (position, heure estimée = prochain déclenchement + ⌈position/10⌉ × durée moyenne d'un lot, étape)
+- [ ] T090 [P] [US1] Écrire `tests/api/test_cache.py` : rapport à jour servi sans nouvelle demande ; rapport de plus de 30 jours ou dont une source a une version plus récente ⇒ nouvelle demande `en_file` ; changement de modèle d'IA ⇒ nouvelle empreinte
 - [ ] T054 [US1] Implémenter `src/bitumap/api/rapports.py` : `GET /rapports/{insee}/{empreinte}` et `/points.geojson`, session requise, fichier lu dans le stockage privé et renvoyé par l'API, `Cache-Control: private, no-store` (FR-021)
 - [ ] T055 [US1] Créer les pages `src/bitumap/api/gabarits/` : accueil (e-mail ou code postal), choix de la commune, suivi (rafraîchi toutes les 30 s), mes demandes ; accessibles au clavier et au lecteur d'écran, lisibles sur téléphone
 
@@ -146,7 +148,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T056 [P] [US2] Écrire `tests/api/test_abus.py` : preuve absente, invalide ou rejouée ; 6ᵉ demande du jour d'un compte ; 51ᵉ demande globale ; 4ᵉ lien en 1 h pour une adresse, 11ᵉ pour une origine ; réponse identique pour une adresse inconnue ; accès au rapport sans session ; budget IA du jour épuisé
 - [ ] T057 [US2] Implémenter `src/bitumap/api/antibot.py` : `GET /altcha/defi` (valable 10 min, clé HMAC du secret `bitumap-altcha-hmac`), vérification avec la bibliothèque `altcha`, enregistrement de la signature dans `preuve_antibot` pour refuser toute réutilisation, purge après 1 h
 - [ ] T058 [P] [US2] Intégrer le widget ALTCHA 3.2.3 **auto-hébergé** dans `src/bitumap/api/statique/altcha/` avec empreinte SHA-256 vérifiée par `tools/verifier_altcha.py` ; aucun appel à un CDN (CSP `script-src 'self'`)
-- [ ] T059 [US2] Implémenter `src/bitumap/api/quotas.py` : clés de `compteur_quota` (data-model.md), incrément atomique, adresse IP **empreinte salée** avec le secret `bitumap-sel-origine` renouvelé chaque jour, conservation ≤ 24 h (FR-026)
+- [ ] T059 [US2] Implémenter `src/bitumap/api/quotas.py` : clés de `compteur_quota` (data-model.md, dont `defi:origine:{empreinte_ip_salée}:{heure}` pour 60 défis par heure), incrément atomique, adresse IP **empreinte salée** avec le secret `bitumap-sel-origine` renouvelé chaque jour, conservation ≤ 24 h (FR-026)
 - [ ] T060 [US2] Brancher antibot et quotas sur `POST /connexion` et `POST /demandes` dans `src/bitumap/api/auth.py` et `src/bitumap/api/demandes.py`, dans l'ordre de `contracts/http-api.md` ; erreur `budget_ia_epuise`
 - [ ] T061 [US2] Implémenter `POST /compte/suppression` dans `src/bitumap/api/compte.py` et la purge dans `src/bitumap/db/purge.py` (comptes inactifs depuis 12 mois, liens, sessions, preuves et compteurs expirés), appelée au début de chaque lot (FR-027)
 - [ ] T062 [P] [US2] Créer la page `src/bitumap/api/gabarits/confidentialite.html` (finalité, données conservées, durées, droits, suppression du compte) et l'afficher avant la création du compte (FR-027)
@@ -179,7 +181,8 @@ SC-004, SC-006, SC-010, SC-012).
 **Independent Test**: quickstart §3 (plafond forcé à 0,01 €) et §5 (évaluation des modèles)
 
 - [ ] T069 [US4] Compléter `src/bitumap/journal.py` et `src/bitumap/lot/__main__.py` : durées par étape, nombre de points, appels, jetons, coût IA, non évalués, avertissements, erreurs (FR-023) ; statistiques du lot en base
-- [ ] T070 [US4] Implémenter l'alerte au mainteneur quand le budget quotidien est atteint ou qu'un lot échoue : e-mail à l'adresse `BITUMAP_EMAIL_MAINTENEUR` (à ajouter à `contracts/configuration.md`) et journal structuré lisible dans Cockpit
+- [ ] T070 [US4] Implémenter l'alerte au mainteneur quand le budget quotidien est atteint ou qu'un lot échoue : e-mail à l'adresse `BITUMAP_EMAIL_MAINTENEUR` (valeur fournie par variable OpenTofu ou secret, **jamais versionnée**) et journal structuré lisible dans Cockpit
+- [ ] T091 [US4] Implémenter l'**alerte mensuelle** dans `src/bitumap/ia/budget.py` : dès que le coût d'IA cumulé du mois civil (somme de `cout_ia_jour`) atteint `BITUMAP_ALERTE_MENSUELLE_EUR` (5 €), un e-mail au mainteneur, **un seul par mois** (table `alerte_envoyee`) ; alerte seulement, **aucun blocage** (les plafonds FR-024 restent les seuls blocages) ; test dans `tests/unit/test_journal.py`
 - [ ] T071 [P] [US4] Écrire `tests/unit/test_journal.py` : plafond de 0,01 € ⇒ rapport produit, P1 « âge non évalué », avertissement, aucune dépense supplémentaire (US4-2)
 - [ ] T072 [US4] Implémenter `src/bitumap/ia/evaluer.py` : compare `mistral-medium-3.5-128b`, `mistral-small-3.2-24b-instruct-2506` et `qwen3.8-27b` sur `tests/fixtures/ia/echantillon_30.json` (exactitude de la période, coût réel en jetons, aucun changement de priorité dû à l'IA seule, SC-012) ; rapport de comparaison en Markdown
 - [ ] T073 [US4] Constituer avec le mainteneur `tests/fixtures/ia/echantillon_30.json` : 30 points P1 dont la date de réfection est connue (vérité terrain), puis lancer T072 et reporter le modèle retenu dans la configuration et dans `specs/002-on-demand-report/research.md` (R7)
@@ -199,22 +202,29 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T080 Créer `infra/tofu/api.tf` : conteneur serverless `min_scale = 0`, `max_scale = 2`, image par digest, références de secrets, variables d'environnement, sonde `/sante`
 - [ ] T081 Créer `infra/tofu/job.tf` : `scaleway_job_definition` avec `cron { schedule = "*/15 * * * *", timezone = "Europe/Paris" }`, `timeout = "3h"`, image par digest, références de secrets
 - [ ] T082 [P] Créer `infra/tofu/courriel.tf` : domaine Transactional Email (variable `domaine_envoi`) et sorties des enregistrements DNS à créer (SPF, DKIM, DMARC, MX)
+- [ ] T092 Mettre en place l'**alerte de facturation Scaleway à 5 € par mois** sur le projet `BITUMAP` (tout le coût : calcul, base, stockage, e-mail, IA) : ressource OpenTofu dans `infra/tofu/alertes.tf` si le fournisseur Scaleway 2.83 la propose (vérifier), sinon procédure pas à pas pour le mainteneur dans `infra/tofu/README.md` (action humaine, console de facturation) ; destinataire non versionné
 - [ ] T083 Étendre `.github/workflows/release.yml` : construction des images `api` et `job`, analyse Trivy bloquante, publication vers le registre Scaleway avec le secret GitHub de `bitumap-ci`, digests en sortie de la version ; vérifier avec zizmor et actionlint
 - [ ] T084 [P] Mettre à jour `README.md` : file d'attente et lots dans les deux diagrammes, base Serverless SQL, carte SVG (au lieu de MapLibre), connexion par e-mail, rapports réservés
-- [ ] T085 [P] Créer `docs/methode/CHANGELOG.md` : méthode 1.0 (facteurs, effets, priorités, limites connues de l'ensoleillement et des îlots de chaleur)
+- [ ] T085 [P] Créer `docs/methode/CHANGELOG.md` : méthode 1.0 (facteurs, effets, priorités, limites connues de l'ensoleillement et des îlots de chaleur) et **écart assumé avec le prototype** : les priorités sont figées avant l'âge de l'enrobé, qui ne réordonne qu'à l'intérieur des P1 (le prototype faisait descendre certains P1 en P2)
 - [ ] T086 Revue de sécurité de la branche : en-têtes, cookies, CSRF, absence de secret et de donnée personnelle dans les journaux et le dépôt, requêtes SQL paramétrées ; `/security-review` si pertinent
 - [ ] T087 Dérouler le quickstart §1 à §4 en local et consigner les résultats (dont SC-002b) dans la description de la PR ; une entrée `LESSON-LEARNED.md` pour chaque incident rencontré
-- [ ] T088 Pousser la branche `002-on-demand-report` et ouvrir la PR vers `main`, avec la liste des actions humaines : domaine d'envoi, bootstrap, secret GitHub, ajout de `tests` aux contrôles requis du ruleset, `tofu apply`, quickstart §6
+- [ ] T088 Pousser la branche `002-on-demand-report` et ouvrir la PR vers `main`, avec la liste des actions humaines : domaine d'envoi, bootstrap, secret GitHub, ajout de `tests` aux contrôles requis du ruleset, alerte de facturation (T092), `tofu apply`, quickstart §6 dont la **mesure de SC-001** (premier accès à un rapport en cache après 30 min d'inactivité, démarrage à froid du conteneur et de la base compris : < 10 s)
 
 ---
 
 ## Dependencies & Execution Order
 
-- **Setup (T001–T007)** → **Foundational (T008–T021)** → user stories.
+Les tâches T089 à T092, ajoutées après `/speckit-analyze`, sont insérées dans leur phase à
+leur place d'exécution ; leur numéro ne suit donc pas l'ordre du fichier.
+
+- **Setup (T001–T007, T089)** → **Foundational (T008–T021)** → user stories. T089 après
+  T003 (les Dockerfiles doivent exister).
 - **US1 (T022–T055)** : tests T022–T027 en premier ; adaptateurs T028–T034 en parallèle ; T035 → facteurs T036–T040 en parallèle → T041 ; IA T042–T044 en parallèle → T045 ; lot T047 → T048 → T049 → T050 ; T051 après T041 et T045 ; API T052 → T053 → T054 → T055.
 - **US2 (T056–T062)** : dépend de T017 (connexion) et T053 (demandes) ; indépendante du pipeline de calcul.
 - **US3 (T063–T068)** : dépend de T030 (BD TOPO) et T051 (rendu de base).
-- **US4 (T069–T073)** : dépend de T043, T045 et T050 ; T073 exige le mainteneur (vérité terrain).
+- **US1** : T090 avant T053 (tests d'abord).
+- **US4 (T069–T073, T091)** : dépend de T043, T045 et T050 ; T073 exige le mainteneur (vérité terrain) ; T091 après T043.
+- **Phase 7** : T092 après T075.
 - **Phase 7** : T074 avant T079–T081 ; T075 avant les autres fichiers OpenTofu ; T083 après T003 ; T087 et T088 en dernier.
 
 ## Parallel Example

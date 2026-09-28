@@ -78,6 +78,12 @@ git tag v0.1.0 && git push origin v0.1.0     # CI : analyse, SBOM, images → re
 cd infra/tofu && tofu init && tofu plan && tofu apply   # profil scw « bitumap »
 ```
 
+Alerte de facturation : vérifier que l'alerte à 5 € par mois du projet `BITUMAP` existe
+(OpenTofu ou console, tâche T092).
+
+**SC-001** : après 30 minutes sans aucune requête (conteneur et base endormis), ouvrir un
+rapport déjà en cache et mesurer le temps jusqu'à son affichage : moins de 10 s.
+
 Puis refaire §2 sur l'URL publique avec une vraie adresse e-mail : e-mail reçu en < 1 min
 (SC-011), rapport Courbevoie disponible en < 45 min (SC-002), aucune instance active une fois
 le lot terminé (SC-008, vérifié dans Cockpit).
