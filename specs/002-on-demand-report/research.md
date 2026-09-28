@@ -95,6 +95,43 @@ GitHub, documentation Scaleway).
 - Coût calculé à partir des jetons consommés et du tarif configuré ; plafonds FR-024
   appliqués **avant** chaque appel.
 
+### R7-bis. Estimation du coût de l'IA vision (2026-09-28)
+
+Tarifs Scaleway Generative APIs (serverless, € par million de jetons, entrée / sortie) et
+taille des jetons d'image (documentation des modèles). Hypothèses : P1 = 20 % des points
+(Courbevoie : 31 P1 sur 153) ; par point, 6 orthophotos 512×512 px, environ 600 jetons de
+consignes, environ 150 jetons de réponse.
+
+| Modèle | € entrée / sortie | Jetons par image | € / point | € / rapport Courbevoie (31 P1) | € / grande commune (100 P1) |
+|---|---|---|---|---|---|
+| mistral-medium-3.5-128b | 1,50 / 7,50 | 361 | 0,0053 | 0,16 | 0,53 |
+| mistral-small-3.2-24b | 0,15 / 0,35 | 361 | 0,0005 | 0,015 | 0,05 |
+| qwen3.8-27b | 0,60 / 3,30 | 256 | 0,0018 | 0,055 | 0,18 |
+| pixtral-12b | 0,20 / 0,20 | 1 024 | 0,0014 | 0,043 | 0,14 |
+| gemma-4-26b | 0,25 / 0,50 | 64 (896 px max) | 0,0003 | 0,010 | 0,03 |
+
+Scénarios (rapport type Courbevoie) :
+
+| Modèle | 1 rapport/jour (€/mois) | 10 rapports d'un coup (€) | 10 rapports/jour (€/mois) |
+|---|---|---|---|
+| mistral-medium-3.5 | 4,90 | 1,63 | 49 |
+| mistral-small-3.2 | 0,43 | 0,14 | 4,35 |
+| qwen3.8-27b | 1,65 | 0,55 | 16,50 |
+
+Conséquences :
+
+- Les plafonds (2 €/rapport, 20 €/jour) ne sont jamais approchés en usage normal : ils
+  protègent contre les abus et les erreurs (boucle, image trop grande), pas contre l'usage.
+- Le **choix du modèle** pèse ×11 (medium vs small) ; le **mode de traitement** (lot ou un par
+  un) ne change pas le coût de l'IA : il y a autant de points à analyser.
+- Leviers réels : (1) cache par point des réponses IA, indexé par point, millésimes
+  d'orthophoto, modèle et version du prompt : une commune régénérée sans nouveau millésime
+  ne coûte plus rien en IA ; (2) API de traitement par lots de Scaleway, **-50 %**, mais délai
+  de réponse à vérifier face à SC-002 (45 min) ; (3) premier million de jetons offert selon la
+  page tarifs (environ 11 rapports Courbevoie avec les Mistral).
+- À mesurer à l'implémentation : jetons réels par image (redimensionnement propre à chaque
+  modèle), longueur réelle des réponses (les modèles Qwen peuvent raisonner longuement).
+
 ## R8. Rapport
 
 - **Décision** : HTML autonome rendu avec Jinja2, **carte en SVG dessinée à partir des
