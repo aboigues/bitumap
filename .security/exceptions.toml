@@ -17,3 +17,12 @@
 # owner = "aboigues"
 # created = 2026-10-01
 # expires = 2026-12-30
+
+[[exception]]
+id = "EXC-001"
+tool = "codeql"
+finding = "0"
+reason = "Piège : exception expirée"
+owner = "aboigues"
+created = 2026-08-01
+expires = 2026-09-01
