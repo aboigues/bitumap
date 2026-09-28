@@ -21,6 +21,15 @@ Ouvrir la PR `001-security-ci-baseline` → `main`. Attendu : les 6 contrôles d
 [contracts/required-checks.md](contracts/required-checks.md) apparaissent et sont verts en
 moins de 10 minutes (SC-003).
 
+Vérifier ensuite que **chaque outil a publié ses résultats** (un contrôle vert ne le prouve
+pas, LL-003) :
+
+```bash
+gh api 'repos/aboigues/bitumap/code-scanning/analyses?per_page=30' \
+  --jq '[.[] | .tool.name] | unique'
+# attendu : CodeQL, Gitleaks (ou gitleaks), Trivy, zizmor
+```
+
 Après fusion, le mainteneur ajoute ces contrôles et la règle *code scanning* au ruleset.
 
 ## 3. Branches pièges (SC-001) — jamais fusionnées

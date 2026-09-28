@@ -77,8 +77,13 @@ jobs:
             "$image" git /repo --redact --no-banner \
             --gitleaks-ignore-path /repo/.gitleaksignore \
             --report-format sarif --report-path /out/gitleaks.sarif
+      # hashFiles() ne voit que l'espace de travail : présence du rapport testée explicitement (LL-003).
+      - name: Présence du rapport gitleaks
+        id: gitleaks-report
+        if: always()
+        run: echo "present=$([ -s "$RUNNER_TEMP/gitleaks.sarif" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publication des résultats
-        if: always() && hashFiles(format('{0}/gitleaks.sarif', runner.temp)) != ''
+        if: always() && steps.gitleaks-report.outputs.present == 'true'
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: ${{ runner.temp }}/gitleaks.sarif
@@ -103,8 +108,13 @@ jobs:
             -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
             fs --cache-dir /cache --scanners vuln,misconfig --skip-dirs .git \
             --format sarif --output /out/trivy.sarif .
+      # hashFiles() ne voit que l'espace de travail : présence du rapport testée explicitement (LL-003).
+      - name: Présence du rapport trivy
+        id: trivy-report
+        if: always()
+        run: echo "present=$([ -s "$RUNNER_TEMP/trivy.sarif" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publication des résultats
-        if: always() && hashFiles(format('{0}/trivy.sarif', runner.temp)) != ''
+        if: always() && steps.trivy-report.outputs.present == 'true'
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: ${{ runner.temp }}/trivy.sarif
@@ -152,8 +162,13 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -w /src "$image" \
             --offline --config .github/zizmor.yml --persona pedantic --format sarif . \
             > "$RUNNER_TEMP/zizmor.sarif" || true
+      # hashFiles() ne voit que l'espace de travail : présence du rapport testée explicitement (LL-003).
+      - name: Présence du rapport zizmor
+        id: zizmor-report
+        if: always()
+        run: echo "present=$([ -s "$RUNNER_TEMP/zizmor.sarif" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Publication des résultats
-        if: always() && hashFiles(format('{0}/zizmor.sarif', runner.temp)) != ''
+        if: always() && steps.zizmor-report.outputs.present == 'true'
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: ${{ runner.temp }}/zizmor.sarif
