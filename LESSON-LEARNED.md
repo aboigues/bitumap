@@ -46,9 +46,9 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
      plage dynamique (49152–65535), différents à chaque redémarrage.
   3. Pourquoi y était-on ? Les ports de `compose.yaml` (55432, 55000) avaient été choisis
      « hauts » pour éviter les conflits, sans tenir compte de la plage dynamique.
-- **Correctif** : ports locaux déplacés hors de la plage dynamique : base 15432, S3 simulé
-  15000 (`compose.yaml`, `tests/conftest.py`, `.env.example` ; `BITUMAP_DB_URL` du `.env` local
-  à mettre à jour).
+- **Correctif** : ports locaux déplacés hors de la plage dynamique (base 15432, S3 simulé
+  15000) et rendus configurables : `BITUMAP_DB_PORT` et `BITUMAP_S3_PORT` dans `.env`, lus par
+  `compose.yaml` et `tests/conftest.py` (aucun port en dur, revue de la PR #16).
 - **Mesure préventive** : règle : tout port publié sur le poste est choisi sous 49152 ;
   en cas d'échec d'exposition, vérifier d'abord `excludedportrange`.
 - **Références** : branche `002-us2-antibot-quotas`.

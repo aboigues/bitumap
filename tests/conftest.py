@@ -1,7 +1,8 @@
 """Fixtures partagées : base PostgreSQL de test, S3 simulé, client HTTP.
 
-La base est celle de ``compose.yaml`` en local (port 15432) ou le service PostgreSQL de la CI
-(``BITUMAP_DB_URL_TEST``). Le schéma est recréé à chaque session de tests.
+La base est celle de ``compose.yaml`` en local (port ``BITUMAP_DB_PORT`` de ``.env``) ou le
+service PostgreSQL de la CI (``BITUMAP_DB_URL_TEST``). Le schéma est recréé à chaque session
+de tests.
 """
 
 from __future__ import annotations
@@ -12,17 +13,26 @@ import secrets
 import pytest
 
 
+def _valeur_locale(nom: str) -> str | None:
+    """Variable d'environnement, sinon valeur du fichier .env local (non versionné)."""
+    if valeur := os.environ.get(nom):
+        return valeur
+    if os.path.exists(".env"):
+        with open(".env", encoding="utf-8") as fichier:
+            for ligne in fichier:
+                if ligne.startswith(f"{nom}="):
+                    return ligne.split("=", 1)[1].strip() or None
+    return None
+
+
 def _url_de_test() -> str:
-    """Base de test : BITUMAP_DB_URL_TEST (CI) ou compose local avec le mot de passe de .env.
-    Aucun mot de passe dans le code (revue de la PR #14)."""
+    """Base de test : BITUMAP_DB_URL_TEST (CI) ou compose local avec le mot de passe et le port
+    de .env. Ni mot de passe (revue de la PR #14) ni port (revue de la PR #16) dans le code."""
     if url := os.environ.get("BITUMAP_DB_URL_TEST"):
         return url
-    mot_de_passe = os.environ.get("BITUMAP_DB_PASSWORD")
-    if not mot_de_passe and os.path.exists(".env"):
-        for ligne in open(".env", encoding="utf-8"):  # noqa: SIM115
-            if ligne.startswith("BITUMAP_DB_PASSWORD="):
-                mot_de_passe = ligne.split("=", 1)[1].strip()
-    return f"postgresql://bitumap:{mot_de_passe or 'absent'}@127.0.0.1:15432/bitumap"
+    mot_de_passe = _valeur_locale("BITUMAP_DB_PASSWORD") or "absent"
+    port = _valeur_locale("BITUMAP_DB_PORT") or "absent"  # URL invalide ⇒ tests base ignorés
+    return f"postgresql://bitumap:{mot_de_passe}@127.0.0.1:{port}/bitumap"
 
 
 URL_TEST = _url_de_test()
