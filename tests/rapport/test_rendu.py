@@ -211,3 +211,16 @@ def test_liens_panoramax_vers_la_visionneuse(rapport):
     assert photos
     for photo in photos:  # panoramax.fr est le site du projet, pas une visionneuse
         assert photo["url"] == f"https://api.panoramax.xyz/#focus=pic&pic={photo['id']}"
+
+
+def test_cinq_couleurs_de_niveau_distinctes(rapport):
+    """Revue de la PR #17 : une couleur par niveau, dans la synthèse, les pastilles et la
+    carte, pour chacun des deux thèmes."""
+    html = rapport["html"]
+    for theme in re.findall(r"--P1a:[^}]*", html):
+        couleurs = dict(re.findall(r"--(P1a|P1b|P1c|P2|P3):(#[0-9a-f]{6})", theme))
+        assert len(couleurs) == 5 and len(set(couleurs.values())) == 5, couleurs
+    assert len(re.findall(r"--P1a:", html)) == 2  # thème clair et thème sombre
+    for code in ("P1a", "P1b", "P1c", "P2", "P3"):
+        assert f'class="chiffre niveau {code}"' in html
+    assert 'fill="var(--P1a)"' in html

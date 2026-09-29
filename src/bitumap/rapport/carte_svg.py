@@ -12,7 +12,7 @@ from bitumap.points.direction import designation, identifiant
 from bitumap.score.methode import LIBELLES_GROUPES
 
 LARGEUR = 1000
-COULEURS = {"P1": "var(--p1)", "P2": "var(--p2)", "P3": "var(--p3)"}
+# Couleur par niveau (P1a … P3), définie par le gabarit du rapport (thèmes clair et sombre).
 RAYONS = {"P1a": 8, "P1b": 7, "P1c": 6}  # P1 : plus gros pour le premier tiers
 
 
@@ -41,7 +41,7 @@ def _chemin(coords, proj: Projection, fermer: bool) -> str:
 
 
 def _forme(p: Point, x: float, y: float) -> str:
-    couleur = COULEURS.get(p.priorite, "var(--p3)")
+    couleur = f"var(--{p.groupe or 'P3'})"
     nom = escape(f"{designation(p)} ({identifiant(p)})")
     niveau = escape(LIBELLES_GROUPES.get(p.groupe, p.groupe))
     titre = f"<title>{nom} — {niveau}, rang {p.rang}</title>"
