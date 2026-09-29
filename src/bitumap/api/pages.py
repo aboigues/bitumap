@@ -1,4 +1,4 @@
-"""Pages HTML rendues côté serveur (US1 : accueil ; complétées dans les tâches suivantes)."""
+"""Pages HTML rendues côté serveur : accueil, données personnelles (FR-027)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from fastapi.responses import Response
 
 from bitumap.api.application import gabarits
 from bitumap.api.auth import session_courante
+from bitumap.config import reglages
 
 routeur = APIRouter()
 
@@ -14,4 +15,17 @@ routeur = APIRouter()
 @routeur.get("/")
 def accueil(requete: Request) -> Response:
     session = session_courante(requete)
-    return gabarits.TemplateResponse(requete, "accueil.html", {"session": session})
+    return gabarits.TemplateResponse(
+        requete,
+        "accueil.html",
+        {"session": session, "compte_supprime": requete.query_params.get("compte") == "supprime"},
+    )
+
+
+@routeur.get("/confidentialite")
+def confidentialite(requete: Request) -> Response:
+    return gabarits.TemplateResponse(
+        requete,
+        "confidentialite.html",
+        {"session": session_courante(requete), "contact": reglages().email_mainteneur},
+    )

@@ -19,7 +19,9 @@ jamais de trace technique (FR-025).
 | `POST /connexion` | `email`, `altcha` | **toujours** la même page « si l'adresse est valide, un lien vient d'être envoyé » (FR-006b) | `400 antibot_invalide`, `429 trop_de_demandes` |
 | `GET /connexion/{jeton}` | jeton du lien | pose la session, redirige vers `/` | `410 lien_expire_ou_utilise` |
 | `POST /deconnexion` | `csrf` | supprime la session | — |
-| `POST /compte/suppression` | `csrf`, confirmation | supprime compte, sessions, rattachements (FR-027) | — |
+| `GET /compte` | — | adresse du compte, formulaire de suppression (session requise) | `401` |
+| `POST /compte/suppression` | `csrf`, `confirmation` (« SUPPRIMER ») | supprime compte, sessions, liens, rattachements (FR-027) ; `303` vers `/` | `400 confirmation_requise`, `403 csrf_invalide`, `401` |
+| `GET /confidentialite` | — | information RGPD : finalité, données, durées, droits (FR-027), liée depuis l'accueil avant toute création de compte | — |
 
 ## Demande de rapport (session requise)
 
@@ -30,10 +32,12 @@ jamais de trace technique (FR-025).
 | `GET /demandes` | — | mes demandes : commune, état, date, lien | `401` |
 | `GET /demandes/{id}` | — | suivi : état, position, heure estimée, étape, lien final ; rafraîchissement automatique toutes les 30 s | `404` (demande inconnue ou non rattachée au compte), `401` |
 
-Règles `POST /demandes` : validation de l'antibot → quota compte → quota global → budget IA
-du jour (déjà épuisé ⇒ `budget_ia_epuise`) → cache (empreinte calculée à partir de la table
-`source_version`, du modèle d'IA et de la version de méthode ; rapport de moins de 30 jours) → rattachement à une demande
-active de même empreinte (sans décompte du quota) → création `en_file`.
+Règles `POST /demandes` : validation de l'antibot → cache (empreinte calculée à partir de la
+table `source_version`, du modèle d'IA et de la version de méthode ; rapport de moins de
+30 jours) → rattachement à une demande active de même empreinte → budget IA du jour (déjà
+épuisé ⇒ `budget_ia_epuise`) → quota compte → quota global → création `en_file`. Le cache et
+le rattachement ne consomment aucun quota (FR-005 : la consultation d'un rapport existant
+n'est pas limitée) ; les quotas sont décomptés dans la transaction qui crée la demande.
 
 Heure estimée = prochain déclenchement + ⌈position / 10⌉ × durée moyenne d'un lot récent.
 

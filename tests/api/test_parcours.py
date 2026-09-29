@@ -1,12 +1,16 @@
 """Parcours complet (quickstart §2) : connexion → commune → demande → lot → rapport."""
 
 from bitumap.db import connexion
-from tests.conftest import connecter
+from tests.conftest import connecter, preuve
 from tests.lot.aides import executer_lot
 
 
 def _demander(client, csrf, insee="92026"):
-    return client.post("/demandes", data={"insee": insee, "csrf": csrf}, follow_redirects=False)
+    return client.post(
+        "/demandes",
+        data={"insee": insee, "csrf": csrf, "altcha": preuve(client)},
+        follow_redirects=False,
+    )
 
 
 def test_code_postal_une_commune(client, courriels, territoire):

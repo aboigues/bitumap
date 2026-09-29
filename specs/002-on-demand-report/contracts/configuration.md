@@ -12,6 +12,10 @@ dépôt ni dans `.env`.
 | `BITUMAP_QUOTA_GENERATION_GLOBAL_JOUR` | 50 | FR-005 |
 | `BITUMAP_QUOTA_LIEN_EMAIL_HEURE` | 3 | FR-005 |
 | `BITUMAP_QUOTA_LIEN_ORIGINE_HEURE` | 10 | FR-005 |
+| `BITUMAP_QUOTA_DEFI_ORIGINE_HEURE` | 60 | défis ALTCHA par heure et par origine |
+| `BITUMAP_ALTCHA_ALGORITHME`, `BITUMAP_ALTCHA_COUT` | `PBKDF2/SHA-256`, 5000 | preuve de travail (R5) |
+| `BITUMAP_ALTCHA_VALIDITE_MIN` | 10 | durée de validité d'un défi |
+| `BITUMAP_ORIGINE_VIA_PROXY` | `false` ; **`true` en production** | origine = dernière adresse de `X-Forwarded-For` (ajoutée par le proxy Scaleway) |
 | `BITUMAP_LIEN_VALIDITE_MIN` | 15 | FR-006 |
 | `BITUMAP_SESSION_JOURS` | 7 | FR-006 |
 | `BITUMAP_COMPTE_INACTIF_MOIS` | 12 | FR-027 |

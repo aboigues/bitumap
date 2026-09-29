@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titre %}Données personnelles · bitumap{% endblock %}
+{% block contenu %}
+<h1>Données personnelles</h1>
+
+<h2>Finalité : à quoi servent vos données</h2>
+<p>Votre adresse e-mail sert uniquement à vous connecter sans mot de passe, à vous prévenir
+  quand votre rapport est prêt et à limiter les abus (nombre de demandes par jour). Elle
+  n'est ni revendue, ni partagée, ni utilisée pour de la prospection. Base légale :
+  l'exécution du service que vous demandez (article 6.1.b du RGPD).</p>
+
+<h2>Données conservées et durées</h2>
+<table>
+  <thead><tr><th>Donnée</th><th>Durée</th></tr></thead>
+  <tbody>
+    <tr><td>Adresse e-mail et date de dernière connexion</td>
+      <td>jusqu'à la suppression du compte, au plus 12 mois sans connexion</td></tr>
+    <tr><td>Liste de vos demandes de rapport</td><td>avec le compte</td></tr>
+    <tr><td>Session de connexion (cookie technique, sans suivi)</td><td>7 jours</td></tr>
+    <tr><td>Lien de connexion (seule son empreinte est gardée)</td>
+      <td>valable 15 minutes, effacé sous 24 h</td></tr>
+    <tr><td>Empreinte de votre adresse IP, rendue méconnaissable par un sel changé chaque
+      jour, pour limiter les abus</td><td>24 heures au plus</td></tr>
+  </tbody>
+</table>
+<p>Aucun cookie de mesure d'audience ni de publicité. La vérification anti-robot est calculée
+  par votre navigateur, sans service tiers ni cookie.</p>
+
+<h2>Où sont vos données</h2>
+<p>Le service, sa base de données et l'envoi des e-mails sont hébergés en France (Scaleway,
+  région Paris). Les rapports ne contiennent aucune donnée personnelle.</p>
+
+<h2>Vos droits</h2>
+<p>Vous pouvez à tout moment accéder à vos données, les faire rectifier ou effacer, vous
+  opposer à leur traitement ou en limiter l'usage.
+  {% if session %}Vous pouvez <a href="/compte">supprimer votre compte vous-même</a>,
+  immédiatement et définitivement.{% else %}Une fois connecté, la page « Mon compte » permet
+  de supprimer votre compte vous-même, immédiatement et définitivement.{% endif %}
+  {% if contact %}Pour toute autre demande : <a href="mailto:{{ contact }}">{{ contact }}</a>.{% endif %}
+  Vous pouvez aussi adresser une réclamation à la CNIL (cnil.fr).</p>
+{% endblock %}

@@ -1,7 +1,7 @@
 """Connexion par lien e-mail (FR-006, FR-006b, SC-010)."""
 
 from bitumap.db import connexion
-from tests.conftest import connecter
+from tests.conftest import connecter, demander_lien
 
 
 def _jeton(courriels):
@@ -15,7 +15,7 @@ def test_lien_valide_ouvre_une_session(client, courriels):
 
 
 def test_lien_reutilise_refuse(client, courriels):
-    client.post("/connexion", data={"email": "a@exemple.fr"})
+    demander_lien(client, "a@exemple.fr")
     jeton = _jeton(courriels)
     assert client.get(f"/connexion/{jeton}", follow_redirects=False).status_code == 303
     client.cookies.clear()
@@ -23,14 +23,14 @@ def test_lien_reutilise_refuse(client, courriels):
 
 
 def test_lien_expire_refuse(client, courriels):
-    client.post("/connexion", data={"email": "a@exemple.fr"})
+    demander_lien(client, "a@exemple.fr")
     with connexion() as conn:
         conn.execute("UPDATE lien_connexion SET expire_le = now() - interval '1 minute'")
     assert client.get(f"/connexion/{_jeton(courriels)}", follow_redirects=False).status_code == 410
 
 
 def test_jeton_jamais_stocke_en_clair(client, courriels):
-    client.post("/connexion", data={"email": "a@exemple.fr"})
+    demander_lien(client, "a@exemple.fr")
     jeton = _jeton(courriels)
     with connexion() as conn:
         stocke = conn.execute("SELECT empreinte_jeton FROM lien_connexion").fetchone()
@@ -41,18 +41,18 @@ def test_jeton_jamais_stocke_en_clair(client, courriels):
 def test_reponse_identique_compte_connu_ou_non(client, courriels):
     connecter(client, courriels, "connu@exemple.fr")
     client.cookies.clear()
-    connu = client.post("/connexion", data={"email": "connu@exemple.fr"})
-    inconnu = client.post("/connexion", data={"email": "inconnu@exemple.fr"})
+    connu = demander_lien(client, "connu@exemple.fr")
+    inconnu = demander_lien(client, "inconnu@exemple.fr")
     assert connu.status_code == inconnu.status_code == 200
     assert connu.text == inconnu.text
 
 
 def test_adresse_invalide(client):
-    assert client.post("/connexion", data={"email": "pas-une-adresse"}).status_code == 400
+    assert demander_lien(client, "pas-une-adresse").status_code == 400
 
 
 def test_cookie_de_session_protege(client, courriels):
-    client.post("/connexion", data={"email": "a@exemple.fr"})
+    demander_lien(client, "a@exemple.fr")
     reponse = client.get(f"/connexion/{_jeton(courriels)}", follow_redirects=False)
     cookie = reponse.headers["set-cookie"]
     assert cookie.startswith("__Host-session=")
