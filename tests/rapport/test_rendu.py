@@ -173,3 +173,21 @@ def test_direction_et_identifiant_du_quai_affiches(rapport):
     assert point["designation"].startswith(attendu)  # fiche (remplie par le script)
     assert point["identifiant"] == "quai IDFM 36807"
     assert "p.designation" in html and "p.identifiant" in html
+
+
+def test_sous_groupes_du_p1(rapport):
+    html = rapport["html"]
+    for groupe in ("P1a", "P1b", "P1c"):
+        assert f"<option>{groupe}</option>" in html
+        assert f'class="pastille {groupe}"' in html
+    points = rapport["donnees"]["points"]
+    p1 = [p for p in points if p["priorite"] == "P1"]
+    assert {p["groupe"] for p in p1} == {"P1a", "P1b", "P1c"}
+    assert "p.groupe === filtres.priorite" in html
+
+
+def test_liens_panoramax_vers_la_visionneuse(rapport):
+    photos = [p["panoramax"] for p in rapport["donnees"]["points"] if p["panoramax"]]
+    assert photos
+    for photo in photos:  # panoramax.fr est le site du projet, pas une visionneuse
+        assert photo["url"] == f"https://api.panoramax.xyz/#focus=pic&pic={photo['id']}"

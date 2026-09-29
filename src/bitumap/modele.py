@@ -51,6 +51,7 @@ class Point:
     score: int = 0
     rang: int = 0
     priorite: str = ""
+    groupe: str = ""  # P1a, P1b, P1c (tiers des P1 par rang, méthode 1.1), P2 ou P3
 
     @property
     def libelle_type(self) -> str:

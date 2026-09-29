@@ -281,7 +281,10 @@ avec un avertissement.
   prototype (charge, sollicitation, site, ensoleillement, îlot de chaleur, âge de l'enrobé
   pour les P1) et un score déterministe versionné ; même entrée ⇒ même classement.
 - **FR-012**: Le service DOIT attribuer les priorités par rang : P1 = 20 % des points les
-  plus exposés, P2 = 40 % suivants, P3 = le reste.
+  plus exposés, P2 = 40 % suivants, P3 = le reste. Pour ordonner les relevés, les P1 sont
+  découpés par rang final (après l'âge de l'enrobé) en trois tiers **P1a**, **P1b**, **P1c**,
+  affichés et filtrables (méthode 1.1, demande du mainteneur du 2026-09-29 : 31 P1 sur 154 à
+  Courbevoie n'aidaient pas à prioriser).
 - **FR-013**: Le service DOIT déterminer pour chaque point le **type de route**
   (autoroute, nationale, départementale, communale, voie privée, indéterminé) et le
   **gestionnaire** correspondant, en croisant deux référentiels ouverts et en signalant les

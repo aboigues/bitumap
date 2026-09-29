@@ -12,6 +12,7 @@ from bitumap.points.direction import designation, identifiant
 
 LARGEUR = 1000
 COULEURS = {"P1": "var(--p1)", "P2": "var(--p2)", "P3": "var(--p3)"}
+RAYONS = {"P1a": 8, "P1b": 7, "P1c": 6}  # P1 : plus gros pour le premier tiers
 
 
 class Projection:
@@ -41,12 +42,12 @@ def _chemin(coords, proj: Projection, fermer: bool) -> str:
 def _forme(p: Point, x: float, y: float) -> str:
     couleur = COULEURS.get(p.priorite, "var(--p3)")
     nom = escape(f"{designation(p)} ({identifiant(p)})")
-    titre = f"<title>{nom} — {escape(p.priorite)}, rang {p.rang}</title>"
+    titre = f"<title>{nom} — {escape(p.groupe)}, rang {p.rang}</title>"
     commun = (
         f'data-point="{escape(p.id)}" tabindex="0" role="button" class="pt" '
-        f'aria-label="{nom}, {escape(p.priorite)}, rang {p.rang}"'
+        f'aria-label="{nom}, {escape(p.groupe)}, rang {p.rang}"'
     )
-    r = 7 if p.priorite == "P1" else 5
+    r = RAYONS.get(p.groupe, 5)
     if p.type == "feu":
         return (
             f'<rect {commun} x="{x - r}" y="{y - r}" width="{2 * r}" height="{2 * r}" '

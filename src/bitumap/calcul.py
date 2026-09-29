@@ -1,4 +1,4 @@
-"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.0).
+"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.1).
 
 Fonction déterministe à sources identiques (principe IV) ; le seul appel non déterministe,
 l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleurs.

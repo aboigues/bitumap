@@ -49,3 +49,27 @@ def test_score_affiche_0_100():
     assert final[0].score == 100
     assert all(0 <= p.score <= 100 for p in final)
     assert [p.rang for p in final] == [1, 2, 3, 4, 5]
+
+
+def test_sous_groupes_du_p1_par_tiers():
+    # 154 points (Courbevoie) : 31 P1 ⇒ 11 P1a, 10 P1b, 10 P1c ; P2 et P3 inchangés.
+    points = combinaison.finaliser(combinaison.prioriser(_points(154)))
+    groupes = [p.groupe for p in points]
+    assert (groupes.count("P1a"), groupes.count("P1b"), groupes.count("P1c")) == (11, 10, 10)
+    assert groupes.count("P2") == 62 and groupes.count("P3") == 61
+    assert groupes == sorted(groupes, key=["P1a", "P1b", "P1c", "P2", "P3"].index)
+    assert all(p.priorite == "P1" for p in points if p.groupe.startswith("P1"))
+
+
+def test_sous_groupes_apres_l_age_de_l_enrobe():
+    points = combinaison.prioriser(_points(15))  # 3 P1 : un par tiers
+    premier = next(p for p in points if p.priorite == "P1")
+    premier.facteurs.append(Facteur(combinaison.FACTEUR_IA, "5–8 ans", 0.5, provenance="ia"))
+    points = combinaison.finaliser(points)
+    assert premier.priorite == "P1" and premier.groupe == "P1c"  # réordonné dans le P1
+
+
+def test_petites_communes():
+    for n, attendu in ((1, ["P1a"]), (5, ["P1a"]), (10, ["P1a", "P1b"])):
+        points = combinaison.finaliser(combinaison.prioriser(_points(n)))
+        assert [p.groupe for p in points if p.priorite == "P1"] == attendu

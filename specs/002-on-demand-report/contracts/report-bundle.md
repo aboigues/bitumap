@@ -9,7 +9,7 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
 
 1. En-tête : commune, date, version de méthode, avertissement « classe des points à relever,
    ne mesure pas l'état réel » (FR-022).
-2. Synthèse : nombre de points par priorité, par type de point, par type de route.
+2. Synthèse : nombre de points par groupe (P1a, P1b, P1c, P2, P3), par type de point, par type de route.
 3. Carte SVG : contour communal, voies très fréquentées par les bus, points colorés par
    priorité et formés par type ; sélection d'un point ⇒ fiche.
 4. Liste classée : filtres priorité / type de point / type de route (FR-018).
@@ -44,7 +44,7 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
      "modele": "…", "date": "2026-10-02"}
   ],
   "panoramax": {"url": "…", "date": "2025-11-07", "licence": "CC-BY-SA-4.0", "distance_m": 9},
-  "score": 100, "rang": 1, "priorite": "P1"
+  "score": 100, "rang": 1, "priorite": "P1", "groupe": "P1a"
 }
 ```
 
