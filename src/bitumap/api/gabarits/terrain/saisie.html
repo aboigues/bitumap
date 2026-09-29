@@ -23,6 +23,8 @@
 <form id="releve" class="carte" novalidate
       data-insee="{{ insee }}" data-point="{{ point_id }}" data-csrf="{{ session.csrf }}"
       data-lon="{{ point.lon }}" data-lat="{{ point.lat }}">
+  <p id="mode-correction" class="note" hidden>Correction de votre relevé : une nouvelle version sera
+    ajoutée, l'ancienne reste dans l'historique. <button type="button" class="lien" id="annuler-correction">Annuler</button></p>
   <fieldset>
     <legend>Orniérage constaté (obligatoire)</legend>
     <label><input type="radio" name="niveau" value="absent" required> absent</label>
@@ -73,8 +75,16 @@
     {% if r.position_eloignee %} · position éloignée{% endif %}
     {% if r.annee_refection %}<br><span class="petit">Réfection {{ r.annee_refection }} ({{ sources[r.source_refection] }})</span>{% endif %}
     {% if r.observation %}<br><span class="petit">{{ r.observation }}</span>{% endif %}
-    {% if r.photos %}<br>{% for photo in r.photos %}<img src="/terrain/photos/{{ photo }}" alt="Photo du relevé" loading="lazy" width="160">{% endfor %}
+    {% if r.photos %}<br>{% for photo in r.photos %}<span class="photo"><img src="/terrain/photos/{{ photo }}" alt="Photo du relevé" loading="lazy" width="160">
+      <button type="button" class="lien" data-retirer-photo="{{ photo }}">Retirer la photo</button></span>{% endfor %}
     {% elif r.nb_photos %}<br><span class="petit">{{ r.nb_photos }} photo(s), visibles par leur auteur</span>{% endif %}
+    {% if r.est_auteur and point %}<br>
+    <button type="button" class="lien" data-corriger="{{ r.id }}" data-version="{{ r.version + 1 }}"
+      data-niveau="{{ r.niveau }}" data-profondeur_mm="{{ r.profondeur_mm if r.profondeur_mm is not none else '' }}"
+      data-instrument="{{ r.instrument or '' }}" data-observation="{{ r.observation or '' }}"
+      data-annee_refection="{{ r.annee_refection or '' }}" data-source_refection="{{ r.source_refection or '' }}">Corriger</button>
+    <button type="button" class="lien" data-retirer-releve="{{ r.id }}">Retirer ce relevé</button>
+    {% endif %}
   </li>
 {% endfor %}
 </ol>

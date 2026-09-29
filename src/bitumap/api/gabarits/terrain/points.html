@@ -39,4 +39,12 @@
 {% endfor %}
 </ul>
 {% endif %}
+
+<h2>Exporter les relevés</h2>
+<ul>
+  <li><a href="/terrain/{{ insee }}/releves.csv" download>Tableur (CSV)</a></li>
+  <li><a href="/terrain/{{ insee }}/releves.geojson" download>Cartographie (GeoJSON)</a></li>
+  <li><a href="/terrain/{{ insee }}/echantillon_refection.json" download>Échantillon de réfection</a>
+    <span class="petit">(années constatées ou fournies par les services techniques, pour l'évaluation de l'estimation de l'âge)</span></li>
+</ul>
 {% endblock %}
