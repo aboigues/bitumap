@@ -145,13 +145,13 @@ SC-004, SC-006, SC-010, SC-012).
 
 **Independent Test**: quickstart §3 et `tests/api/test_abus.py` : aucune génération ni aucun e-mail sans preuve valide ou au-delà des quotas (SC-006, SC-010)
 
-- [ ] T056 [P] [US2] Écrire `tests/api/test_abus.py` : preuve absente, invalide ou rejouée ; 6ᵉ demande du jour d'un compte ; 51ᵉ demande globale ; 4ᵉ lien en 1 h pour une adresse, 11ᵉ pour une origine ; réponse identique pour une adresse inconnue ; accès au rapport sans session ; budget IA du jour épuisé
-- [ ] T057 [US2] Implémenter `src/bitumap/api/antibot.py` : `GET /altcha/defi` (valable 10 min, clé HMAC du secret `bitumap-altcha-hmac`), vérification avec la bibliothèque `altcha`, enregistrement de la signature dans `preuve_antibot` pour refuser toute réutilisation, purge après 1 h
-- [ ] T058 [P] [US2] Intégrer le widget ALTCHA 3.2.3 **auto-hébergé** dans `src/bitumap/api/statique/altcha/` avec empreinte SHA-256 vérifiée par `tools/verifier_altcha.py` ; aucun appel à un CDN (CSP `script-src 'self'`)
-- [ ] T059 [US2] Implémenter `src/bitumap/api/quotas.py` : clés de `compteur_quota` (data-model.md, dont `defi:origine:{empreinte_ip_salée}:{heure}` pour 60 défis par heure), incrément atomique, adresse IP **empreinte salée** avec le secret `bitumap-sel-origine` renouvelé chaque jour, conservation ≤ 24 h (FR-026)
-- [ ] T060 [US2] Brancher antibot et quotas sur `POST /connexion` et `POST /demandes` dans `src/bitumap/api/auth.py` et `src/bitumap/api/demandes.py`, dans l'ordre de `contracts/http-api.md` ; erreur `budget_ia_epuise`
-- [ ] T061 [US2] Implémenter `POST /compte/suppression` dans `src/bitumap/api/compte.py` et la purge dans `src/bitumap/db/purge.py` (comptes inactifs depuis 12 mois, liens, sessions, preuves et compteurs expirés), appelée au début de chaque lot (FR-027)
-- [ ] T062 [P] [US2] Créer la page `src/bitumap/api/gabarits/confidentialite.html` (finalité, données conservées, durées, droits, suppression du compte) et l'afficher avant la création du compte (FR-027)
+- [X] T056 [P] [US2] Écrire `tests/api/test_abus.py` : preuve absente, invalide ou rejouée ; 6ᵉ demande du jour d'un compte ; 51ᵉ demande globale ; 4ᵉ lien en 1 h pour une adresse, 11ᵉ pour une origine ; réponse identique pour une adresse inconnue ; accès au rapport sans session ; budget IA du jour épuisé
+- [X] T057 [US2] Implémenter `src/bitumap/api/antibot.py` : `GET /altcha/defi` (valable 10 min, clé HMAC du secret `bitumap-altcha-hmac`), vérification avec la bibliothèque `altcha`, enregistrement de la signature dans `preuve_antibot` pour refuser toute réutilisation, purge après 1 h
+- [X] T058 [P] [US2] Intégrer le widget ALTCHA 3.2.3 **auto-hébergé** dans `src/bitumap/api/statique/altcha/` avec empreinte SHA-256 vérifiée par `tools/verifier_altcha.py` ; aucun appel à un CDN (CSP `script-src 'self'`)
+- [X] T059 [US2] Implémenter `src/bitumap/api/quotas.py` : clés de `compteur_quota` (data-model.md, dont `defi:origine:{empreinte_ip_salée}:{heure}` pour 60 défis par heure), incrément atomique, adresse IP **empreinte salée** avec le secret `bitumap-sel-origine` renouvelé chaque jour, conservation ≤ 24 h (FR-026)
+- [X] T060 [US2] Brancher antibot et quotas sur `POST /connexion` et `POST /demandes` dans `src/bitumap/api/auth.py` et `src/bitumap/api/demandes.py`, dans l'ordre de `contracts/http-api.md` ; erreur `budget_ia_epuise`
+- [X] T061 [US2] Implémenter `POST /compte/suppression` dans `src/bitumap/api/compte.py` et la purge dans `src/bitumap/db/purge.py` (comptes inactifs depuis 12 mois, liens, sessions, preuves et compteurs expirés), appelée au début de chaque lot (FR-027)
+- [X] T062 [P] [US2] Créer la page `src/bitumap/api/gabarits/confidentialite.html` (finalité, données conservées, durées, droits, suppression du compte) et l'afficher avant la création du compte (FR-027)
 
 **Checkpoint**: SC-006 et SC-010 verts
 

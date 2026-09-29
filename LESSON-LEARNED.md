@@ -33,6 +33,26 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-006 — Port de la base locale réservé par Windows (2026-09-29) — Close
+
+- **Contexte** : développement sous WSL2 avec Docker Desktop, reprise après redémarrage du
+  poste, branche `002-us2-antibot-quotas`.
+- **Symptôme** : `docker compose up -d db` échoue : `ports are not available: exposing port
+  TCP 127.0.0.1:55432 … /forwards/expose returned unexpected status: 500`.
+- **Causes racines** :
+  1. Pourquoi l'échec ? Le port 55432 est dans une plage réservée par Windows
+     (`netsh int ipv4 show excludedportrange protocol=tcp` : 55334–55433).
+  2. Pourquoi réservée ? WinNAT/Hyper-V réserve des blocs de ports au démarrage, pris dans la
+     plage dynamique (49152–65535), différents à chaque redémarrage.
+  3. Pourquoi y était-on ? Les ports de `compose.yaml` (55432, 55000) avaient été choisis
+     « hauts » pour éviter les conflits, sans tenir compte de la plage dynamique.
+- **Correctif** : ports locaux déplacés hors de la plage dynamique (base 15432, S3 simulé
+  15000) et rendus configurables : `BITUMAP_DB_PORT` et `BITUMAP_S3_PORT` dans `.env`, lus par
+  `compose.yaml` et `tests/conftest.py` (aucun port en dur, revue de la PR #16).
+- **Mesure préventive** : règle : tout port publié sur le poste est choisi sous 49152 ;
+  en cas d'échec d'exposition, vérifier d'abord `excludedportrange`.
+- **Références** : branche `002-us2-antibot-quotas`.
+
 ### LL-005 — Python local sans module bz2 (2026-09-28) — Close
 
 - **Contexte** : développement, premiers tests utilisant le stockage objet simulé (moto).

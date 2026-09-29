@@ -1,7 +1,8 @@
 """Fixtures partagées : base PostgreSQL de test, S3 simulé, client HTTP.
 
-La base est celle de ``compose.yaml`` en local (port 55432) ou le service PostgreSQL de la CI
-(``BITUMAP_DB_URL_TEST``). Le schéma est recréé à chaque session de tests.
+La base est celle de ``compose.yaml`` en local (port ``BITUMAP_DB_PORT`` de ``.env``) ou le
+service PostgreSQL de la CI (``BITUMAP_DB_URL_TEST``). Le schéma est recréé à chaque session
+de tests.
 """
 
 from __future__ import annotations
@@ -12,17 +13,26 @@ import secrets
 import pytest
 
 
+def _valeur_locale(nom: str) -> str | None:
+    """Variable d'environnement, sinon valeur du fichier .env local (non versionné)."""
+    if valeur := os.environ.get(nom):
+        return valeur
+    if os.path.exists(".env"):
+        with open(".env", encoding="utf-8") as fichier:
+            for ligne in fichier:
+                if ligne.startswith(f"{nom}="):
+                    return ligne.split("=", 1)[1].strip() or None
+    return None
+
+
 def _url_de_test() -> str:
-    """Base de test : BITUMAP_DB_URL_TEST (CI) ou compose local avec le mot de passe de .env.
-    Aucun mot de passe dans le code (revue de la PR #14)."""
+    """Base de test : BITUMAP_DB_URL_TEST (CI) ou compose local avec le mot de passe et le port
+    de .env. Ni mot de passe (revue de la PR #14) ni port (revue de la PR #16) dans le code."""
     if url := os.environ.get("BITUMAP_DB_URL_TEST"):
         return url
-    mot_de_passe = os.environ.get("BITUMAP_DB_PASSWORD")
-    if not mot_de_passe and os.path.exists(".env"):
-        for ligne in open(".env", encoding="utf-8"):  # noqa: SIM115
-            if ligne.startswith("BITUMAP_DB_PASSWORD="):
-                mot_de_passe = ligne.split("=", 1)[1].strip()
-    return f"postgresql://bitumap:{mot_de_passe or 'absent'}@127.0.0.1:55432/bitumap"
+    mot_de_passe = _valeur_locale("BITUMAP_DB_PASSWORD") or "absent"
+    port = _valeur_locale("BITUMAP_DB_PORT") or "absent"  # URL invalide ⇒ tests base ignorés
+    return f"postgresql://bitumap:{mot_de_passe}@127.0.0.1:{port}/bitumap"
 
 
 URL_TEST = _url_de_test()
@@ -30,6 +40,7 @@ os.environ["BITUMAP_DB_URL"] = URL_TEST
 # Secrets applicatifs : valeurs aléatoires propres à chaque exécution des tests.
 os.environ["BITUMAP_ALTCHA_HMAC"] = secrets.token_urlsafe(32)
 os.environ["BITUMAP_SEL_ORIGINE"] = secrets.token_urlsafe(32)
+os.environ["BITUMAP_ALTCHA_COUT"] = "1"  # preuve de travail minimale : tests rapides
 os.environ["BITUMAP_COURRIEL_MODE"] = "console"
 os.environ["BITUMAP_COOKIES_SECURISES"] = "true"  # le .env local peut les désactiver
 os.environ["BITUMAP_URL_PUBLIQUE"] = "https://testserver"
@@ -92,9 +103,21 @@ def client(base, courriels):
         yield c
 
 
+def preuve(client) -> str:
+    """Résout un défi ALTCHA comme le ferait le widget ; renvoie la charge utile base64."""
+    import altcha
+
+    defi = altcha.Challenge.from_dict(client.get("/altcha/defi").json())
+    return altcha.Payload(defi, altcha.solve_challenge(defi)).to_base64()
+
+
+def demander_lien(client, email, **donnees):
+    return client.post("/connexion", data={"email": email, "altcha": preuve(client), **donnees})
+
+
 def connecter(client, courriels, email="agent@exemple.fr"):
     """Parcours complet de connexion par lien ; renvoie le jeton CSRF de la session."""
-    client.post("/connexion", data={"email": email})
+    demander_lien(client, email)
     lien = courriels[-1].texte.split("https://testserver", 1)[1].split()[0]
     reponse = client.get(lien, follow_redirects=False)
     assert reponse.status_code == 303

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titre %}Mon compte · bitumap{% endblock %}
+{% block contenu %}
+<h1>Mon compte</h1>
+<p>Adresse : {{ session.email }}</p>
+<p><a href="/demandes">Mes demandes</a> · <a href="/confidentialite">Données personnelles</a></p>
+
+<h2>Supprimer mon compte</h2>
+<p>La suppression est immédiate et définitive : votre adresse, vos sessions et la liste de
+  vos demandes sont effacées. Les rapports déjà produits ne contiennent aucune donnée
+  personnelle et restent disponibles pour les autres comptes.</p>
+<form method="post" action="/compte/suppression" class="carte">
+  <input type="hidden" name="csrf" value="{{ session.csrf }}">
+  <label for="confirmation">Pour confirmer, saisissez {{ confirmation }}</label>
+  <input id="confirmation" name="confirmation" required autocomplete="off"
+         pattern="{{ confirmation }}" aria-describedby="aide-confirmation">
+  <span id="aide-confirmation" class="note">En majuscules, sans espace.</span>
+  <button type="submit">Supprimer définitivement mon compte</button>
+</form>
+{% endblock %}

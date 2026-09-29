@@ -1,0 +1,6 @@
+{# Vérification anti-robot ALTCHA, auto-hébergée (FR-004, T058) : calcul dans le navigateur,
+   sans service tiers ni cookie. #}
+<script type="module" src="/statique/altcha/altcha.min.js"></script>
+<script type="module" src="/statique/altcha/fr-fr.js"></script>
+<altcha-widget challenge="/altcha/defi" name="altcha" language="fr-fr"></altcha-widget>
+<noscript><p class="note">La vérification anti-robot nécessite JavaScript.</p></noscript>

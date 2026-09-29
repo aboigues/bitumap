@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${BITUMAP_DB_PASSWORD:?à définir dans .env}
       POSTGRES_DB: bitumap
     ports:
-      - "127.0.0.1:55432:5432"
+      - "127.0.0.1:${BITUMAP_DB_PORT:?à définir dans .env}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bitumap"]
       interval: 2s
@@ -22,4 +22,4 @@ services:
     # Stockage objet simulé (moto) pour le développement et les tests d'intégration.
     image: motoserver/moto:5.2.3@sha256:91fd602a21f49cf9eb82fdf474015a3c131d40104c8297ea6a2ca920708ae32c
     ports:
-      - "127.0.0.1:55000:5000"
+      - "127.0.0.1:${BITUMAP_S3_PORT:?à définir dans .env}:5000"

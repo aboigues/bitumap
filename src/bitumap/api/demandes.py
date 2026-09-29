@@ -1,6 +1,9 @@
-"""Communes, demandes de rapport, suivi et consultation (contracts/http-api.md ; US1).
+"""Communes, demandes de rapport, suivi et consultation (contracts/http-api.md ; US1, US2).
 
-Antibot et quotas sont branchés en US2 (T060) : voir ``controles_avant_demande``.
+Ordre des contrôles de ``POST /demandes`` : antibot → cache → rattachement → budget IA du
+jour → quota du compte → quota global → création. Consulter un rapport en cache ou se
+rattacher à une demande active ne consomme aucun quota (FR-005, US2-6) ; les quotas ne
+sont décomptés qu'à la création, dans la même transaction que l'insertion.
 """
 
 from __future__ import annotations
@@ -14,10 +17,12 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse, Response
 
 from bitumap import stockage
+from bitumap.api import antibot, quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
 from bitumap.config import reglages
 from bitumap.db import connexion
+from bitumap.ia.budget import budget_jour_epuise
 from bitumap.lot import versions
 from bitumap.rapport.rendu import CSP_RAPPORT
 from bitumap.territoire import ErreurTerritoire, commune_par_insee, communes_du_code_postal
@@ -44,8 +49,65 @@ def rapport_valide(insee: str) -> str | None:
     return empreinte if produit_le >= limite else None
 
 
-def controles_avant_demande(requete: Request, session, altcha: str) -> None:
-    """Point d'extension : antibot, quotas, budget (US2, T060)."""
+QUOTA_COMPTE = (429, "quota_compte", "Limite de demandes du jour atteinte : réessayez demain.")
+QUOTA_GLOBAL = (
+    429,
+    "quota_global",
+    "Le service a atteint sa limite de rapports du jour : réessayez demain.",
+)
+BUDGET_EPUISE = (
+    429,
+    "budget_ia_epuise",
+    "Le budget d'analyse du jour est épuisé : réessayez demain.",
+)
+
+
+def _decompter(conn, compte_id: str) -> None:
+    """Décompte atomique des deux quotas ; un dépassement annule toute la transaction."""
+    r = reglages()
+    if not quotas.consommer(
+        conn, quotas.generation_compte(compte_id), quotas.JOUR, r.quota_generation_compte_jour
+    ):
+        raise ErreurPublique(*QUOTA_COMPTE)
+    if not quotas.consommer(
+        conn, quotas.GENERATION_GLOBALE, quotas.JOUR, r.quota_generation_global_jour
+    ):
+        raise ErreurPublique(*QUOTA_GLOBAL)
+
+
+def _demande_active(conn, empreinte: str):
+    return conn.execute(
+        "SELECT id FROM demande WHERE empreinte = %s AND etat IN ('en_file', 'en_cours')",
+        (empreinte,),
+    ).fetchone()
+
+
+def _creer_ou_rattacher(commune, empreinte: str, compte_id: str) -> str:
+    with connexion() as conn:
+        existante = _demande_active(conn, empreinte)
+        if existante is None:
+            if budget_jour_epuise():
+                raise ErreurPublique(*BUDGET_EPUISE)
+            cree = conn.execute(
+                "INSERT INTO demande (commune_insee, commune_nom, empreinte)"
+                " VALUES (%s, %s, %s)"
+                " ON CONFLICT (empreinte) WHERE etat IN ('en_file', 'en_cours') DO NOTHING"
+                " RETURNING id",
+                (commune.insee, commune.nom, empreinte),
+            ).fetchone()
+            if cree is None:  # créée entre-temps par un autre compte
+                existante = _demande_active(conn, empreinte)
+        if existante is not None:  # rattachement sans décompte (US2-6)
+            demande_id, compte_quota = existante["id"], False
+        else:
+            demande_id, compte_quota = cree["id"], True
+            _decompter(conn, compte_id)
+        conn.execute(
+            "INSERT INTO demandeur_demande (demande_id, compte_id, compte_quota)"
+            " VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+            (demande_id, compte_id, compte_quota),
+        )
+    return demande_id
 
 
 @routeur.get("/communes")
@@ -76,33 +138,14 @@ def demander(
         commune = commune_par_insee(insee)
     except ErreurTerritoire as e:
         raise _erreur_territoire(e) from e
-    controles_avant_demande(requete, session, altcha)
+    antibot.verifier(altcha)
 
     empreinte = rapport_valide(commune.insee)
     if empreinte:
         return RedirectResponse(f"/rapports/{commune.insee}/{empreinte}", status_code=303)
 
     empreinte = versions.empreinte_courante(commune.insee)
-    with connexion() as conn:
-        cree = conn.execute(
-            "INSERT INTO demande (commune_insee, commune_nom, empreinte) VALUES (%s, %s, %s)"
-            " ON CONFLICT (empreinte) WHERE etat IN ('en_file', 'en_cours') DO NOTHING"
-            " RETURNING id",
-            (commune.insee, commune.nom, empreinte),
-        ).fetchone()
-        if cree is None:  # demande active existante : rattachement sans décompte (US2-6)
-            existante = conn.execute(
-                "SELECT id FROM demande WHERE empreinte = %s AND etat IN ('en_file', 'en_cours')",
-                (empreinte,),
-            ).fetchone()
-            demande_id, compte_quota = existante["id"], False
-        else:
-            demande_id, compte_quota = cree["id"], True
-        conn.execute(
-            "INSERT INTO demandeur_demande (demande_id, compte_id, compte_quota)"
-            " VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-            (demande_id, session.compte_id, compte_quota),
-        )
+    demande_id = _creer_ou_rattacher(commune, empreinte, session.compte_id)
     return RedirectResponse(f"/demandes/{demande_id}", status_code=303)
 
 

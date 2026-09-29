@@ -29,4 +29,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 USER 65532:65532
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/sante', timeout=2)"]
-ENTRYPOINT ["uvicorn", "bitumap.api:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers"]
+ENTRYPOINT ["uvicorn", "bitumap.api:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]

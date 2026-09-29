@@ -27,6 +27,14 @@ class Reglages(BaseSettings):
     quota_lien_origine_heure: int = 10
     quota_defi_origine_heure: int = 60
 
+    # Antibot ALTCHA (research R5) : preuve de travail PBKDF2 résolue par le navigateur
+    altcha_algorithme: str = "PBKDF2/SHA-256"
+    altcha_cout: int = 5000
+    altcha_validite_min: int = 10
+    # Vrai derrière le proxy de Scaleway : l'origine est alors la dernière adresse de
+    # X-Forwarded-For (ajoutée par le proxy, non falsifiable par le client).
+    origine_via_proxy: bool = False
+
     # Connexion (FR-006, FR-027)
     lien_validite_min: int = 15
     session_jours: int = 7

@@ -11,7 +11,7 @@
       {{ c.nom }} ({{ c.departement }})</label><br>
     {% endfor %}
   </fieldset>
-  {% block antibot %}{% endblock %}
+  {% include "_antibot.html" %}
   <button type="submit">Demander le rapport</button>
 </form>
 <p><a href="/">Autre code postal</a></p>

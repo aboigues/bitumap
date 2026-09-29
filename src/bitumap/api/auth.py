@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse, Response
 
 from bitumap import courriel
+from bitumap.api import antibot, quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.config import reglages
 from bitumap.db import connexion
@@ -137,9 +138,18 @@ def verifier_csrf(session: Session, csrf: str) -> None:
 
 
 @routeur.post("/connexion")
-def demander_lien(requete: Request, email: Annotated[str, Form()] = "") -> Response:
+def demander_lien(
+    requete: Request,
+    email: Annotated[str, Form()] = "",
+    altcha: Annotated[str, Form()] = "",
+) -> Response:
     adresse = normaliser_email(email)
-    # Contrôles antibot et quotas branchés ici en US2 (T060).
+    antibot.verifier(altcha)
+    r = reglages()
+    trop = ("trop_de_demandes", "Trop de demandes de lien : réessayez dans une heure.")
+    quotas.limiter(quotas.lien_origine(requete), quotas.HEURE, r.quota_lien_origine_heure, *trop)
+    # Même refus que l'adresse ait un compte ou non (FR-006b).
+    quotas.limiter(quotas.lien_email(adresse), quotas.HEURE, r.quota_lien_email_heure, *trop)
     emettre_lien(adresse)
     # Réponse identique que le compte existe ou non (FR-006b).
     return gabarits.TemplateResponse(requete, "lien_envoye.html", {})
