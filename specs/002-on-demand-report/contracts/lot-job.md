@@ -26,7 +26,21 @@ par le mainteneur. Délai maximal d'exécution : 3 h.
    Échec d'une commune ⇒ `en_echec` (ou nouvelle tentative au lot suivant si
    `tentatives < 2` et erreur transitoire) ; les autres communes continuent (FR-007d).
 5. **Notification** : e-mail à chaque compte rattaché (succès ou échec, FR-007c).
-6. **Clôture du lot** : durée, coûts, résultat par commune.
+6. **Clôture du lot** : durée, coûts, nombre de communes terminées, en échec et reportées
+   (table `lot`) ; événement `lot.termine` dans le journal structuré.
+
+## Journal et alertes (FR-023, FR-029 ; T069, T070, T091)
+
+- Journal structuré : une ligne JSON par événement (`horodatage`, `niveau`, `source`,
+  `message`, champs), filtrable dans Cockpit : `commune.terminee` (durées d'acquisition,
+  de calcul, d'IA et de rapport, points, appels et coût IA, non évalués), `commune.en_echec`,
+  `commune.reportee`, `lot.termine`. Aucune donnée personnelle.
+- `journal.json` du rapport : mêmes durées par étape, statistiques IA, avertissements
+  (dont « plafond de coût de l'IA atteint »).
+- Alertes au mainteneur (`BITUMAP_EMAIL_MAINTENEUR`, jamais versionnée), dédupliquées par
+  la table `alerte_envoyee` : communes en échec (à chaque lot), plafond IA du jour atteint
+  (une par jour), lot interrompu par une erreur d'infrastructure (une par heure ; sans
+  déduplication si la base est injoignable), coût IA du mois ≥ 5 € (une par mois).
 
 ## Sources indispensables et optionnelles
 

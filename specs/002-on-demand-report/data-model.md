@@ -91,14 +91,15 @@ en_file ──(budget IA du jour épuisé)──▶ en_file (reportée au lendem
 | `demarre_le`, `termine_le` | horodatage | durée ≤ 3 h |
 | `nb_demandes` | entier | ≤ 10 |
 | `duree_regionale_s` | réel | temps d'acquisition des données régionales (SC-002b) |
-| `cout_ia_eur` | décimal | |
+| `cout_ia_eur` | décimal (6 décimales) | |
+| `nb_terminees`, `nb_echecs`, `nb_reportees` | entier | résultat par commune à la clôture (T069) |
 
 ### cout_ia_jour
 
 | Champ | Type | Règles |
 |---|---|---|
 | `jour` | date | clé |
-| `montant_eur` | décimal | réservation **avant** chaque appel, ajustement après ; ≤ 5 € (FR-024) ; somme du mois civil comparée au seuil d'alerte de 5 € (FR-029) |
+| `montant_eur` | décimal (6 décimales : un appel coûte ≈ 0,0003 €) | réservation **avant** chaque appel, ajustement après ; ≤ 5 € (FR-024) ; somme du mois civil comparée au seuil d'alerte de 5 € (FR-029) |
 
 ### source_version
 

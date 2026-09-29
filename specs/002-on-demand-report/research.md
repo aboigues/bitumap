@@ -129,6 +129,11 @@ Conséquences :
   ne coûte plus rien en IA ; (2) API de traitement par lots de Scaleway, **-50 %**, mais délai
   de réponse à vérifier face à SC-002 (45 min) ; (3) premier million de jetons offert selon la
   page tarifs (environ 11 rapports Courbevoie avec les Mistral).
+- **Limite connue (non-régression)** : la CI ne teste l'IA qu'avec des réponses simulées
+  (résultats non déterministes d'un modèle hébergé, services externes, secret non exposé aux
+  workflows des PR, coût répété) ; une dérive du modèle réel ne serait donc pas détectée.
+  Relevé par le mainteneur le 2026-09-29 : workflow d'évaluation périodique non bloquant à
+  mettre en place (T094), une fois le modèle choisi (T073).
 - À mesurer à l'implémentation : jetons réels par image (redimensionnement propre à chaque
   modèle), longueur réelle des réponses (les modèles Qwen peuvent raisonner longuement).
 
