@@ -60,12 +60,11 @@ def rapport():
     )
     fichiers = rendu.rendre(resultat, JournalGeneration("92026", VERSION_METHODE))
     html = fichiers["rapport.html"][0].decode()
-    donnees = json.loads(
-        re.search(r'<script type="application/json" id="donnees">(.*?)</script>', html, re.S).group(
-            1
-        )
-    )
+    analyse = _Ressources()
+    analyse.feed(html)
+    donnees = json.loads(next(t for a, t in analyse.scripts if a.get("id") == "donnees"))
     return {
+        "analyse": analyse,
         "resultat": resultat,
         "fichiers": fichiers,
         "html": html,
@@ -75,7 +74,8 @@ def rapport():
 
 
 class _Ressources(HTMLParser):
-    """Relève toute ressource chargée automatiquement (hors liens cliquables <a>)."""
+    """Analyse le HTML comme un navigateur (balises insensibles à la casse) : ressources
+    chargées automatiquement, liens cliquables <a>, balises et contenu des <script>."""
 
     ATTRIBUTS = frozenset({"src", "href", "srcset", "poster", "data", "action", "xlink:href"})
 
@@ -83,26 +83,41 @@ class _Ressources(HTMLParser):
         super().__init__()
         self.chargees: list[str] = []
         self.liens: list[str] = []
+        self.balises: set[str] = set()
+        self.scripts: list[tuple[dict, str]] = []
+        self._script: dict | None = None
 
     def handle_starttag(self, tag, attrs):
+        self.balises.add(tag)
         for nom, valeur in attrs:
             if nom in self.ATTRIBUTS and valeur:
                 (self.liens if tag == "a" else self.chargees).append(f"{tag} {nom}={valeur}")
+        if tag == "script":
+            self._script = dict(attrs)
+            self.scripts.append((self._script, ""))
+
+    def handle_data(self, data):
+        if self._script is not None:
+            attrs, texte = self.scripts[-1]
+            self.scripts[-1] = (attrs, texte + data)
+
+    def handle_endtag(self, tag):
+        if tag == "script":
+            self._script = None
 
 
 def test_aucune_ressource_externe(rapport):
-    analyse = _Ressources()
-    analyse.feed(rapport["html"])
+    analyse = rapport["analyse"]
     assert analyse.chargees == []  # ni script, ni style, ni image, ni police externes
     assert analyse.liens  # les liens cliquables (sources, photos) restent permis
     assert not re.search(r"@import|url\(\s*['\"]?(https?:)?//", rapport["html"])
-    assert "<link" not in rapport["html"] and "<iframe" not in rapport["html"]
+    assert not analyse.balises & {"link", "iframe", "object", "embed", "base"}
 
 
 def test_script_conforme_a_la_csp(rapport):
-    scripts = re.findall(r"<script>(.*?)</script>", rapport["html"], re.S)
-    assert len(scripts) == 1
-    empreinte = base64.b64encode(hashlib.sha256(scripts[0].encode()).digest()).decode()
+    executables = [t for a, t in rapport["analyse"].scripts if a.get("type") != "application/json"]
+    assert len(executables) == 1  # le seul script exécutable, en ligne
+    empreinte = base64.b64encode(hashlib.sha256(executables[0].encode()).digest()).decode()
     assert f"'sha256-{empreinte}'" in rendu.CSP_RAPPORT
 
 
