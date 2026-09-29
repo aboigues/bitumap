@@ -192,12 +192,17 @@ def test_direction_et_identifiant_du_quai_affiches(rapport):
 
 def test_sous_groupes_du_p1(rapport):
     html = rapport["html"]
-    for groupe in ("P1a", "P1b", "P1c"):
-        assert f"<option>{groupe}</option>" in html
-        assert f'class="pastille {groupe}"' in html
+    libelles = {"P1a": "Critique", "P1b": "Sérieux", "P1c": "Important"}
+    libelles |= {"P2": "À surveiller", "P3": "Supportable"}
+    for code, libelle in libelles.items():  # codes internes, libellés affichés (revue #17)
+        assert f'<option value="{code}">{libelle}</option>' in html
+        assert f'class="pastille {code}">{libelle}</span>' in html
+    assert '<option value="P1">Critique à important</option>' in html
+    assert ">P1a<" not in html and ">P2<" not in html
     points = rapport["donnees"]["points"]
     p1 = [p for p in points if p["priorite"] == "P1"]
     assert {p["groupe"] for p in p1} == {"P1a", "P1b", "P1c"}
+    assert {p["groupe_libelle"] for p in p1} == {"Critique", "Sérieux", "Important"}
     assert "p.groupe === filtres.priorite" in html
 
 

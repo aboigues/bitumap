@@ -65,10 +65,12 @@ class Point:
     def en_dict(self) -> dict:
         from bitumap.facteurs.voirie import libelle
         from bitumap.points.direction import designation, identifiant
+        from bitumap.score.methode import LIBELLES_GROUPES
 
         d = asdict(self)
         d["type_libelle"] = self.libelle_type
         d["route"]["libelle"] = libelle(self.route.classement)
         d["designation"] = designation(self)
         d["identifiant"] = identifiant(self)
+        d["groupe_libelle"] = LIBELLES_GROUPES.get(self.groupe, self.groupe)
         return d

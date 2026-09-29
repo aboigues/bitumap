@@ -9,6 +9,7 @@ from shapely.geometry import shape
 
 from bitumap.modele import Point
 from bitumap.points.direction import designation, identifiant
+from bitumap.score.methode import LIBELLES_GROUPES
 
 LARGEUR = 1000
 COULEURS = {"P1": "var(--p1)", "P2": "var(--p2)", "P3": "var(--p3)"}
@@ -42,10 +43,11 @@ def _chemin(coords, proj: Projection, fermer: bool) -> str:
 def _forme(p: Point, x: float, y: float) -> str:
     couleur = COULEURS.get(p.priorite, "var(--p3)")
     nom = escape(f"{designation(p)} ({identifiant(p)})")
-    titre = f"<title>{nom} — {escape(p.groupe)}, rang {p.rang}</title>"
+    niveau = escape(LIBELLES_GROUPES.get(p.groupe, p.groupe))
+    titre = f"<title>{nom} — {niveau}, rang {p.rang}</title>"
     commun = (
         f'data-point="{escape(p.id)}" tabindex="0" role="button" class="pt" '
-        f'aria-label="{nom}, {escape(p.groupe)}, rang {p.rang}"'
+        f'aria-label="{nom}, {niveau}, rang {p.rang}"'
     )
     r = RAYONS.get(p.groupe, 5)
     if p.type == "feu":

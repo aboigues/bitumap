@@ -38,7 +38,7 @@ ol.liste li{display:grid;grid-template-columns:40px 1fr auto;gap:8px;padding:6px
 ol.liste li:hover{background:var(--puce)}
 ol.liste li.sel{background:var(--puce);box-shadow:inset 5px 0 0 var(--sel),0 0 0 2px var(--sel)}
 .rang{color:var(--discret);font-variant-numeric:tabular-nums}.petit{font-size:.85rem;color:var(--discret)}
-.pastille{font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:4px;color:#fff;align-self:start}
+.pastille{font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:4px;color:#fff;align-self:start;white-space:nowrap}
 .P1a{background:color-mix(in srgb,var(--p1) 78%,#000)}.P1b{background:var(--p1)}
 .P1c{background:transparent;color:var(--p1);box-shadow:inset 0 0 0 2px var(--p1)}
 .P2{background:var(--p2)}.P3{background:var(--p3)}
@@ -68,11 +68,11 @@ a{color:inherit;text-decoration-color:var(--accent)}
 {% endif %}
 
 <section class="chiffres" aria-label="Synthèse">
-  <div class="chiffre p1"><b>{{ synthese.groupes.P1a }}</b><span class="g">P1a · relever en premier</span></div>
-  <div class="chiffre p1"><b>{{ synthese.groupes.P1b }}</b><span class="g">P1b</span></div>
-  <div class="chiffre p1"><b>{{ synthese.groupes.P1c }}</b><span class="g">P1c</span></div>
-  <div class="chiffre p2"><b>{{ synthese.priorites.P2 }}</b><span class="g">P2</span></div>
-  <div class="chiffre"><b>{{ synthese.priorites.P3 }}</b><span class="g">P3</span></div>
+  <div class="chiffre p1"><b>{{ synthese.groupes.P1a }}</b><span class="g">{{ libelles_groupes.P1a }} · relever en premier</span></div>
+  <div class="chiffre p1"><b>{{ synthese.groupes.P1b }}</b><span class="g">{{ libelles_groupes.P1b }}</span></div>
+  <div class="chiffre p1"><b>{{ synthese.groupes.P1c }}</b><span class="g">{{ libelles_groupes.P1c }}</span></div>
+  <div class="chiffre p2"><b>{{ synthese.priorites.P2 }}</b><span class="g">{{ libelles_groupes.P2 }}</span></div>
+  <div class="chiffre"><b>{{ synthese.priorites.P3 }}</b><span class="g">{{ libelles_groupes.P3 }}</span></div>
   {% for type, n in synthese.types.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ type }}</span></div>{% endfor %}
 </section>
 <section class="chiffres" aria-label="Types de route">
@@ -89,8 +89,9 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <div class="panneau">
     <div class="filtres">
       <label>Priorité <select data-filtre="priorite"><option value="tous">toutes</option>
-        <option value="P1">P1 (a, b, c)</option><option>P1a</option><option>P1b</option>
-        <option>P1c</option><option>P2</option><option>P3</option></select></label>
+        <option value="P1">{{ libelles_groupes.P1a }} à {{ libelles_groupes.P1c|lower }}</option>
+        {% for code, libelle in libelles_groupes.items() %}<option value="{{ code }}">{{ libelle }}</option>{% endfor %}
+      </select></label>
       <label>Type <select data-filtre="type"><option value="tous">tous</option>
         <option value="arret">arrêts</option><option value="feu">carrefours à feux</option>
         <option value="giratoire">giratoires</option></select></label>
@@ -106,7 +107,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
         <span><strong>{{ p|designation }}</strong><br><span class="petit">{{ p.libelle_type }}
           · {{ p.route.classement|route }}{% if p.route.numero %} {{ p.route.numero }}{% endif %}
           · {{ p|identifiant }}</span></span>
-        <span class="pastille {{ p.groupe }}">{{ p.groupe }}</span>
+        <span class="pastille {{ p.groupe }}">{{ libelles_groupes[p.groupe] }}</span>
       </li>
     {% endfor %}
     </ol>
@@ -114,10 +115,11 @@ a{color:inherit;text-decoration-color:var(--accent)}
 </section>
 
 <section class="panneau"><h2>Méthode {{ version_methode }}</h2>
-  <p>Score = produit de facteurs ; priorités par rang : <strong>P1</strong> = 20 % des points les plus exposés
-    (découpés par rang en trois tiers <strong>P1a</strong>, P1b, P1c pour ordonner les relevés),
-    <strong>P2</strong> = 40 % suivants, P3 = le reste. Les priorités sont fixées <em>avant</em> l'âge de
-    l'enrobé estimé par IA, qui ne réordonne les points qu'à l'intérieur des P1.</p>
+  <p>Score = produit de facteurs ; niveaux par rang : les 20 % de points les plus exposés, découpés en
+    trois tiers <strong>{{ libelles_groupes.P1a }}</strong>, <strong>{{ libelles_groupes.P1b }}</strong> et
+    <strong>{{ libelles_groupes.P1c }}</strong> ; les 40 % suivants <strong>{{ libelles_groupes.P2 }}</strong> ; le reste
+    <strong>{{ libelles_groupes.P3 }}</strong>. Ces niveaux sont fixés <em>avant</em> l'âge de l'enrobé estimé par IA,
+    qui ne réordonne les points qu'à l'intérieur des 20 % les plus exposés.</p>
   <table><thead><tr><th>Facteur</th><th>Effet</th></tr></thead><tbody>
     <tr><td>Charge : passages de bus par jour (moyenne hebdomadaire hors vacances), échelle logarithmique ;
       carrefour : voie la plus chargée + moitié de la seconde</td><td>ln(1 + bus/jour)</td></tr>
@@ -126,7 +128,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Site : pente ≥ 3 % (±30 m le long de la voie) ; béton ou pavés</td><td>jusqu'à ×1,32 ; ×0,5</td></tr>
     <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments et des arbres)</td><td>×0,8 à ×1,2</td></tr>
     <tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>
-    <tr><td>Âge de l'enrobé (IA, P1 seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
+    <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
   </tbody></table>
   <h3>Limites connues</h3>
   <ul>

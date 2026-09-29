@@ -44,7 +44,8 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
      "modele": "…", "date": "2026-10-02"}
   ],
   "panoramax": {"url": "…", "date": "2025-11-07", "licence": "CC-BY-SA-4.0", "distance_m": 9},
-  "score": 100, "rang": 1, "priorite": "P1", "groupe": "P1a"
+  "score": 100, "rang": 1, "priorite": "P1", "groupe": "P1a",
+  "groupe_libelle": "Critique"
 }
 ```
 

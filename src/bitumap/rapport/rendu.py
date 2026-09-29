@@ -16,7 +16,7 @@ from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
 from bitumap.points import direction
 from bitumap.rapport import carte_svg
-from bitumap.score.methode import VERSION_METHODE
+from bitumap.score.methode import LIBELLES_GROUPES, VERSION_METHODE
 
 SCRIPT = (resources.files("bitumap.rapport") / "interactions.js").read_text("utf-8")
 # Empreinte du seul script autorisé dans les rapports (CSP servie par l'API).
@@ -35,6 +35,7 @@ _env = Environment(
 _env.filters["route"] = libelle
 _env.filters["designation"] = direction.designation
 _env.filters["identifiant"] = direction.identifiant
+_env.globals["libelles_groupes"] = LIBELLES_GROUPES
 
 
 def _json_dans_html(donnees) -> str:

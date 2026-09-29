@@ -39,7 +39,7 @@
     var gabarit = document.getElementById("gabarit-fiche").content.cloneNode(true);
     texte(gabarit.querySelector(".f-titre"), p.designation);
     texte(gabarit.querySelector(".f-sous"), p.type_libelle + " · " + p.identifiant);
-    texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.groupe + " · score " + p.score);
+    texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.groupe_libelle + " · score " + p.score);
     var route = p.route.libelle + (p.route.numero ? " " + p.route.numero : "") +
       (p.route.gestionnaire ? " — gestionnaire : " + p.route.gestionnaire : "") +
       (p.route.statut === "a_verifier" ? " (à vérifier)" : "");

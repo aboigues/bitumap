@@ -11,6 +11,8 @@ autre version n'est jamais réutilisé.
   après l'âge de l'enrobé, en trois tiers **P1a**, **P1b**, **P1c** ; le reste de la division
   va aux premiers tiers (31 P1 ⇒ 11, 10, 10). Affichés dans la synthèse, la liste, la fiche et
   la carte (points plus gros pour P1a), filtrables.
+- **Libellés affichés** (codes internes inchangés) : P1a **Critique**, P1b **Sérieux**,
+  P1c **Important**, P2 **À surveiller**, P3 **Supportable**.
 - **Raison** : à Courbevoie, 31 points P1 sur 154 n'aidaient pas à choisir par où commencer
   (retour du mainteneur).
 - **Sans effet** sur les scores, les rangs, les priorités P1 / P2 / P3, le périmètre de l'IA
