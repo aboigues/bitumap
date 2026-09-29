@@ -22,8 +22,8 @@ R4) ; `img-src 'self' blob: data:` (aperçu des photos avant envoi).
 | Méthode, chemin | Entrée | Réponse | Erreurs |
 |---|---|---|---|
 | `PUT /terrain/releves/{id}` | JSON : `commune_insee`, `point_id`, `cree_le`, `niveau`, champs facultatifs (data-model), `lon`/`lat` facultatifs, `confirme_malgre_incoherence` (booléen), `csrf` | `201` créé, `200` si le même relevé existe déjà (idempotent) ; si la profondeur contredit les repères du niveau et que `confirme_malgre_incoherence` est faux : `200` **sans enregistrement**, `{"avertissement": "mesure_incoherente", "niveau_suggere": "grave"}` (l'agent corrige ou confirme) | `400 niveau_requis`, `400 saisie_invalide`, `404 point_inconnu`, `409 identifiant_pris` (id d'un autre compte), `429 quota_releves` |
-| `POST /terrain/releves/{id}/versions` | champs modifiables, `csrf` | `201` nouvelle version | `403 pas_auteur`, `404` |
-| `POST /terrain/releves/{id}/retrait` | `csrf`, `motif` | `200` ; relevé masqué, trace conservée | `403 pas_auteur` (sauf mainteneur), `404` |
+| `POST /terrain/releves/{id}/versions` | champs modifiables, `version` attendue (facultative : rend le réenvoi idempotent), `confirme_malgre_incoherence`, `csrf` | `201` nouvelle version ; `200` si la même version au même contenu existe déjà ; même avertissement de cohérence que la saisie | `400`, `403 pas_auteur`, `404` (inconnu ou retiré), `409 version_prise` (version déjà prise ou non consécutive) |
+| `POST /terrain/releves/{id}/retrait` | `csrf`, `motif` (facultatif, 200 caractères ; défaut « erreur ») | `200` ; relevé masqué, trace conservée (qui, quand, motif) ; rejoué : sans effet | `403 pas_auteur` (sauf mainteneur), `404` |
 | `GET /terrain/releves/{id}` | — | relevé, versions, nombre de photos ; photos seulement pour l'auteur ou le mainteneur | `404` |
 
 ## Photos (R4, R5)
@@ -33,15 +33,15 @@ R4) ; `img-src 'self' blob: data:` (aperçu des photos avant envoi).
 | `POST /terrain/releves/{id}/photos/{photo_id}/formulaire` | `csrf`, `octets` annoncés | formulaire d'envoi signé (URL, champs), valable 5 min, taille ≤ 10 Mo, `image/jpeg` ou `image/png` | `403 pas_auteur`, `409 trop_de_photos` (> 5), `413 photo_trop_lourde`, `429 quota_photos`, `507 stockage_plein` |
 | `POST /terrain/releves/{id}/photos/{photo_id}/confirmation` | `csrf`, `lon`/`lat`/`prise_le` facultatifs | `201` photo `visible` après contrôle et réencodage ; idempotent | `400 image_invalide` (contenu non image), `404 envoi_absent` |
 | `GET /terrain/photos/{photo_id}` | — | image JPEG sans métadonnée ; `Cache-Control: private, no-store` | `404` **aussi** quand l'utilisateur n'est ni l'auteur ni le mainteneur (aucune fuite d'existence) |
-| `POST /terrain/photos/{photo_id}/retrait` | `csrf`, `motif` | `200` ; auteur : photo masquée ; mainteneur (RGPD) : **toutes les versions** du fichier supprimées du bucket | `403`, `404` |
+| `POST /terrain/photos/{photo_id}/retrait` | `csrf`, `motif` | `200` ; auteur : photo masquée ; mainteneur (RGPD) : **toutes les versions** du fichier supprimées du bucket | `404` pour un autre compte (aucune fuite d'existence) |
 
 ## Export (FR-013, FR-014)
 
 | Méthode, chemin | Réponse |
 |---|---|
-| `GET /terrain/{insee}/releves.csv` | UTF-8 avec BOM, `;` ; un relevé visible par ligne (dernière version) : point, désignation, lon, lat, niveau estimé du rapport en vigueur, niveau constaté, profondeur, instrument, année et source de réfection, observation, date, auteur (pseudonyme), nombre de photos, liens des photos **seulement pour les relevés de l'utilisateur** |
+| `GET /terrain/{insee}/releves.csv` | UTF-8 avec BOM, `;` ; texte commençant par `=`, `+`, `-`, `@` préfixé d'une apostrophe (injection de formules) ; un relevé visible par ligne (dernière version) : relevé, point, désignation, lon, lat, niveau estimé du rapport en vigueur, niveau constaté, profondeur, instrument, année et source de réfection, observation, date, version, auteur (pseudonyme), nombre de photos, liens des photos **seulement pour les relevés de l'utilisateur** |
 | `GET /terrain/{insee}/releves.geojson` | mêmes champs en `properties`, WGS 84 |
-| `GET /terrain/{insee}/echantillon_refection.json` | `{"points": [{id, nom, lon, lat, refection_annee, source}]}` pour les points à année « constatée » ou « services techniques » (format de `bitumap.ia.evaluer`, 002 T072) |
+| `GET /terrain/{insee}/echantillon_refection.json` | `{"points": [{id, nom, lon, lat, refection_annee, source, groupe}]}` (relevé le plus récent de chaque point du rapport en vigueur) pour les points à année « constatée » ou « services techniques » (format de `bitumap.ia.evaluer`, 002 T072) |
 
 ## Mainteneur
 

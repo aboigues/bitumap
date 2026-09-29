@@ -53,6 +53,7 @@ La version affichée est la plus grande ; l'historique montre toutes les version
 | `lon`, `lat` | réels, nuls | position de prise de vue (conservée, FR-003), WGS 84 |
 | `prise_le` | horodatage, nul | |
 | `cree_le` | horodatage | |
+| `retire_le`, `retire_par`, `motif_retrait` | nul | trace du retrait, comme pour un relevé (migration `004_photo_retrait.sql`) |
 
 Transitions : `quarantaine` → `visible` (contrôle et réencodage réussis) ; échec ⇒ ligne et
 objet supprimés. `visible` → `retiree_auteur` | `retiree_mainteneur`. Pour un retrait RGPD, **toutes les

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import psycopg
 from pydantic import BaseModel, Field, model_validator
 
 from bitumap.api import quotas
@@ -197,6 +198,94 @@ def creer(compte_id: str, releve_id: str, saisie: SaisieReleve) -> Resultat:
     )
 
 
+class Correction(Constat):
+    """Nouvelle version d'un relevé ; ``version`` (facultatif) rend le réenvoi idempotent."""
+
+    version: int | None = Field(default=None, ge=2)
+
+
+_CHAMPS_CONSTAT = (
+    "niveau",
+    "profondeur_mm",
+    "instrument",
+    "observation",
+    "annee_refection",
+    "source_refection",
+)
+
+
+def _releve_modifiable(conn, releve_id: str, compte_id: str) -> None:
+    ligne = conn.execute(
+        "SELECT compte_id FROM releve WHERE id = %s AND retire_le IS NULL", (releve_id,)
+    ).fetchone()
+    if ligne is None:
+        raise ErreurPublique(404, "releve_inconnu", "Relevé introuvable.")
+    if str(ligne["compte_id"]) != str(compte_id):
+        raise ErreurPublique(403, "pas_auteur", "Seul l'auteur peut modifier ce relevé.")
+
+
+def corriger(compte_id: str, releve_id: str, correction: Correction) -> Resultat:
+    """Ajoute une version (FR-011) : rien n'est modifié en place. Réenvoi de la même version
+    avec le même contenu ⇒ ``200`` ; version déjà prise ou non consécutive ⇒ ``409``."""
+    with connexion() as conn:
+        _releve_modifiable(conn, releve_id, compte_id)
+        derniere = conn.execute(
+            "SELECT * FROM releve_version WHERE releve_id = %s ORDER BY version DESC LIMIT 1",
+            (releve_id,),
+        ).fetchone()
+        if correction.version is not None and correction.version <= derniere["version"]:
+            existante = conn.execute(
+                "SELECT * FROM releve_version WHERE releve_id = %s AND version = %s",
+                (releve_id, correction.version),
+            ).fetchone()
+            propre = Correction.model_validate(
+                {k: existante[k] for k in _CHAMPS_CONSTAT} | {"version": correction.version}
+            )
+            if all(getattr(propre, k) == getattr(correction, k) for k in _CHAMPS_CONSTAT):
+                return Resultat(
+                    200, {"id": releve_id, "version": correction.version, "deja_enregistre": True}
+                )
+        numero = derniere["version"] + 1
+        if correction.version is not None and correction.version != numero:
+            raise ErreurPublique(
+                409, "version_prise", "Ce relevé a changé entre-temps : rechargez la page."
+            )
+        if (avertissement := _avertissement(correction)) is not None:
+            return avertissement
+        try:
+            _inserer_version(conn, releve_id, numero, correction)
+        except psycopg.errors.UniqueViolation as erreur:  # correction concurrente
+            raise ErreurPublique(
+                409, "version_prise", "Ce relevé a changé entre-temps : rechargez la page."
+            ) from erreur
+    return Resultat(201, {"id": releve_id, "version": numero})
+
+
+def retirer(releve_id: str, compte_id: str, motif: str | None, mainteneur: bool = False) -> None:
+    """Retrait d'un relevé : masqué partout, trace conservée (qui, quand, motif ; R12).
+    L'auteur ou le mainteneur ; un retrait rejoué est sans effet."""
+    with connexion() as conn:
+        ligne = conn.execute(
+            "SELECT compte_id, retire_le FROM releve WHERE id = %s", (releve_id,)
+        ).fetchone()
+        if ligne is None:
+            raise ErreurPublique(404, "releve_inconnu", "Relevé introuvable.")
+        if not mainteneur and str(ligne["compte_id"]) != str(compte_id):
+            raise ErreurPublique(403, "pas_auteur", "Seul l'auteur peut retirer ce relevé.")
+        if ligne["retire_le"] is not None:
+            return
+        conn.execute(
+            "UPDATE releve SET retire_le = now(), retire_par = %s, motif_retrait = %s"
+            " WHERE id = %s",
+            (compte_id, _motif(motif, mainteneur), releve_id),
+        )
+
+
+def _motif(motif: str | None, mainteneur: bool) -> str:
+    texte = (motif or "").strip()[:200]
+    return texte or ("RGPD" if mainteneur else "erreur")
+
+
 def auteur_de(releve_id: str) -> tuple[bool, str | None]:
     """(existe, compte_id de l'auteur)."""
     with connexion() as conn:
@@ -249,6 +338,31 @@ def _releves(conn, filtre: str, parametres: tuple) -> list[dict]:
         " ORDER BY r.cree_le DESC",
         parametres,
     ).fetchall()
+
+
+def releves_visibles(commune_insee: str, lecteur_id: str | None) -> list[dict]:
+    """Tous les relevés visibles de la commune (dernière version), du plus récent au plus
+    ancien, avec la position du téléphone et, pour les relevés du lecteur seulement, les
+    identifiants de photos (FR-013, FR-015)."""
+    with connexion() as conn:
+        lignes = _releves(conn, "r.commune_insee = %s", (commune_insee,))
+        siens = [li["id"] for li in lignes if str(li["compte_id"]) == str(lecteur_id)]
+        photos = (
+            conn.execute(
+                "SELECT id, releve_id FROM photo WHERE etat = 'visible' AND releve_id = ANY(%s)"
+                " ORDER BY cree_le",
+                (siens,),
+            ).fetchall()
+            if siens
+            else []
+        )
+    emails = {str(li["compte_id"]): li["email"] for li in lignes if li["compte_id"]}
+    vues = []
+    for ligne in lignes:
+        vue = _vue(ligne, lecteur_id, emails) | {"lon": ligne["lon"], "lat": ligne["lat"]}
+        vue["photos"] = [str(p["id"]) for p in photos if str(p["releve_id"]) == vue["id"]]
+        vues.append(vue)
+    return vues
 
 
 def derniers_releves(commune_insee: str, lecteur_id: str | None) -> dict[str, dict]:

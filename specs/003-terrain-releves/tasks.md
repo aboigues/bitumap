@@ -112,9 +112,9 @@ de chaque story **avant** son implémentation et vérifier qu'ils échouent.
 
 **Independent Test**: corriger le niveau puis retirer une photo : version corrigée affichée, deux versions dans l'historique, trace du retrait
 
-- [ ] T029 [P] [US3] Écrire `tests/terrain/test_versions.py` : `POST /terrain/releves/{id}/versions` ⇒ version 2 affichée, version 1 dans l'historique, rien n'est modifié en place (SC-005) ; autre compte ⇒ `403 pas_auteur` ; retrait d'un relevé ou d'une photo par l'auteur ⇒ masqué partout, trace (qui, quand), fichier de photo **conservé** (R12) ; contrôle de cohérence (R11) aussi appliqué aux versions
-- [ ] T030 [US3] Implémenter dans `src/bitumap/terrain/depot.py` et `src/bitumap/terrain/photos.py` : nouvelle version, retrait par l'auteur (`retire_le`, `retire_par`, `motif_retrait` ; `photo.etat = retiree_auteur`)
-- [ ] T031 [US3] Ajouter `POST /terrain/releves/{id}/versions`, `POST /terrain/releves/{id}/retrait` et `POST /terrain/photos/{photo_id}/retrait` (auteur) dans `src/bitumap/api/terrain.py` ; boutons « Corriger » et « Retirer » sur `saisie.html` pour les relevés de l'utilisateur (hors réseau : la correction entre dans la même file d'attente que la saisie)
+- [X] T029 [P] [US3] Écrire `tests/terrain/test_versions.py` : `POST /terrain/releves/{id}/versions` ⇒ version 2 affichée, version 1 dans l'historique, rien n'est modifié en place (SC-005) ; autre compte ⇒ `403 pas_auteur` ; retrait d'un relevé ou d'une photo par l'auteur ⇒ masqué partout, trace (qui, quand), fichier de photo **conservé** (R12) ; contrôle de cohérence (R11) aussi appliqué aux versions
+- [X] T030 [US3] Implémenter dans `src/bitumap/terrain/depot.py` et `src/bitumap/terrain/photos.py` : nouvelle version, retrait par l'auteur (`retire_le`, `retire_par`, `motif_retrait` ; `photo.etat = retiree_auteur`)
+- [X] T031 [US3] Ajouter `POST /terrain/releves/{id}/versions`, `POST /terrain/releves/{id}/retrait` et `POST /terrain/photos/{photo_id}/retrait` (auteur) dans `src/bitumap/api/terrain.py` ; boutons « Corriger » et « Retirer » sur `saisie.html` pour les relevés de l'utilisateur (hors réseau : la correction entre dans la même file d'attente que la saisie)
 
 **Checkpoint**: historique fiable (SC-005)
 
@@ -126,9 +126,9 @@ de chaque story **avant** son implémentation et vérifier qu'ils échouent.
 
 **Independent Test**: exporter Courbevoie et ouvrir dans un tableur et un logiciel de cartographie ; l'échantillon est lu par `bitumap.ia.evaluer`
 
-- [ ] T032 [P] [US4] Écrire `tests/terrain/test_export.py` : CSV UTF-8 avec BOM, séparateur `;`, une ligne par relevé visible (dernière version), colonnes du contrat ; niveau estimé = rapport **en vigueur** ; liens de photos seulement pour les relevés de l'utilisateur ; GeoJSON WGS 84 aux mêmes champs ; `echantillon_refection.json` au format `{"points": [{id, nom, lon, lat, refection_annee, source}]}` limité aux sources `constatee` et `services_techniques`, accepté par `bitumap.ia.evaluer` (lecture seule, sans appel au modèle)
-- [ ] T033 [US4] Implémenter `src/bitumap/terrain/export.py` (CSV, GeoJSON, échantillon de réfection)
-- [ ] T034 [US4] Ajouter `GET /terrain/{insee}/releves.csv`, `GET /terrain/{insee}/releves.geojson`, `GET /terrain/{insee}/echantillon_refection.json` dans `src/bitumap/api/terrain.py`, et les liens d'export sur `points.html`
+- [X] T032 [P] [US4] Écrire `tests/terrain/test_export.py` : CSV UTF-8 avec BOM, séparateur `;`, une ligne par relevé visible (dernière version), colonnes du contrat ; niveau estimé = rapport **en vigueur** ; liens de photos seulement pour les relevés de l'utilisateur ; GeoJSON WGS 84 aux mêmes champs ; `echantillon_refection.json` au format `{"points": [{id, nom, lon, lat, refection_annee, source}]}` limité aux sources `constatee` et `services_techniques`, accepté par `bitumap.ia.evaluer` (lecture seule, sans appel au modèle)
+- [X] T033 [US4] Implémenter `src/bitumap/terrain/export.py` (CSV, GeoJSON, échantillon de réfection)
+- [X] T034 [US4] Ajouter `GET /terrain/{insee}/releves.csv`, `GET /terrain/{insee}/releves.geojson`, `GET /terrain/{insee}/echantillon_refection.json` dans `src/bitumap/api/terrain.py`, et les liens d'export sur `points.html`
 
 **Checkpoint**: export exploitable (SC-007)
 

@@ -87,15 +87,26 @@ async function appeler(methode, url, corps) {
   throw new ErreurDefinitive(donnees.message || "Envoi refusé.");
 }
 
+// Types d'envoi : « saisie » (relevé nouveau, identifiant = celui de l'envoi), « correction »
+// (nouvelle version d'un relevé, numéro fixé à la saisie : un réenvoi ne crée pas de doublon),
+// « retrait » (relevé retiré par son auteur).
 async function envoyer(envoi) {
+  const releve = envoi.releve || envoi.id;
   if (!envoi.releveEnvoye) {
-    await appeler("PUT", `/terrain/releves/${envoi.id}`, { ...envoi.donnees, csrf: envoi.csrf });
+    const corps = { ...envoi.donnees, csrf: envoi.csrf };
+    if (envoi.type === "correction") {
+      await appeler("POST", `/terrain/releves/${releve}/versions`, { ...corps, version: envoi.version });
+    } else if (envoi.type === "retrait") {
+      await appeler("POST", `/terrain/releves/${releve}/retrait`, { csrf: envoi.csrf, motif: envoi.motif });
+    } else {
+      await appeler("PUT", `/terrain/releves/${releve}`, corps);
+    }
     envoi.releveEnvoye = true;
     await garder(envoi);
   }
-  for (const photo of envoi.photos) {
+  for (const photo of envoi.photos || []) {
     if (photo.envoyee) continue;
-    const base = `/terrain/releves/${envoi.id}/photos/${photo.id}`;
+    const base = `/terrain/releves/${releve}/photos/${photo.id}`;
     const formulaire = await appeler("POST", `${base}/formulaire`, {
       csrf: envoi.csrf, octets: photo.blob.size, type: photo.blob.type,
     });
@@ -171,11 +182,69 @@ function lireFormulaire(formulaire) {
   };
 }
 
+const CHAMPS = ["profondeur_mm", "instrument", "observation", "annee_refection", "source_refection"];
+
 function initialiserSaisie(formulaire) {
   const avertissement = document.getElementById("avertissement");
   const erreur = document.getElementById("erreur");
   const confirmer = document.getElementById("confirmer");
   const confirmation = document.getElementById("confirmation");
+  const modeCorrection = document.getElementById("mode-correction");
+  let correction = null; // { releve, version } pendant une correction
+
+  function quitterCorrection() {
+    correction = null;
+    modeCorrection.hidden = true;
+    document.getElementById("valider").textContent = "Enregistrer le relevé";
+  }
+
+  // Corriger : le formulaire reprend la dernière version ; l'envoi ajoute une version.
+  document.querySelectorAll("[data-corriger]").forEach((bouton) => {
+    bouton.addEventListener("click", () => {
+      const d = bouton.dataset;
+      formulaire.reset();
+      const niveau = formulaire.querySelector(`input[name=niveau][value="${d.niveau}"]`);
+      if (niveau) niveau.checked = true;
+      CHAMPS.forEach((nom) => { formulaire.elements[nom].value = d[nom] || ""; });
+      correction = { releve: d.corriger, version: Number(d.version) };
+      modeCorrection.hidden = false;
+      document.getElementById("valider").textContent = "Enregistrer la correction";
+      formulaire.scrollIntoView({ behavior: "smooth" });
+    });
+  });
+  document.getElementById("annuler-correction").addEventListener("click", () => {
+    formulaire.reset();
+    quitterCorrection();
+  });
+
+  // Retirer un relevé : trace conservée côté serveur ; passe par la file hors réseau.
+  document.querySelectorAll("[data-retirer-releve]").forEach((bouton) => {
+    bouton.addEventListener("click", async () => {
+      if (!window.confirm("Retirer ce relevé ? Il ne sera plus visible ; une trace est conservée.")) return;
+      await garder({
+        id: crypto.randomUUID(), type: "retrait", releve: bouton.dataset.retirerReleve,
+        csrf: formulaire.dataset.csrf, motif: "erreur", donnees: { cree_le: new Date().toISOString() },
+      });
+      bouton.closest("li").hidden = true;
+      await synchroniser();
+    });
+  });
+
+  // Retirer une photo : nécessite le réseau (la photo est affichée depuis le serveur).
+  document.querySelectorAll("[data-retirer-photo]").forEach((bouton) => {
+    bouton.addEventListener("click", async () => {
+      if (!window.confirm("Retirer cette photo ? Elle ne sera plus visible.")) return;
+      try {
+        await appeler("POST", `/terrain/photos/${bouton.dataset.retirerPhoto}/retrait`, {
+          csrf: formulaire.dataset.csrf, motif: "erreur",
+        });
+        bouton.closest(".photo").remove();
+      } catch (e) {
+        erreur.textContent = navigator.onLine ? e.message : "Retrait impossible hors réseau : réessayez plus tard.";
+        erreur.hidden = false;
+      }
+    });
+  });
 
   async function enregistrer(confirme) {
     erreur.hidden = true;
@@ -203,15 +272,22 @@ function initialiserSaisie(formulaire) {
         lon: ici && ici.lon, lat: ici && ici.lat, prise_le: new Date().toISOString(),
       });
     }
-    await garder({ id: crypto.randomUUID(), csrf: formulaire.dataset.csrf, donnees, photos });
+    const envoi = { id: crypto.randomUUID(), csrf: formulaire.dataset.csrf, donnees, photos };
+    if (correction) Object.assign(envoi, { type: "correction", ...correction });
+    await garder(envoi);
     formulaire.reset();
     avertissement.hidden = true;
     confirmer.hidden = true;
+    const etaitCorrection = Boolean(correction);
+    const quoi = etaitCorrection ? "Correction enregistrée" : "Relevé enregistré";
+    quitterCorrection();
     confirmation.textContent = navigator.onLine
-      ? "Relevé enregistré ; envoi en cours."
-      : "Relevé enregistré sur le téléphone ; il sera envoyé au retour du réseau.";
+      ? `${quoi} ; envoi en cours.`
+      : `${quoi} sur le téléphone ; envoi au retour du réseau.`;
     confirmation.hidden = false;
     await synchroniser();
+    // historique à jour dès que la correction est reçue
+    if (etaitCorrection && (await tousLesEnvois()).length === 0) window.location.reload();
   }
 
   formulaire.addEventListener("submit", (e) => { e.preventDefault(); enregistrer(false); });

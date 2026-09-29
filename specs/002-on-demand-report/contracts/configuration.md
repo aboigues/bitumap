@@ -4,6 +4,12 @@ Variables d'environnement lues par `bitumap.config` (pydantic-settings). Les **s
 injectés depuis Secret Manager (références de secret du conteneur et du job), jamais dans le
 dépôt ni dans `.env`.
 
+**Nommage sur Scaleway** : aucune variable d'environnement ni aucun secret déclaré sur
+Scaleway (conteneur, job, Secret Manager) ne peut commencer par `SCW` : ce préfixe est réservé
+à Scaleway. Les variables de l'application commencent par `BITUMAP_`, les secrets par
+`bitumap-`. (`SCW_PROFILE` de `.env.example` est une variable locale de la CLI `scw`, jamais
+déclarée sur Scaleway.)
+
 ## Réglages (valeurs de départ, spec « Assumptions »)
 
 | Variable | Défaut | Rôle |

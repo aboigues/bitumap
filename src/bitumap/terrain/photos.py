@@ -178,6 +178,27 @@ def confirmer(
     return {"id": photo_id, "etat": "visible"}
 
 
+def retirer_par_auteur(photo_id: str, compte_id: str, motif: str | None) -> None:
+    """Retrait par l'auteur (R12) : photo masquée partout, fichier **conservé** (historique,
+    FR-012), trace (qui, quand, motif). Un autre compte reçoit ``404`` (aucune fuite
+    d'existence, R5) ; un retrait rejoué est sans effet."""
+    with connexion() as conn:
+        ligne = conn.execute(
+            "SELECT p.etat, r.compte_id FROM photo p JOIN releve r ON r.id = p.releve_id"
+            " WHERE p.id = %s",
+            (photo_id,),
+        ).fetchone()
+        if ligne is None or str(ligne["compte_id"]) != str(compte_id):
+            raise ErreurPublique(404, "http", "Page introuvable.")
+        if ligne["etat"] != "visible":
+            return
+        conn.execute(
+            "UPDATE photo SET etat = 'retiree_auteur', retire_le = now(), retire_par = %s,"
+            " motif_retrait = %s WHERE id = %s",
+            (compte_id, (motif or "").strip()[:200] or "erreur", photo_id),
+        )
+
+
 def lire(photo_id: str, compte_id: str, mainteneur: bool) -> bytes | None:
     """Contenu d'une photo visible, pour son auteur ou le mainteneur ; ``None`` sinon (R5)."""
     with connexion() as conn:

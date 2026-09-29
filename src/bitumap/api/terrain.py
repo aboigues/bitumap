@@ -19,7 +19,7 @@ from bitumap.api.application import DOSSIER, ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, est_mainteneur, verifier_csrf
 from bitumap.config import reglages
 from bitumap.score.methode import LIBELLES_GROUPES
-from bitumap.terrain import depot, photos
+from bitumap.terrain import depot, export, photos
 from bitumap.terrain.points import points_en_vigueur
 
 routeur = APIRouter(prefix="/terrain")
@@ -101,6 +101,43 @@ def lire_releve(releve_id: str, session: SessionRequise) -> JSONResponse:
     return _reponse(200, vue)
 
 
+@routeur.post("/releves/{releve_id}/versions")
+async def corriger(requete: Request, releve_id: str, session: SessionRequise) -> JSONResponse:
+    _uuid(releve_id)
+    corps = await _json(requete)
+    verifier_csrf(session, str(corps.pop("csrf", "")))
+    if not corps.get("niveau"):
+        raise ErreurPublique(400, "niveau_requis", "Le niveau d'orniérage est obligatoire.")
+    try:
+        correction = depot.Correction.model_validate(corps)
+    except ValidationError as erreur:
+        raise ErreurPublique(400, "saisie_invalide", "Saisie invalide.") from erreur
+    resultat = depot.corriger(session.compte_id, releve_id, correction)
+    return _reponse(resultat.statut, resultat.corps)
+
+
+@routeur.post("/releves/{releve_id}/retrait")
+async def retirer_releve(requete: Request, releve_id: str, session: SessionRequise) -> JSONResponse:
+    _uuid(releve_id)
+    corps = await _json(requete)
+    verifier_csrf(session, str(corps.get("csrf", "")))
+    depot.retirer(releve_id, session.compte_id, _texte(corps.get("motif")))
+    return _reponse(200, {"id": releve_id, "retire": True})
+
+
+@routeur.post("/photos/{photo_id}/retrait")
+async def retirer_photo(requete: Request, photo_id: str, session: SessionRequise) -> JSONResponse:
+    _uuid(photo_id)
+    corps = await _json(requete)
+    verifier_csrf(session, str(corps.get("csrf", "")))
+    photos.retirer_par_auteur(photo_id, session.compte_id, _texte(corps.get("motif")))
+    return _reponse(200, {"id": photo_id, "retire": True})
+
+
+def _texte(valeur) -> str | None:
+    return valeur if isinstance(valeur, str) else None
+
+
 @routeur.post("/releves/{releve_id}/photos/{photo_id}/formulaire")
 async def formulaire_photo(
     requete: Request, releve_id: str, photo_id: str, session: SessionRequise
@@ -180,6 +217,48 @@ def page_points(requete: Request, insee: str, session: SessionRequise) -> Respon
     )
     reponse.headers.update(en_tetes_terrain())
     return reponse
+
+
+def _telechargement(contenu: bytes, type_media: str, nom: str) -> Response:
+    return Response(
+        contenu,
+        media_type=type_media,
+        headers={
+            "Content-Disposition": f'attachment; filename="{nom}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@routeur.get("/{insee}/releves.csv")
+def export_csv(insee: str, session: SessionRequise) -> Response:
+    _, points = _commune(insee)
+    donnees = export.lignes(insee, session.compte_id, points)
+    return _telechargement(
+        export.en_csv(donnees), "text/csv; charset=utf-8", f"releves-{insee}.csv"
+    )
+
+
+@routeur.get("/{insee}/releves.geojson")
+def export_geojson(insee: str, session: SessionRequise) -> Response:
+    _, points = _commune(insee)
+    donnees = export.en_geojson(export.lignes(insee, session.compte_id, points))
+    return _telechargement(
+        json.dumps(donnees, ensure_ascii=False).encode(),
+        "application/geo+json",
+        f"releves-{insee}.geojson",
+    )
+
+
+@routeur.get("/{insee}/echantillon_refection.json")
+def export_echantillon(insee: str, session: SessionRequise) -> Response:
+    _, points = _commune(insee)
+    donnees = export.echantillon_refection(insee, points)
+    return _telechargement(
+        json.dumps(donnees, ensure_ascii=False, indent=1).encode(),
+        "application/json",
+        f"echantillon_refection-{insee}.json",
+    )
 
 
 @routeur.get("/{insee}/{point_id}")
