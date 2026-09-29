@@ -22,7 +22,8 @@ from pathlib import Path
 
 VERSION = "3.2.3"
 INTEGRITE_NPM = (
-    "sha512-yBHJIOoGZyU4/ap3AnlL2kChEVw40QP142BtxYZN5dCjAeBlaScuAEWxmrLDVQjlRBplayapUIvARs0eG48OVw=="
+    "sha512-yBHJIOoGZyU4/ap3AnlL2kChEVw40QP142BtxYZN5dCjAeBla"
+    "ScuAEWxmrLDVQjlRBplayapUIvARs0eG48OVw=="
 )
 DOSSIER = Path(__file__).resolve().parents[1] / "src" / "bitumap" / "api" / "statique" / "altcha"
 
