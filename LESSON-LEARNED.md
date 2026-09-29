@@ -33,6 +33,47 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-012 — Constaté absent du rapport malgré des tests verts (2026-09-29) — Close
+
+- **Contexte** : développement de 003 (US2), essai du parcours dans un navigateur (émulation
+  mobile) avant la PR.
+- **Symptôme** : un relevé saisi n'apparaît ni dans la synthèse « Constaté » ni dans la fiche
+  du rapport ; aucune erreur en console. Les tests de `test_rapport_releves.py` passaient.
+- **Causes racines** :
+  1. Pourquoi ? Le script du rapport lit le bloc `releves` au chargement et ne le trouvait
+     pas : il valait `{}`.
+  2. Pourquoi ? L'API insérait le bloc juste avant `</body>`, donc **après** le script en
+     ligne, qui s'exécute dès qu'il est analysé.
+  3. Pourquoi non vu ? Les tests vérifiaient la présence et le contenu du bloc dans le HTML,
+     pas qu'il soit lisible par le script (même famille que LL-003 : présent ≠ effectif).
+- **Correctif** : le bloc est inséré juste après le bloc `donnees`, avant le script.
+- **Mesure préventive** : test `test_bloc_avant_le_script_qui_le_lit` (ordre des blocs) ;
+  le parcours navigateur du quickstart reste obligatoire avant chaque PR touchant le rapport
+  ou la saisie.
+- **Références** : branche `003-terrain-releves`.
+
+### LL-011 — CSP d'un rapport en cache liée à la version courante du script (2026-09-29) — Close
+
+- **Contexte** : conception de 003 (relevés terrain), rapport servi par l'API de 002 ;
+  défaut latent, trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après toute modification de
+  `rapport/interactions.js` (PR #17, #19), un rapport encore en cache (30 jours), produit
+  avec l'ancien script, serait servi avec une CSP n'autorisant que l'empreinte du **nouveau**
+  script : filtres, fiche et carte inertes.
+- **Causes racines** :
+  1. Pourquoi ? `CSP_RAPPORT` était une constante calculée au démarrage sur le script du code
+     en cours, alors que le script est figé dans chaque `rapport.html` stocké.
+  2. Pourquoi non vu ? Les tests génèrent le rapport et le servent avec le même code ; aucun
+     test ne servait un rapport produit par une version antérieure.
+  3. Pourquoi pas d'incident ? Aucun rapport n'est encore en production.
+- **Correctif** : `rapport.rendu.csp_du_document(html)` calcule, à chaque service,
+  l'empreinte des scripts en ligne **du document servi** (analyseur HTML, blocs de données
+  JSON exclus) ; le document vient du bucket privé, écrit par le job.
+- **Mesure préventive** : `tests/api/test_rapport_csp.py` (ancien script autorisé, bloc JSON
+  exclu, balise en majuscules reconnue, document sans script ⇒ `script-src 'none'`). Règle :
+  tout artefact stocké et servi plus tard est testé avec une version antérieure du code.
+- **Références** : branche `003-terrain-releves` (T006, T007).
+
 ### LL-009 — Coût IA du jour arrondi à chaque opération (2026-09-29) — Close
 
 - **Contexte** : développement US4, test du plafond de coût par rapport

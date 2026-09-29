@@ -7,6 +7,7 @@ import hashlib
 import json
 from collections import Counter
 from datetime import date
+from html.parser import HTMLParser
 from importlib import resources
 
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -26,6 +27,52 @@ CSP_RAPPORT = (
     f"script-src '{EMPREINTE_SCRIPT}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
+
+class _ScriptsEnLigne(HTMLParser):
+    """Scripts exécutables en ligne d'un document (les blocs de données JSON exclus)."""
+
+    def __init__(self):
+        super().__init__()
+        self.scripts: list[str] = []
+        self._courant: list[str] | None = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "script":
+            type_ = (dict(attrs).get("type") or "").lower()
+            self._courant = None if type_ == "application/json" else []
+
+    def handle_data(self, data):
+        if self._courant is not None:
+            self._courant.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "script":
+            if self._courant is not None:
+                self.scripts.append("".join(self._courant))
+            self._courant = None
+
+
+def csp_du_document(html: str) -> str:
+    """CSP d'un rapport servi : n'autorise que les scripts en ligne **de ce document**.
+
+    Un rapport encore en cache, produit avant une modification du script, garde ainsi son
+    interactivité (003 R2) ; le document vient du bucket privé, écrit par le job de lot.
+    """
+    analyse = _ScriptsEnLigne()
+    analyse.feed(html)
+    empreintes = sorted(
+        {
+            "'sha256-" + base64.b64encode(hashlib.sha256(s.encode()).digest()).decode() + "'"
+            for s in analyse.scripts
+        }
+    )
+    scripts = " ".join(empreintes) or "'none'"
+    return (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src data:; "
+        f"script-src {scripts}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+
+
 _env = Environment(
     loader=PackageLoader("bitumap.rapport", "gabarits"),
     autoescape=select_autoescape(["html", "j2"]),
@@ -38,7 +85,7 @@ _env.filters["identifiant"] = direction.identifiant
 _env.globals["libelles_groupes"] = LIBELLES_GROUPES
 
 
-def _json_dans_html(donnees) -> str:
+def json_dans_html(donnees) -> str:
     """JSON sûr dans un bloc <script type="application/json"> (aucune sortie de balise)."""
     texte = json.dumps(donnees, ensure_ascii=False, default=str)
     return texte.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
@@ -73,7 +120,7 @@ def rendre(
         sources=sources,
         avertissements=resultat.avertissements,
         ia=journal.ia if journal.ia.modele else None,
-        donnees_json=_json_dans_html({"points": points_dict}),
+        donnees_json=json_dans_html({"points": points_dict}),
         script=SCRIPT,
     )
     geojson = {

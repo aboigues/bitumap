@@ -24,7 +24,8 @@ from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.ia.budget import budget_jour_epuise
 from bitumap.lot import versions
-from bitumap.rapport.rendu import CSP_RAPPORT
+from bitumap.rapport.rendu import csp_du_document, json_dans_html
+from bitumap.terrain import depot as releves_terrain
 from bitumap.territoire import ErreurTerritoire, commune_par_insee, communes_du_code_postal
 
 routeur = APIRouter()
@@ -230,14 +231,33 @@ def _fichier_rapport(insee: str, empreinte: str, nom: str) -> bytes:
     return contenu
 
 
+def _inserer_avant_script(html: str, bloc: str) -> str:
+    """Insère ``bloc`` juste après le bloc ``donnees``, donc avant le script du rapport qui le
+    lit au chargement (inséré après, il serait ignoré). Le JSON échappe ``</`` : la première
+    balise ``</script>`` qui suit est bien la fin du bloc."""
+    ouverture = html.find('id="donnees"')
+    fin = html.find("</script>", ouverture) if ouverture != -1 else -1
+    if fin == -1:
+        debut, balise, reste = html.rpartition("</body>")
+        return f"{debut}{bloc}\n{balise}{reste}" if balise else html + bloc
+    fin += len("</script>")
+    return f"{html[:fin]}\n{bloc}{html[fin:]}"
+
+
 @routeur.get("/rapports/{insee}/{empreinte}")
 def rapport(insee: str, empreinte: str, session: SessionRequise) -> Response:
-    contenu = _fichier_rapport(insee, empreinte, "rapport.html")
+    html = _fichier_rapport(insee, empreinte, "rapport.html").decode("utf-8")
+    # Constaté (003 US2) : relevés courants insérés à chaque consultation, sans modifier le
+    # rapport stocké ni le score ; données non exécutées, aucune photo (FR-015).
+    constate = releves_terrain.derniers_releves(insee, session.compte_id)
+    bloc = f'<script type="application/json" id="releves">{json_dans_html(constate)}</script>'
+    html = _inserer_avant_script(html, bloc)
     return Response(
-        contenu,
+        html,
         media_type="text/html; charset=utf-8",
         headers={
-            "Content-Security-Policy": CSP_RAPPORT,
+            # Script autorisé : celui du document servi (003 R2, rapports en cache).
+            "Content-Security-Policy": csp_du_document(html),
             "Cache-Control": "private, no-store",
             "Content-Disposition": "inline",
         },

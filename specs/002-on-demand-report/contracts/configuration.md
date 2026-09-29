@@ -26,7 +26,12 @@ dépôt ni dans `.env`.
 | `BITUMAP_IA_MODELE` | issu de l'évaluation (R7) | FR-014 |
 | `BITUMAP_ALERTE_MENSUELLE_EUR` | 5 | FR-029 : seuil d'alerte, sans blocage |
 | `BITUMAP_CACHE_RAPPORT_JOURS` | 30 | FR-008 : validité d'un rapport en cache |
-| `BITUMAP_EMAIL_MAINTENEUR` | **aucun dans le dépôt** : fourni par variable OpenTofu | destinataire des alertes |
+| `BITUMAP_EMAIL_MAINTENEUR` | **aucun dans le dépôt** : fourni par variable OpenTofu | destinataire des alertes ; compte mainteneur (modération des relevés, 003) |
+| `BITUMAP_BUCKET_TERRAIN` | `bitumap-terrain` | photos des relevés terrain (003), privé et versionné |
+| `BITUMAP_QUOTA_RELEVES_COMPTE_JOUR`, `BITUMAP_QUOTA_PHOTOS_COMPTE_JOUR` | 200, 1 000 | 003 FR-018 |
+| `BITUMAP_PHOTOS_PAR_RELEVE`, `BITUMAP_PHOTO_MAX_OCTETS` | 5, 10 Mo | 003 FR-003 |
+| `BITUMAP_PHOTO_FORMULAIRE_VALIDITE_S` | 300 | formulaire d'envoi présigné (003 R4) |
+| `BITUMAP_PHOTOS_MAX_GO` | 20 | plafond global du stockage des photos (003 R8) |
 | `BITUMAP_IA_TARIF_ENTREE_EUR_MTOK`, `…_SORTIE_…` | tarif Scaleway en vigueur | calcul du coût |
 | `BITUMAP_PANORAMAX_RAYON_M` | 30 | FR-015 |
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |
