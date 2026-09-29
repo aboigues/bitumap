@@ -1,5 +1,6 @@
 """OpenStreetMap (ODbL) : itinéraires de bus, feux, giratoires, revêtement, ouvrages d'art,
-terminus desservis depuis chaque quai (direction, FR-030).
+terminus desservis depuis chaque quai (direction, FR-030), ouvrages (ponts routiers,
+ferroviaires et passerelles) qui ombrent la chaussée (issue #18).
 
 Portée régionale (FR-007b) : une passe sur l'extrait Geofabrik Île-de-France (≈ 3 min,
 ≈ 600 Mo de mémoire) produit un fichier compact mis en cache ; chaque commune n'en lit
@@ -45,6 +46,7 @@ class DonneesOsm:
     feux: gpd.GeoDataFrame  # node_id, pieton
     giratoires: gpd.GeoDataFrame  # way_id, nom
     quais: gpd.GeoDataFrame  # node_id, ref_idfm, terminus (JSON {ligne: [terminus]})
+    ouvrages: gpd.GeoDataFrame  # way_id, genre (rail, route, pieton), niveau, largeur_m
 
 
 def telecharger(dossier: Path) -> tuple[Path, date]:
@@ -75,6 +77,27 @@ def telecharger(dossier: Path) -> tuple[Path, date]:
 
 
 _QUAIS_VIDE = {"node_id": [], "ref_idfm": [], "terminus": [], "geometry": []}
+_OUVRAGES_VIDE = {"way_id": [], "genre": [], "niveau": [], "largeur_m": [], "geometry": []}
+_PIETONS = {"footway", "pedestrian", "path", "steps", "cycleway", "bridleway"}
+
+
+def genre_ouvrage(tags) -> str | None:
+    """Pont qui porte une voie ferrée, une route ou un cheminement ; ``None`` sinon."""
+    if tags.get("bridge", "no") in ("no", "") or tags.get("covered") == "yes":
+        return None
+    if tags.get("railway") in ("rail", "light_rail", "subway", "tram", "narrow_gauge"):
+        return "rail"
+    highway = tags.get("highway")
+    if highway in _PIETONS:
+        return "pieton"
+    return "route" if highway else None
+
+
+def _nombre(valeur: str | None) -> float | None:
+    try:
+        return float(str(valeur).split(";")[0].replace(",", ".").removesuffix(" m"))
+    except TypeError, ValueError:
+        return None
 
 
 def terminus(tags) -> str | None:
@@ -102,7 +125,7 @@ def extraire_region(pbf: Path) -> DonneesOsm:
             elif membre.type == "n" and fin:
                 terminus_par_noeud.setdefault(membre.ref, {}).setdefault(ref, set()).add(fin)
 
-    voies, feux, giratoires, quais = [], [], [], []
+    voies, feux, giratoires, quais, ouvrages = [], [], [], [], []
     for obj in osmium.FileProcessor(str(pbf), osmium.osm.NODE | osmium.osm.WAY).with_locations():
         if obj.is_node():
             ref_idfm = obj.tags.get("ref:FR:STIF") or obj.tags.get("ref:FR:IDFM")
@@ -130,7 +153,8 @@ def extraire_region(pbf: Path) -> DonneesOsm:
             continue
         est_bus = obj.id in lignes_par_voie
         est_giratoire = obj.tags.get("junction") in ("roundabout", "circular")
-        if not (est_bus or est_giratoire):
+        genre = genre_ouvrage(obj.tags)
+        if not (est_bus or est_giratoire or genre):
             continue
         try:
             coords = [(n.lon, n.lat) for n in obj.nodes]
@@ -139,6 +163,17 @@ def extraire_region(pbf: Path) -> DonneesOsm:
         if len(coords) < 2:
             continue
         geometrie = LineString(coords)
+        if genre:
+            niveau = _nombre(obj.tags.get("layer"))
+            ouvrages.append(
+                {
+                    "way_id": obj.id,
+                    "genre": genre,
+                    "niveau": int(niveau) if niveau and niveau > 0 else 1,
+                    "largeur_m": _nombre(obj.tags.get("width")),
+                    "geometry": geometrie,
+                }
+            )
         if est_bus:
             voies.append(
                 {
@@ -165,12 +200,13 @@ def extraire_region(pbf: Path) -> DonneesOsm:
         gpd.GeoDataFrame(feux, crs=crs),
         gpd.GeoDataFrame(giratoires, crs=crs),
         gpd.GeoDataFrame(quais or _QUAIS_VIDE, geometry="geometry", crs=crs),
+        gpd.GeoDataFrame(ouvrages or _OUVRAGES_VIDE, geometry="geometry", crs=crs),
     )
 
 
-COUCHES = ("voies_bus", "feux", "giratoires", "quais")
+COUCHES = ("voies_bus", "feux", "giratoires", "quais", "ouvrages")
 # Version du fichier régional mis en cache : à incrémenter quand ses couches changent.
-VERSION_CACHE = 2
+VERSION_CACHE = 3
 
 
 def enregistrer(donnees: DonneesOsm, fichier: Path) -> None:

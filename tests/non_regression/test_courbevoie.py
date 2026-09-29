@@ -24,19 +24,21 @@ RACINE = Path(__file__).resolve().parents[2]
 FIXTURES = RACINE / "tests" / "fixtures" / "courbevoie"
 PROTOTYPE = RACINE / "docs" / "reference" / "prototype-courbevoie-v2.html"
 
-# Mesuré le 2026-09-28 : 74 % (23/31). Les 8 P1 non retrouvés sont expliqués ci-dessous.
-# L'objectif SC-003 (80 %) n'est pas atteint : écart accepté par le mainteneur le 2026-09-28
-# (ensoleillement refondu en 004).
+# Mesuré le 2026-09-29 (méthode 1.2) : 74 % (23/31). Les 8 P1 non retrouvés sont expliqués
+# ci-dessous. L'objectif SC-003 (80 %) n'est pas atteint : écart accepté par le mainteneur le
+# 2026-09-28 (ensoleillement refondu en 004). La méthode 1.2 (ponts, zone d'arrêt, issue #18)
+# retrouve A24336, A18789 et A420570 et écarte trois P1 que le prototype plaçait sous un pont.
 SEUIL_P1 = 0.74
 ECARTS_EXPLIQUES = {
-    "A23729": "ensoleillement (7,5 h contre 8,5 h), score à 96 % du seuil P1",
-    "A25835": "îlot de chaleur à plus de 50 m, ensoleillement (11 h contre 9,6 h)",
-    "A24336": "à la frontière (98 % du seuil P1), effet cumulé des écarts d'ensoleillement",
-    "A18789": "à la frontière (99 % du seuil P1)",
+    "A23729": "ensoleillement de la zone d'arrêt (6 h contre 8,5 h), score à 93 % du seuil P1",
+    "A25835": "îlot de chaleur à plus de 50 m, score à 98 % du seuil P1",
     "F23": "charge du carrefour (605 contre 242 bus/j) et ombre des tours de La Défense",
     "A420557": "carrefour à feux voisin non repéré à moins de 40 m (facteur feu absent)",
-    "A36806": "ensoleillement (7 h contre 8,1 h)",
-    "A420570": "à la frontière (100 % du seuil P1, rang 32), ensoleillement (4,5 h contre 5,2 h)",
+    "A36806": "ensoleillement (7,6 h contre 8,1 h), score à 96 % du seuil P1",
+    # Méthode 1.2 : le prototype ignorait les ponts (écarts voulus, issue #18).
+    "A27418": "zone d'arrêt sous le pont ferroviaire de Saint-Lazare – Versailles (1,5 h)",
+    "A480291": "zone d'arrêt sous le pont ferroviaire de Saint-Lazare – Versailles (1,9 h)",
+    "A421767": "zone d'arrêt en partie sous la passerelle Iris (3 h contre 4,7 h)",
 }
 
 
