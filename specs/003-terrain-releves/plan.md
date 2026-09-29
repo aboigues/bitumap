@@ -14,6 +14,9 @@ consultation, l'API insère le « constaté » dans le rapport servi, sans le r�
 toucher au score. Export tableur, SIG et échantillon de réfection pour l'évaluation du
 modèle d'IA (002, T073).
 
+Clarifications du 2026-09-29 intégrées : auteur en pseudonyme + domaine (R6), repères des
+niveaux avec contrôle de cohérence non bloquant (R11), photos conservées sans limite (R12).
+
 ## Technical Context
 
 **Language/Version**: Python 3.14 (paquet `bitumap` de 002) ; JavaScript du navigateur sans
@@ -72,7 +75,7 @@ saisie limité aux pages `/terrain/…`, sans dépendance, justifié ci-dessous.
 ```text
 specs/003-terrain-releves/
 ├── plan.md              # ce fichier
-├── research.md          # phase 0 : décisions R1 à R10
+├── research.md          # phase 0 : décisions R1 à R12
 ├── data-model.md        # phase 1 : tables et transitions
 ├── quickstart.md        # phase 1 : validation de bout en bout
 ├── contracts/

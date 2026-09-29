@@ -30,7 +30,8 @@ Index : `(commune_insee, point_id, cree_le DESC)`.
 | `releve_id` | uuid | → releve |
 | `version` | entier | 1, 2, … ; clé `(releve_id, version)` |
 | `cree_le` | horodatage | |
-| `niveau` | énuméré | **obligatoire** : `absent`, `leger`, `marque`, `grave` (FR-005) |
+| `niveau` | énuméré | **obligatoire** : `absent`, `leger`, `marque`, `grave` (FR-005) ; repères : léger < 10 mm, marqué 10–20 mm, grave > 20 mm (FR-005b) |
+| `incoherence_confirmee` | booléen | vrai si `profondeur_mm` ne correspond pas aux repères du `niveau` et que l'agent a maintenu son choix après l'avertissement ; sert à juger la qualité des relevés (validation de 004) |
 | `profondeur_mm` | entier, nul | 0 à 200 |
 | `instrument` | texte, nul | par exemple « règle et cale », « jauge » ; requis si `profondeur_mm` |
 | `observation` | texte, nul | 1 000 caractères au plus |

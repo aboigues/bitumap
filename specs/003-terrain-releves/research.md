@@ -126,3 +126,22 @@ Décisions de conception ; chaque point résout une inconnue du contexte techniq
   d'entrée de `python -m bitumap.ia.evaluer` (002, T072) : `{"points": [{id, nom, lon, lat,
   refection_annee, source}]}`, seulement pour les points dont l'année est « constatée » ou
   donnée par les « services techniques ».
+
+## R11. Repères des niveaux d'orniérage (clarification du 2026-09-29)
+
+- **Décision** : la fiche de saisie affiche les repères (léger < 10 mm, marqué 10–20 mm,
+  grave > 20 mm, profondeur maximale à la règle) ; le contrôle de cohérence est fait **sur
+  le téléphone** (avertissement immédiat, même hors réseau) **et par le serveur** (même
+  règle, dans `terrain/depot.py`) ; un relevé maintenu malgré l'avertissement est enregistré
+  avec `incoherence_confirmee = vrai`.
+- **Raison** : classement homogène d'un agent à l'autre (la validation de 004 compte
+  « marqué » et « grave » comme orniérés) sans empêcher une saisie que l'agent juge juste
+  (instrument, point de mesure).
+
+## R12. Conservation des photos sans limite (clarification du 2026-09-29)
+
+- **Décision** : aucune règle d'expiration sur les photos (seul le préfixe `quarantaine/`
+  expire en 1 jour) ; le coût est borné par le plafond global de stockage (R8) ; la page
+  « Données personnelles » (002) indique la finalité (suivi de la voirie dans le temps), la
+  durée (sans limite, sauf retrait), l'accès restreint (auteur, mainteneur) et la procédure
+  de retrait.

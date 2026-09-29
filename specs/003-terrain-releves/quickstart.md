@@ -18,6 +18,7 @@ données : [data-model.md](data-model.md) ; décisions : [research.md](research.
 |---|---|---|
 | Saisie | agent A connecté ; `/terrain/92026` ; point « Paix - Verdun » (A23742) ; niveau « marqué », 18 mm à la règle et cale, année 2019 « services techniques », 2 photos | relevé enregistré, confirmation ; photos visibles par A |
 | Rapport | agent B ouvre le rapport de Courbevoie | fiche A23742 : section « Constaté » (marqué, 18 mm, 2019, « agent XXXX · domaine », « 2 photos, visibles par leur auteur ») ; marqueur sur la carte ; filtre « relevés, marqué ou grave » ; synthèse estimé × constaté |
+| Cohérence | niveau « léger » avec 25 mm | avertissement « correspond à grave » ; corriger ou confirmer ; confirmé ⇒ `incoherence_confirmee` |
 | Score inchangé | comparer score, rang et niveau de A23742 avant et après | identiques (SC-004) |
 | Photos | B demande `/terrain/photos/{id}` | `404` ; A et le mainteneur : image sans métadonnée (SC-006, SC-009) |
 
