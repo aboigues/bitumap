@@ -33,6 +33,28 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-008 — Arrêt sous un pont classé Critique (2026-09-29) — Close
+
+- **Contexte** : méthode de score, rapport de Courbevoie, issue #18 ouverte par le mainteneur.
+- **Symptôme** : « Verdun - Rue Latérale » (A27418) classé Critique (rang 4) avec « plein
+  soleil l'été : 10,5 h/jour », alors que le bus s'arrête sous le pont ferroviaire de la ligne
+  Saint-Lazare – Versailles.
+- **Causes racines** :
+  1. Pourquoi 10,5 h ? La grille d'ombres ne contenait que les bâtiments et les arbres ; les
+     tabliers de ponts n'existaient pas pour le calcul.
+  2. Pourquoi ignorés ? Méthode reprise du prototype, qui ne les modélisait pas, et la
+     non-régression compare au prototype : elle ne pouvait pas révéler le défaut.
+  3. Pourquoi ajouter les ponts ne suffisait pas (7,5 h) ? L'ensoleillement était mesuré en un
+     seul point, projection du poteau, ici au bord du tablier ; or le bus s'arrête en amont
+     du poteau, sous le pont.
+- **Correctif** : méthode 1.2 : tabliers OSM dans la grille d'ombres, mesure d'un arrêt sur
+  sa zone d'arrêt (12 m en amont, 5 points) ; A27418 : 1,5 h, rang 63, À surveiller.
+- **Mesure préventive** : tests `tests/unit/test_ouvrages.py` (chaussée sous un pont, bus sur
+  un pont, zone d'arrêt au bord du tablier) ; écarts SC-003 dus aux ponts documentés. Règle :
+  un écart au prototype n'est pas une erreur en soi ; les relectures terrain du mainteneur
+  (issues) priment sur la ressemblance au prototype.
+- **Références** : issue #18, branche `002-issue-18-ouvrages`.
+
 ### LL-007 — Liens Panoramax du rapport vers une page sans photo (2026-09-29) — Close
 
 - **Contexte** : relecture du rapport de Courbevoie par le mainteneur (fiche d'un point).

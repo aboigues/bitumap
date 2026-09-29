@@ -1,8 +1,9 @@
 """Fige les données d'une commune pour les tests (T022) : aucun accès réseau ensuite.
 
 Usage : uv run python tools/figer_fixtures.py 92026 Courbevoie tests/fixtures/courbevoie
-        uv run python tools/figer_fixtures.py --quais tests/fixtures/courbevoie
-          (ajoute seulement la couche OSM « quais » à des fixtures existantes, T093)
+        uv run python tools/figer_fixtures.py --couches tests/fixtures/courbevoie quais ouvrages
+          (ajoute seulement ces couches OSM à des fixtures existantes : quais T093,
+          ouvrages issue #18)
 Prérequis : extrait OSM régional (var/cache/osm-idf-AAMMJJ-vN.gpkg).
 """
 
@@ -42,9 +43,9 @@ def _regional() -> Path:
     return sorted(Path("var/cache").glob(f"osm-idf-*-v{osm.VERSION_CACHE}.gpkg"))[-1]
 
 
-def ajouter_quais(dossier: str) -> None:
-    """Complète l'osm.gpkg figé avec la couche « quais » du même extrait régional, sans
-    toucher aux autres couches (la non-régression reste comparable)."""
+def ajouter_couches(dossier: str, couches: list[str]) -> None:
+    """Complète l'osm.gpkg figé avec des couches du même extrait régional, sans toucher aux
+    autres (la non-régression reste comparable)."""
     import gzip
     import json
 
@@ -56,9 +57,10 @@ def ajouter_quais(dossier: str) -> None:
     with gzip.open(Path(dossier) / "contour.json.gz") as fichier:
         contour = json.loads(fichier.read())
     geom = contour["geometry"] if contour.get("type") == "Feature" else contour
-    quais = gpd.read_file(_regional(), layer="quais", bbox=_emprise(shape(geom)))
-    quais.to_file(Path(dossier) / "osm.gpkg", layer="quais", driver="GPKG")
-    print(f"{len(quais)} quais -> {dossier}/osm.gpkg")
+    for couche in couches:
+        gdf = gpd.read_file(_regional(), layer=couche, bbox=_emprise(shape(geom)))
+        gdf.to_file(Path(dossier) / "osm.gpkg", layer=couche, driver="GPKG")
+        print(f"{len(gdf)} {couche} -> {dossier}/osm.gpkg")
 
 
 def main(insee: str, nom: str, dossier: str) -> None:
@@ -77,7 +79,7 @@ def main(insee: str, nom: str, dossier: str) -> None:
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "--quais":
-        ajouter_quais(sys.argv[2])
+    if sys.argv[1] == "--couches":
+        ajouter_couches(sys.argv[2], sys.argv[3:])
     else:
         main(*sys.argv[1:4])

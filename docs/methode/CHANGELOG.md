@@ -5,6 +5,27 @@ ou d'une règle de priorité incrémente la version de méthode (`bitumap.score.
 décrite ici. La version entre dans l'empreinte des rapports : un rapport produit avec une
 autre version n'est jamais réutilisé.
 
+## 1.2 — 2026-09-29
+
+- **Ponts et passerelles dans l'ensoleillement** (issue #18) : les tabliers des ouvrages
+  OpenStreetMap (`bridge=*` portant une voie ferrée, une route ou un cheminement) deviennent
+  des obstacles de la grille d'ombres : emprise = ligne élargie (`width`, sinon 5 m par voie
+  ferrée, 8 m pour une route, 3 m pour une passerelle), hauteur 6 m par niveau (`layer`).
+  Exclus : la voie du bus elle-même et, quand le bus roule sur un pont, le tablier qui le
+  porte (le facteur « ouvrage d'art » est inchangé).
+- **Zone d'arrêt** : l'ensoleillement d'un arrêt est la moyenne de 5 points sur les 12 m de
+  chaussée où le bus s'arrête, en amont du poteau dans le sens de circulation (6 m de part et
+  d'autre sur une voie à double sens) ; carrefours et giratoires : un point, inchangé.
+  Raison : le poteau de « Verdun - Rue Latérale » est au bord du pont ferroviaire, le bus
+  s'arrête dessous (7,5 h mesurées au poteau, 1,5 h sur la zone d'arrêt).
+- **Effet à Courbevoie** : 6 arrêts sous un ouvrage ; 16 points sur 154 changent de niveau ;
+  « Verdun - Rue Latérale » passe de Critique (rang 4) à À surveiller (rang 63).
+  Non-régression SC-003 inchangée à 74 % (23/31) : trois P1 du prototype retrouvés, trois
+  écartés parce qu'ils sont sous un pont (le prototype ignorait les ouvrages).
+- **Limites** : hauteur forfaitaire des tabliers ; zone d'arrêt tracée en ligne droite le long
+  de la voie ; sens de circulation déduit du sens de numérisation OSM (une voie `oneway=-1`
+  serait mesurée en aval).
+
 ## 1.1 — 2026-09-29
 
 - **Sous-groupes du P1** : les P1 (toujours 20 % des points) sont découpés par rang final,

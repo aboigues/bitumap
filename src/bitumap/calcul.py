@@ -6,6 +6,7 @@ l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleu
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -25,6 +26,7 @@ from bitumap.sources.fournisseur import Fournisseur
 MARGE_EMPRISE_DEG = 0.003  # ≈ 250 m autour de la commune
 DISTANCE_PENTE_M = 30
 DISTANCE_CHAUSSEE_M = 30  # au-delà, le point est gardé tel quel
+ZONE_ARRET_M = 12  # longueur de chaussée où un bus s'arrête (ensoleillement, méthode 1.2)
 RAYON_TRONCON_M = 25
 
 
@@ -50,6 +52,37 @@ def _voie_la_plus_proche(reseau: c.Reseau, geo_l93):
         return None
     distances = reseau.voies.distance(geo_l93)
     return reseau.voies.loc[distances.idxmin()]
+
+
+def _zone_de_mesure(p: Point, voie, chaussee) -> list[tuple[float, float]]:
+    """Points de mesure de l'ensoleillement : pour un arrêt, 5 points sur les
+    ``ZONE_ARRET_M`` mètres où le bus s'arrête, en amont du poteau dans le sens de circulation
+    (centrés sur le poteau si la voie est à double sens) ; un seul point sinon."""
+    if p.type != "arret":
+        return [(chaussee.x, chaussee.y)]
+    ligne = voie.geometry
+    s = ligne.project(chaussee)
+    a, b = ligne.interpolate(max(0.0, s - 1)), ligne.interpolate(min(ligne.length, s + 1))
+    norme = math.hypot(b.x - a.x, b.y - a.y) or 1.0
+    tx, ty = (b.x - a.x) / norme, (b.y - a.y) / norme  # sens de numérisation = de circulation
+    pas = ZONE_ARRET_M / 4
+    decalages = (
+        [-i * pas for i in range(5)]
+        if bool(voie.sens_unique)
+        else [(i - 2) * pas for i in range(5)]
+    )
+    return [(chaussee.x + d * tx, chaussee.y + d * ty) for d in decalages]
+
+
+def _tabliers_au_dessus(tabliers_l93: gpd.GeoDataFrame, voie, chaussee) -> gpd.GeoDataFrame:
+    """Tabliers pouvant ombrer la chaussée : sans la voie du bus elle-même, ni, quand le bus
+    roule sur un pont, le tablier qui le porte."""
+    if tabliers_l93.empty or voie is None:
+        return tabliers_l93
+    garde = tabliers_l93.way_id != voie.way_id
+    if bool(voie.pont):
+        garde &= ~tabliers_l93.contains(chaussee)
+    return tabliers_l93[garde]
 
 
 def _points_pente(ligne, geo_l93) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -141,6 +174,9 @@ def calculer_commune(
         avertissements.append(f"Îlots de chaleur indisponibles : {type(erreur).__name__}")
         jointure = None
 
+    # Ponts et passerelles : leurs tabliers ombrent la chaussée qu'ils surplombent (1.2).
+    tabliers_l93 = ensoleillement.tabliers(donnees_osm.ouvrages.to_crs(c.L93))
+
     # Pentes : altitude à ±30 m le long de la voie bus la plus proche.
     voies_proches = [_voie_la_plus_proche(reseau, g) for g in geos_l93]
     extremites = []
@@ -180,13 +216,23 @@ def calculer_commune(
             vegetation = f.vegetation(round(p.lon, 6), round(p.lat, 6))
         except Exception:
             avertissements.append(f"Infrarouge indisponible pour {p.id}")
-        # Ensoleillement mesuré sur la chaussée (voie bus la plus proche), pas au poteau.
-        chaussee = g
+        # Ensoleillement mesuré sur la chaussée (voie bus la plus proche), pas au poteau ;
+        # pour un arrêt, sur la zone où le bus s'arrête (méthode 1.2).
+        chaussee, echantillons = g, [(g.x, g.y)]
         if voie is not None and voie.geometry.distance(g) <= DISTANCE_CHAUSSEE_M:
             chaussee = voie.geometry.interpolate(voie.geometry.project(g))
-        vegetation = ensoleillement.decaler(vegetation, chaussee.x - g.x, chaussee.y - g.y)
+            echantillons = _zone_de_mesure(p, voie, chaussee)
         p.facteurs.append(
-            ensoleillement.calculer(p.lon, p.lat, chaussee.x, chaussee.y, batiments_l93, vegetation)
+            ensoleillement.calculer(
+                p.lon,
+                p.lat,
+                [
+                    (x, y, ensoleillement.decaler(vegetation, x - g.x, y - g.y))
+                    for x, y in echantillons
+                ],
+                batiments_l93,
+                _tabliers_au_dessus(tabliers_l93, voie, chaussee),
+            )
         )
 
         if jointure is not None:
