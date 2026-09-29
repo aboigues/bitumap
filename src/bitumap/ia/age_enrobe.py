@@ -110,6 +110,7 @@ class AnalyseurAge:
         self._appel = appel
         self._annee = annee or date.today().year
         self.bruts: dict[str, dict] = {}  # réponses brutes, écrites dans ia/{point_id}.json
+        self.hors_plafond = 0  # points P1 laissés « non évalués » par un plafond de coût
         r = reglages()
         self._modele, self._version = r.ia_modele, r.ia_version_prompt
         stats.modele, stats.version_prompt = self._modele, self._version
@@ -136,6 +137,7 @@ class AnalyseurAge:
         reserve = budget_ia.estimation(len(vignettes), client_ia.MAX_JETONS_SORTIE)
         if not self._budget.reserver(reserve):
             self._stats.non_evalues += 1
+            self.hors_plafond += 1
             return _non_evalue("plafond de coût atteint")
         try:
             appel = self._appel(prompt(), vignettes)

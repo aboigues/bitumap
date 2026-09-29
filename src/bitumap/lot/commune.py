@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import signal
+import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -16,8 +17,8 @@ from bitumap import courriel, stockage
 from bitumap.calcul import calculer_commune
 from bitumap.config import reglages
 from bitumap.ia.age_enrobe import AnalyseurAge
-from bitumap.ia.budget import BudgetRapport, budget_jour_epuise
-from bitumap.journal import JournalGeneration
+from bitumap.ia.budget import BudgetRapport, alerter_budget_jour, budget_jour_epuise
+from bitumap.journal import JournalGeneration, evenement
 from bitumap.lot import prise_en_charge as file
 from bitumap.lot import versions
 from bitumap.rapport import rendu
@@ -47,6 +48,31 @@ def delai_maximal(secondes: int):
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, precedent)
+
+
+class _Chronometre:
+    """Enveloppe d'un objet : cumule dans ``durees_s[etape]`` le temps passé dans ses
+    méthodes (sources acquises à la demande pendant le calcul, analyses IA)."""
+
+    def __init__(self, cible, journal: JournalGeneration, etape: str):
+        self._cible, self._journal, self._etape = cible, journal, etape
+
+    def _mesurer(self, fonction, *args, **kwargs):
+        t0 = time.perf_counter()
+        try:
+            return fonction(*args, **kwargs)
+        finally:
+            durees = self._journal.durees_s
+            durees[self._etape] = round(durees.get(self._etape, 0) + time.perf_counter() - t0, 3)
+
+    def __call__(self, *args, **kwargs):
+        return self._mesurer(self._cible, *args, **kwargs)
+
+    def __getattr__(self, nom):
+        attribut = getattr(self._cible, nom)
+        if not callable(attribut):
+            return attribut
+        return lambda *args, **kwargs: self._mesurer(attribut, *args, **kwargs)
 
 
 @dataclass
@@ -91,8 +117,10 @@ def traiter(
 ) -> Resultat:
     ident, insee, nom = str(demande["id"]), demande["commune_insee"], demande["commune_nom"]
     if budget_jour_epuise():
+        alerter_budget_jour()
         file.reporter(ident)
         notifier(demande, "reportee")
+        evenement(journal, "commune.reportee", insee=insee, raison="budget IA du jour")
         return Resultat(ident, nom, "reportee")
 
     empreinte = versions.empreinte_courante(insee)
@@ -108,25 +136,43 @@ def traiter(
     try:
         with delai_maximal(reglages().commune_delai_max_min * 60):
             file.etape(ident, "acquisition")
-            fournisseur = fabrique(insee)
+            fournisseur = _Chronometre(fabrique(insee), jg, "acquisition")
             file.etape(ident, "calcul")
             with jg.chronometrer("calcul"):
-                resultat = calculer_commune(fournisseur, nom, analyse_ia=analyseur)
+                resultat = calculer_commune(
+                    fournisseur, nom, analyse_ia=_Chronometre(analyseur, jg, "ia")
+                )
+            # Temps propre du calcul : sans l'acquisition des sources ni l'IA.
+            jg.durees_s["calcul"] = round(
+                jg.durees_s["calcul"]
+                - jg.durees_s.get("acquisition", 0)
+                - jg.durees_s.get("ia", 0),
+                3,
+            )
+            if analyseur.hors_plafond:
+                resultat.avertissements.append(
+                    f"Plafond de coût de l'IA atteint : âge de l'enrobé non évalué pour "
+                    f"{analyseur.hors_plafond} point(s) prioritaire(s)."
+                )
             file.etape(ident, "rapport")
             with jg.chronometrer("rapport"):
                 jg.nb_points = len(resultat.points)
                 jg.avertissements = resultat.avertissements
-                jg.terminer()
-                stockage.ecrire_rapport(
-                    insee, empreinte, rendu.rendre(resultat, jg, analyseur.bruts)
-                )
+                fichiers = rendu.rendre(resultat, jg, analyseur.bruts)
+            jg.terminer()
+            # journal.json régénéré pour contenir la durée de l'étape « rapport »
+            fichiers["journal.json"] = (jg.en_json(), fichiers["journal.json"][1])
+            stockage.ecrire_rapport(insee, empreinte, fichiers)
     except DelaiDepasse:
-        journal.error("commune %s : délai maximal dépassé", insee)
+        evenement(journal, "commune.en_echec", logging.ERROR, insee=insee, raison="délai")
         file.echouer(ident, "La génération a dépassé la durée maximale.")
         notifier(demande, "en_echec")
         return Resultat(ident, nom, "en_echec", float(budget.depense))
-    except Exception:
+    except Exception as erreur:
         journal.exception("commune %s : échec", insee)  # détail dans le journal (FR-025)
+        evenement(
+            journal, "commune.en_echec", logging.ERROR, insee=insee, raison=type(erreur).__name__
+        )
         file.echouer(ident, MESSAGE_ECHEC)
         notifier(demande, "en_echec")
         return Resultat(ident, nom, "en_echec", float(budget.depense))
@@ -136,4 +182,16 @@ def traiter(
             closer()
     file.terminer(ident, empreinte)
     notifier(demande, "terminee", empreinte)
+    evenement(
+        journal,
+        "commune.terminee",
+        insee=insee,
+        empreinte=empreinte,
+        nb_points=jg.nb_points,
+        durees_s=jg.durees_s,
+        ia_appels=jg.ia.appels,
+        ia_cout_eur=float(jg.ia.cout_eur),
+        ia_non_evalues=jg.ia.non_evalues,
+        avertissements=len(jg.avertissements),
+    )
     return Resultat(ident, nom, "terminee", float(budget.depense))

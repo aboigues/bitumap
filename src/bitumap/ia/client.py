@@ -36,8 +36,12 @@ def _image_en_url(img: Image.Image) -> str:
 
 
 def analyser(
-    prompt: str, vignettes: list[tuple[int, Image.Image]], client: OpenAI | None = None
+    prompt: str,
+    vignettes: list[tuple[int, Image.Image]],
+    client: OpenAI | None = None,
+    modele: str | None = None,
 ) -> Appel:
+    """Un appel au modèle configuré (``modele`` le remplace, pour l'évaluation T072)."""
     r = reglages()
     client = client or OpenAI(
         base_url=r.ia_url, api_key=r.genai_cle.get_secret_value() if r.genai_cle else "absente"
@@ -47,7 +51,7 @@ def analyser(
         contenu.append({"type": "text", "text": f"Année {annee} :"})
         contenu.append({"type": "image_url", "image_url": {"url": _image_en_url(img)}})
     reponse = client.chat.completions.create(
-        model=r.ia_modele,
+        model=modele or r.ia_modele,
         messages=[{"role": "user", "content": contenu}],
         temperature=0,
         max_tokens=MAX_JETONS_SORTIE,

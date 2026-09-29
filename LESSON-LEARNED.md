@@ -33,6 +33,25 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-009 — Coût IA du jour arrondi à chaque opération (2026-09-29) — Close
+
+- **Contexte** : développement US4, test du plafond de coût par rapport
+  (`tests/unit/test_journal.py`).
+- **Symptôme** : dépense d'un rapport ≤ 0,002 €, mais cumul du jour enregistré à 0,0021 €.
+- **Causes racines** :
+  1. Pourquoi l'écart ? `cout_ia_jour.montant_eur` était en `numeric(10, 4)` : chaque
+     réservation (≈ 0,0004 €) et chaque ajustement étaient arrondis au dix-millième.
+  2. Pourquoi 4 décimales ? Choisies à l'échelle de l'euro, sans rapprocher du coût d'un
+     appel (≈ 0,0003 €, R7-bis), du même ordre que la précision.
+  3. Pourquoi non vu plus tôt ? Les tests du budget comparaient des plafonds larges au
+     cumul, jamais le cumul du jour à la somme exacte des dépenses.
+- **Correctif** : migration `002` : `numeric(12, 6)` pour `cout_ia_jour.montant_eur` et
+  `lot.cout_ia_eur`.
+- **Mesure préventive** : test du plafond serré (0,002 €) comparant le cumul du jour à la
+  dépense réelle. Règle : la précision d'un montant stocké est choisie à partir de la plus
+  petite opération (ici un appel), pas de l'unité affichée.
+- **Références** : branche `002-us4-couts-suivi`.
+
 ### LL-008 — Arrêt sous un pont classé Critique (2026-09-29) — Close
 
 - **Contexte** : méthode de score, rapport de Courbevoie, issue #18 ouverte par le mainteneur.

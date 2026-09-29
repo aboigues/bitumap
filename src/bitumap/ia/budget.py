@@ -1,7 +1,8 @@
 """Budget de l'IA (FR-024, FR-029) : réservation avant chaque appel, ajustement après.
 
-Plafonds : par rapport (2 €) et par jour (5 €) ; au-delà, aucun appel. Seuil d'alerte
-mensuel (5 €) : un e-mail au mainteneur, une seule fois par mois, sans blocage.
+Plafonds : par rapport (2 €) et par jour (5 €) ; au-delà, aucun appel. Alertes au
+mainteneur, sans blocage : plafond du jour atteint (une fois par jour) et seuil mensuel (5 €,
+une fois par mois).
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ class BudgetRapport:
                 (montant, montant, montant, r.ia_plafond_jour_eur),
             ).fetchone()
         if ligne is None or ligne["montant_eur"] > r.ia_plafond_jour_eur:
+            alerter_budget_jour()
             return False
         self.depense += montant
         return True
@@ -81,13 +83,8 @@ def cout_du_mois() -> Decimal:
     return Decimal(ligne["total"])
 
 
-def verifier_alerte_mensuelle() -> bool:
-    """Envoie l'alerte mensuelle une seule fois quand le seuil est franchi (FR-029)."""
-    seuil = reglages().alerte_mensuelle_eur
-    total = cout_du_mois()
-    if total < seuil:
-        return False
-    cle = f"cout_mensuel_ia:{datetime.now(UTC):%Y-%m}"
+def alerter_une_fois(cle: str, sujet: str, texte: str) -> bool:
+    """E-mail au mainteneur, une seule fois par clé (table ``alerte_envoyee``)."""
     with connexion() as conn:
         nouvelle = conn.execute(
             "INSERT INTO alerte_envoyee (cle) VALUES (%s) ON CONFLICT DO NOTHING RETURNING cle",
@@ -95,11 +92,30 @@ def verifier_alerte_mensuelle() -> bool:
         ).fetchone()
     if nouvelle is None:
         return False
-    courriel.envoyer(
-        courriel.alerte_mainteneur(
-            f"coût IA du mois : {total:.2f} € (seuil {seuil} €)",
-            "Le coût de l'IA vision a atteint le seuil d'alerte mensuel. Aucun blocage : les"
-            " plafonds par rapport et par jour restent les seules limites.",
-        )
-    )
+    courriel.envoyer(courriel.alerte_mainteneur(sujet, texte))
     return True
+
+
+def alerter_budget_jour() -> bool:
+    """Plafond quotidien atteint (FR-024, T070) : une alerte par jour."""
+    plafond = reglages().ia_plafond_jour_eur
+    return alerter_une_fois(
+        f"budget_jour_ia:{datetime.now(UTC):%Y-%m-%d}",
+        f"plafond IA du jour atteint ({plafond} €)",
+        "Le plafond quotidien de l'IA vision est atteint : les points restants sont marqués"
+        " « âge non évalué » et les nouvelles demandes sont reportées au lendemain.",
+    )
+
+
+def verifier_alerte_mensuelle() -> bool:
+    """Envoie l'alerte mensuelle une seule fois quand le seuil est franchi (FR-029)."""
+    seuil = reglages().alerte_mensuelle_eur
+    total = cout_du_mois()
+    if total < seuil:
+        return False
+    return alerter_une_fois(
+        f"cout_mensuel_ia:{datetime.now(UTC):%Y-%m}",
+        f"coût IA du mois : {total:.2f} € (seuil {seuil} €)",
+        "Le coût de l'IA vision a atteint le seuil d'alerte mensuel. Aucun blocage : les"
+        " plafonds par rapport et par jour restent les seules limites.",
+    )

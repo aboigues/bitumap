@@ -94,10 +94,24 @@ def demandeurs(demande_id: str) -> list[str]:
     return [ligne["email"] for ligne in lignes]
 
 
-def clore_lot(lot_id: str, duree_regionale_s: float | None, cout_ia) -> None:
+def clore_lot(
+    lot_id: str,
+    duree_regionale_s: float | None,
+    cout_ia,
+    statuts: dict[str, int] | None = None,
+) -> None:
+    """Clôture : durée régionale, coût IA et résultat par commune (T069)."""
+    statuts = statuts or {}
     with connexion() as conn:
         conn.execute(
-            "UPDATE lot SET termine_le = now(), duree_regionale_s = %s, cout_ia_eur = %s"
-            " WHERE id = %s",
-            (duree_regionale_s, cout_ia, lot_id),
+            "UPDATE lot SET termine_le = now(), duree_regionale_s = %s, cout_ia_eur = %s,"
+            " nb_terminees = %s, nb_echecs = %s, nb_reportees = %s WHERE id = %s",
+            (
+                duree_regionale_s,
+                cout_ia,
+                statuts.get("terminee", 0),
+                statuts.get("en_echec", 0),
+                statuts.get("reportee", 0),
+                lot_id,
+            ),
         )

@@ -181,11 +181,11 @@ SC-004, SC-006, SC-010, SC-012).
 
 **Independent Test**: quickstart §3 (plafond forcé à 0,01 €) et §5 (évaluation des modèles)
 
-- [ ] T069 [US4] Compléter `src/bitumap/journal.py` et `src/bitumap/lot/__main__.py` : durées par étape, nombre de points, appels, jetons, coût IA, non évalués, avertissements, erreurs (FR-023) ; statistiques du lot en base
-- [ ] T070 [US4] Implémenter l'alerte au mainteneur quand le budget quotidien est atteint ou qu'un lot échoue : e-mail à l'adresse `BITUMAP_EMAIL_MAINTENEUR` (valeur fournie par variable OpenTofu ou secret, **jamais versionnée**) et journal structuré lisible dans Cockpit
-- [ ] T091 [US4] Implémenter l'**alerte mensuelle** dans `src/bitumap/ia/budget.py` : dès que le coût d'IA cumulé du mois civil (somme de `cout_ia_jour`) atteint `BITUMAP_ALERTE_MENSUELLE_EUR` (5 €), un e-mail au mainteneur, **un seul par mois** (table `alerte_envoyee`) ; alerte seulement, **aucun blocage** (les plafonds FR-024 restent les seuls blocages) ; test dans `tests/unit/test_journal.py`
-- [ ] T071 [P] [US4] Écrire `tests/unit/test_journal.py` : plafond de 0,01 € ⇒ rapport produit, P1 « âge non évalué », avertissement, aucune dépense supplémentaire (US4-2)
-- [ ] T072 [US4] Implémenter `src/bitumap/ia/evaluer.py` : compare `mistral-medium-3.5-128b`, `mistral-small-3.2-24b-instruct-2506` et `qwen3.8-27b` sur `tests/fixtures/ia/echantillon_30.json` (exactitude de la période, coût réel en jetons, aucun changement de priorité dû à l'IA seule, SC-012) ; rapport de comparaison en Markdown
+- [X] T069 [US4] Compléter `src/bitumap/journal.py` et `src/bitumap/lot/__main__.py` : durées par étape, nombre de points, appels, jetons, coût IA, non évalués, avertissements, erreurs (FR-023) ; statistiques du lot en base
+- [X] T070 [US4] Implémenter l'alerte au mainteneur quand le budget quotidien est atteint ou qu'un lot échoue : e-mail à l'adresse `BITUMAP_EMAIL_MAINTENEUR` (valeur fournie par variable OpenTofu ou secret, **jamais versionnée**) et journal structuré lisible dans Cockpit
+- [X] T091 [US4] Implémenter l'**alerte mensuelle** dans `src/bitumap/ia/budget.py` : dès que le coût d'IA cumulé du mois civil (somme de `cout_ia_jour`) atteint `BITUMAP_ALERTE_MENSUELLE_EUR` (5 €), un e-mail au mainteneur, **un seul par mois** (table `alerte_envoyee`) ; alerte seulement, **aucun blocage** (les plafonds FR-024 restent les seuls blocages) ; test dans `tests/unit/test_journal.py`
+- [X] T071 [P] [US4] Écrire `tests/unit/test_journal.py` : plafond de 0,01 € ⇒ rapport produit, P1 « âge non évalué », avertissement, aucune dépense supplémentaire (US4-2)
+- [X] T072 [US4] Implémenter `src/bitumap/ia/evaluer.py` : compare `mistral-medium-3.5-128b`, `mistral-small-3.2-24b-instruct-2506` et `qwen3.8-27b` sur `tests/fixtures/ia/echantillon_30.json` (exactitude de la période, coût réel en jetons, aucun changement de priorité dû à l'IA seule, SC-012) ; rapport de comparaison en Markdown
 - [ ] T073 [US4] Constituer avec le mainteneur `tests/fixtures/ia/echantillon_30.json` : 30 points P1 dont la date de réfection est connue (vérité terrain), puis lancer T072 et reporter le modèle retenu dans la configuration et dans `specs/002-on-demand-report/research.md` (R7)
 
 **Checkpoint**: coûts observables et plafonnés, modèle vision choisi sur mesure
