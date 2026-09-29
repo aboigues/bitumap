@@ -1,4 +1,4 @@
-"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.0).
+"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.1).
 
 Fonction déterministe à sources identiques (principe IV) ; le seul appel non déterministe,
 l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleurs.
@@ -16,6 +16,7 @@ from shapely.geometry import mapping
 from bitumap.facteurs import chaleur, charge, ensoleillement, site, sollicitation, voirie
 from bitumap.modele import Facteur, Point
 from bitumap.points import construction as c
+from bitumap.points import direction
 from bitumap.score import combinaison
 from bitumap.sources import idfm, osm
 from bitumap.sources.base import Provenance
@@ -100,6 +101,7 @@ def calculer_commune(
         + c.carrefours_a_feux(donnees_osm.feux, reseau, commune_l93)
         + c.giratoires(donnees_osm.giratoires, reseau, commune_l93)
     )
+    direction.appliquer(points, donnees_osm.quais)
     provenances = [prov_offre, prov_osm]
     if not points:
         avertissements.append("Aucun point à relever : aucune ligne de bus desservant la commune.")

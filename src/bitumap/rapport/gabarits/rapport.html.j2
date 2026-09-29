@@ -7,9 +7,11 @@
 <title>Risque d'orniérage — {{ commune }}</title>
 <style>
 :root{--fond:#eef0f2;--surface:#fff;--encre:#1c2126;--discret:#5b6570;--ligne:#d5dae0;--voie:#9aa4ae;
---commune:#e3e7eb;--accent:#9a6a00;--p1:#c23b2e;--p2:#de8a1b;--p3:#7f8c98;--puce:#e6e9ed}
+--commune:#e3e7eb;--accent:#9a6a00;--puce:#e6e9ed;--sel:#0a84ff;
+--P1a:#9b0d1f;--P1b:#d9381e;--P1c:#b35900;--P2:#8a6d00;--P3:#3f7d4e;--sur-pastille:#fff}
 @media (prefers-color-scheme:dark){:root{--fond:#15191d;--surface:#1e2328;--encre:#e8ecef;--discret:#9aa5af;
---ligne:#343b42;--voie:#5e6973;--commune:#22282e;--accent:#ebb33a;--p1:#e45f50;--p2:#f0a33e;--p3:#8c99a5;--puce:#2a3037}}
+--ligne:#343b42;--voie:#5e6973;--commune:#22282e;--accent:#ebb33a;--puce:#2a3037;--sel:#3ee0ff;
+--P1a:#ff5a6e;--P1b:#ff7a45;--P1c:#ffa62b;--P2:#e6d04a;--P3:#6fcf87;--sur-pastille:#15191d}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.5 system-ui,"Segoe UI",sans-serif;padding:16px}
 .page{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
@@ -19,23 +21,28 @@ h1{font-size:clamp(1.3rem,5vw,1.8rem);line-height:1.15;margin:0;overflow-wrap:an
 .chiffres{display:flex;flex-wrap:wrap;gap:8px}
 .chiffre{background:var(--surface);border:1px solid var(--ligne);border-radius:6px;padding:8px 12px;flex:1 1 100px;min-width:0}
 .chiffre b{display:block;font-size:1.5rem}.chiffre span{font-size:.75rem;color:var(--discret);text-transform:uppercase}
-.p1 b{color:var(--p1)}.p2 b{color:var(--p2)}
+.chiffre span.g{text-transform:none;font-weight:600}
+.niveau{border-top:5px solid var(--c)}.niveau b{color:var(--c)}
 .grille{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:860px){.grille{grid-template-columns:minmax(0,1fr)}}
 .panneau{background:var(--surface);border:1px solid var(--ligne);border-radius:8px;padding:12px}
 .carte{width:100%;height:auto;display:block}
 .commune{fill:var(--commune);stroke:var(--ligne);stroke-width:1.5}
 .voie{fill:none;stroke:var(--voie);stroke-linecap:round;opacity:.8}
-.pt{cursor:pointer}.pt.sel{stroke:var(--encre);stroke-width:3}
+.pt{cursor:pointer;transform-box:fill-box;transform-origin:center}
+.pt.sel{stroke:var(--sel);stroke-width:4;paint-order:stroke;scale:1.8;
+filter:drop-shadow(0 0 3px var(--sel)) drop-shadow(0 0 8px var(--sel))}
 .pt:focus-visible,[data-point]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .filtres{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 select{font:inherit;padding:4px 6px;border-radius:6px;border:1px solid var(--ligne);background:var(--puce);color:var(--encre)}
 ol.liste{list-style:none;margin:0;padding:0;max-height:640px;overflow-y:auto;display:grid;gap:4px}
 ol.liste li{display:grid;grid-template-columns:40px 1fr auto;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer}
-ol.liste li:hover,ol.liste li.sel{background:var(--puce)}
+ol.liste li:hover{background:var(--puce)}
+ol.liste li.sel{background:var(--puce);box-shadow:inset 5px 0 0 var(--sel),0 0 0 2px var(--sel)}
 .rang{color:var(--discret);font-variant-numeric:tabular-nums}.petit{font-size:.85rem;color:var(--discret)}
-.pastille{font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:4px;color:#fff;align-self:start}
-.P1{background:var(--p1)}.P2{background:var(--p2)}.P3{background:var(--p3)}
+.pastille{font-weight:600;font-size:.75rem;padding:3px 7px;border-radius:4px;color:#fff;align-self:start;white-space:nowrap}
+.P1a{--c:var(--P1a)}.P1b{--c:var(--P1b)}.P1c{--c:var(--P1c)}.P2{--c:var(--P2)}.P3{--c:var(--P3)}
+.pastille{background:var(--c);color:var(--sur-pastille)}
 .fiche h3{margin:.2rem 0}.fiche dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:.5rem 0}
 .fiche dt{color:var(--discret)}.fiche dd{margin:0}
 table{border-collapse:collapse;width:100%;font-size:.9rem;overflow-wrap:anywhere}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ligne)}
@@ -62,9 +69,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
 {% endif %}
 
 <section class="chiffres" aria-label="Synthèse">
-  <div class="chiffre p1"><b>{{ synthese.priorites.P1 }}</b><span>P1 · relever en premier</span></div>
-  <div class="chiffre p2"><b>{{ synthese.priorites.P2 }}</b><span>P2</span></div>
-  <div class="chiffre"><b>{{ synthese.priorites.P3 }}</b><span>P3</span></div>
+  {% for code, libelle in libelles_groupes.items() %}<div class="chiffre niveau {{ code }}"><b>{{ synthese.groupes[code] }}</b><span class="g">{{ libelle }}{% if loop.first %} · relever en premier{% endif %}</span></div>
+  {% endfor %}
   {% for type, n in synthese.types.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ type }}</span></div>{% endfor %}
 </section>
 <section class="chiffres" aria-label="Types de route">
@@ -75,13 +81,15 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <div class="panneau">
     {{ carte|safe }}
     <div class="legende"><span>● arrêt</span><span>◆ carrefour à feux</span><span>○ giratoire</span>
-      <span>couleur = priorité</span><span>trait épais = voie très fréquentée par les bus</span></div>
+      <span>couleur = niveau</span><span>trait épais = voie très fréquentée par les bus</span></div>
     <div id="fiche" class="fiche" aria-live="polite"></div>
   </div>
   <div class="panneau">
     <div class="filtres">
       <label>Priorité <select data-filtre="priorite"><option value="tous">toutes</option>
-        <option>P1</option><option>P2</option><option>P3</option></select></label>
+        <option value="P1">{{ libelles_groupes.P1a }} à {{ libelles_groupes.P1c|lower }}</option>
+        {% for code, libelle in libelles_groupes.items() %}<option value="{{ code }}">{{ libelle }}</option>{% endfor %}
+      </select></label>
       <label>Type <select data-filtre="type"><option value="tous">tous</option>
         <option value="arret">arrêts</option><option value="feu">carrefours à feux</option>
         <option value="giratoire">giratoires</option></select></label>
@@ -94,9 +102,10 @@ a{color:inherit;text-decoration-color:var(--accent)}
     {% for p in points %}
       <li data-point="{{ p.id }}" tabindex="0">
         <span class="rang">{{ p.rang }}</span>
-        <span><strong>{{ p.nom }}</strong><br><span class="petit">{{ p.libelle_type }} · {{ p.voie or "voie inconnue" }}
-          · {{ p.route.classement|route }}{% if p.route.numero %} {{ p.route.numero }}{% endif %}</span></span>
-        <span class="pastille {{ p.priorite }}">{{ p.priorite }}</span>
+        <span><strong>{{ p|designation }}</strong><br><span class="petit">{{ p.libelle_type }}
+          · {{ p.route.classement|route }}{% if p.route.numero %} {{ p.route.numero }}{% endif %}
+          · {{ p|identifiant }}</span></span>
+        <span class="pastille {{ p.groupe }}">{{ libelles_groupes[p.groupe] }}</span>
       </li>
     {% endfor %}
     </ol>
@@ -104,9 +113,11 @@ a{color:inherit;text-decoration-color:var(--accent)}
 </section>
 
 <section class="panneau"><h2>Méthode {{ version_methode }}</h2>
-  <p>Score = produit de facteurs ; priorités par rang : <strong>P1</strong> = 20 % des points les plus exposés,
-    <strong>P2</strong> = 40 % suivants, P3 = le reste. Les priorités sont fixées <em>avant</em> l'âge de
-    l'enrobé estimé par IA, qui ne réordonne les points qu'à l'intérieur des P1.</p>
+  <p>Score = produit de facteurs ; niveaux par rang : les 20 % de points les plus exposés, découpés en
+    trois tiers <strong>{{ libelles_groupes.P1a }}</strong>, <strong>{{ libelles_groupes.P1b }}</strong> et
+    <strong>{{ libelles_groupes.P1c }}</strong> ; les 40 % suivants <strong>{{ libelles_groupes.P2 }}</strong> ; le reste
+    <strong>{{ libelles_groupes.P3 }}</strong>. Ces niveaux sont fixés <em>avant</em> l'âge de l'enrobé estimé par IA,
+    qui ne réordonne les points qu'à l'intérieur des 20 % les plus exposés.</p>
   <table><thead><tr><th>Facteur</th><th>Effet</th></tr></thead><tbody>
     <tr><td>Charge : passages de bus par jour (moyenne hebdomadaire hors vacances), échelle logarithmique ;
       carrefour : voie la plus chargée + moitié de la seconde</td><td>ln(1 + bus/jour)</td></tr>
@@ -115,7 +126,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Site : pente ≥ 3 % (±30 m le long de la voie) ; béton ou pavés</td><td>jusqu'à ×1,32 ; ×0,5</td></tr>
     <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments et des arbres)</td><td>×0,8 à ×1,2</td></tr>
     <tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>
-    <tr><td>Âge de l'enrobé (IA, P1 seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
+    <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
   </tbody></table>
   <h3>Limites connues</h3>
   <ul>

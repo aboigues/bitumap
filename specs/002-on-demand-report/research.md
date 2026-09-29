@@ -196,3 +196,25 @@ Figées dans `pyproject.toml` / `uv.lock` et `infra/tofu/versions.tf`.
   `tofu apply` lancé par le mainteneur (principe IX : la mise en production reste humaine).
 - CI : `python` ajouté à CodeQL, nouveau contrôle requis `tests` (ruff + pytest),
   Dependabot `uv`, `docker` et `opentofu`.
+
+## R11. Direction des quais (FR-030, décision du 2026-09-29)
+
+- **Décision** : **relations de lignes de bus OpenStreetMap**, lues dans l'extrait Geofabrik
+  déjà téléchargé à chaque lot. Les nœuds de quai membres d'un itinéraire portent la référence
+  IDFM du quai (`ref:FR:STIF`, ou `ref:FR:IDFM`) ; la direction d'un quai est la liste des
+  terminus (`to`, sinon la fin du nom « A → B ») des itinéraires qui le desservent, limitée aux
+  lignes qu'IDFM fait passer à ce quai. Aucun terminus trouvé ⇒ `null`, affiché « direction
+  non déterminée ».
+- **Vérification** (extrait du 2026-09-27) : les trois quais « Paix - Verdun » de Courbevoie
+  sont distingués : 23742 → Nanterre - Préfecture RER, Argenteuil, Les Bruyères ; 36806 →
+  Porte de Clichy, L'Yser et la Somme ; 36807 → Porte de Saint-Cloud, La Défense.
+- **Raison** : licence ODbL déjà citée par le rapport ; aucune nouvelle source ni nouveau
+  téléchargement ; sa version (date de l'extrait) est **déjà dans l'empreinte** ; le fichier
+  régional mis en cache gagne une couche `quais` (`osm.VERSION_CACHE = 2`).
+- **Alternatives écartées** : GTFS d'IDFM (`offre-horaires-tc-gtfs-idfm`) : source officielle,
+  mais « Licence Mobilités » (conditions propres à étudier) et fichier régional volumineux à
+  télécharger et dépouiller à chaque lot ; terminus par quai déduit de l'offre IDFM : le jeu
+  `offre_hebdomadaire_moyenne_hors_vacances` ne porte pas le sens.
+- **Limite** : couverture dépendante de la contribution OSM (quai non relié à un itinéraire ou
+  sans référence IDFM ⇒ direction non déterminée) ; taux mesuré sur Courbevoie consigné dans
+  la PR.

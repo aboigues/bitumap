@@ -11,7 +11,8 @@ import httpx
 from bitumap.sources.base import Provenance, client_http, obtenir
 
 URL = "https://api.panoramax.xyz/api/search"
-URL_VISIONNEUSE = "https://panoramax.fr/#focus=pic&pic={id}"
+# Visionneuse du méta-catalogue (panoramax.fr est le site du projet, pas une visionneuse).
+URL_VISIONNEUSE = "https://api.panoramax.xyz/#focus=pic&pic={id}"
 
 
 @dataclass(frozen=True)

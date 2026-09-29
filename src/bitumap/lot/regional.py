@@ -27,7 +27,7 @@ class DonneesRegionales:
 
 def _osm(dossier: Path) -> tuple[Path, date]:
     pbf, date_osm = osm.telecharger(dossier)
-    gpkg = dossier / f"osm-idf-{date_osm:%y%m%d}.gpkg"
+    gpkg = dossier / f"osm-idf-{date_osm:%y%m%d}-v{osm.VERSION_CACHE}.gpkg"
     cle = f"regional/osm/{gpkg.name}"
     bucket = reglages().bucket_cache
     if not gpkg.exists():

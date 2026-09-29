@@ -33,6 +33,25 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-007 — Liens Panoramax du rapport vers une page sans photo (2026-09-29) — Close
+
+- **Contexte** : relecture du rapport de Courbevoie par le mainteneur (fiche d'un point).
+- **Symptôme** : le lien « Photo de rue du … » ouvre la page d'accueil de panoramax.fr, sans
+  la photo.
+- **Causes racines** :
+  1. Pourquoi ? L'URL était `https://panoramax.fr/#focus=pic&pic=<id>` : panoramax.fr est le
+     site vitrine du projet, pas une visionneuse ; il ignore ces paramètres.
+  2. Pourquoi ce format ? Écrit par analogie avec les paramètres de la visionneuse, sans
+     ouvrir une seule fois le lien produit.
+  3. Pourquoi non détecté ? Les tests vérifiaient la présence d'un lien, pas sa cible ; les
+     fixtures figées reproduisaient la même URL.
+- **Correctif** : visionneuse du méta-catalogue `https://api.panoramax.xyz/#focus=pic&pic=<id>`
+  (vérifiée dans un navigateur : la photo s'affiche) ; 65 URL des fixtures réécrites.
+- **Mesure préventive** : test du format exact des liens (`tests/rapport/test_rendu.py`) ;
+  règle : tout lien externe généré est ouvert au moins une fois dans un navigateur avant sa
+  PR (même esprit que LL-003 : vérifier l'effet, pas seulement la forme).
+- **Références** : branche `002-us3-us4-rapport-couts`.
+
 ### LL-006 — Port de la base locale réservé par Windows (2026-09-29) — Close
 
 - **Contexte** : développement sous WSL2 avec Docker Desktop, reprise après redémarrage du

@@ -14,8 +14,9 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from bitumap.calcul import ResultatCommune
 from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
+from bitumap.points import direction
 from bitumap.rapport import carte_svg
-from bitumap.score.methode import VERSION_METHODE
+from bitumap.score.methode import LIBELLES_GROUPES, VERSION_METHODE
 
 SCRIPT = (resources.files("bitumap.rapport") / "interactions.js").read_text("utf-8")
 # Empreinte du seul script autorisé dans les rapports (CSP servie par l'API).
@@ -32,6 +33,9 @@ _env = Environment(
     lstrip_blocks=True,
 )
 _env.filters["route"] = libelle
+_env.filters["designation"] = direction.designation
+_env.filters["identifiant"] = direction.identifiant
+_env.globals["libelles_groupes"] = LIBELLES_GROUPES
 
 
 def _json_dans_html(donnees) -> str:
@@ -43,8 +47,10 @@ def _json_dans_html(donnees) -> str:
 def _synthese(resultat: ResultatCommune) -> dict:
     points = resultat.points
     priorites = Counter(p.priorite for p in points)
+    groupes = Counter(p.groupe for p in points)
     return {
         "priorites": {k: priorites.get(k, 0) for k in ("P1", "P2", "P3")},
+        "groupes": {k: groupes.get(k, 0) for k in ("P1a", "P1b", "P1c", "P2", "P3")},
         "types": dict(Counter(p.libelle_type for p in points)),
         "routes": dict(Counter(libelle(p.route.classement) for p in points).most_common()),
         "classements": [(c, libelle(c)) for c in sorted({p.route.classement for p in points})],

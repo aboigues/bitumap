@@ -12,7 +12,7 @@
   function texte(el, valeur) { el.textContent = valeur === null || valeur === undefined ? "—" : valeur; }
 
   function visible(p) {
-    return (filtres.priorite === "tous" || p.priorite === filtres.priorite) &&
+    return (filtres.priorite === "tous" || p.priorite === filtres.priorite || p.groupe === filtres.priorite) &&
       (filtres.type === "tous" || p.type === filtres.type) &&
       (filtres.route === "tous" || p.route.classement === filtres.route);
   }
@@ -31,11 +31,15 @@
     var p = parId[id];
     if (!p) { return; }
     document.querySelectorAll(".sel").forEach(function (el) { el.classList.remove("sel"); });
-    document.querySelectorAll('[data-point="' + id + '"]').forEach(function (el) { el.classList.add("sel"); });
+    document.querySelectorAll('[data-point="' + id + '"]').forEach(function (el) {
+      el.classList.add("sel");
+      // Point de la carte au premier plan : jamais masqué par ses voisins.
+      if (el.classList.contains("pt")) { el.parentNode.appendChild(el); }
+    });
     var gabarit = document.getElementById("gabarit-fiche").content.cloneNode(true);
-    texte(gabarit.querySelector(".f-titre"), p.nom);
-    texte(gabarit.querySelector(".f-sous"), p.type_libelle + " · " + (p.voie || "voie inconnue"));
-    texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.priorite + " · score " + p.score);
+    texte(gabarit.querySelector(".f-titre"), p.designation);
+    texte(gabarit.querySelector(".f-sous"), p.type_libelle + " · " + p.identifiant);
+    texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.groupe_libelle + " · score " + p.score);
     var route = p.route.libelle + (p.route.numero ? " " + p.route.numero : "") +
       (p.route.gestionnaire ? " — gestionnaire : " + p.route.gestionnaire : "") +
       (p.route.statut === "a_verifier" ? " (à vérifier)" : "");
