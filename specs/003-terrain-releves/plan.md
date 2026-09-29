@@ -59,7 +59,7 @@ plafond global de stockage des photos (20 Go au départ)
 | **VII. Simplicité et tests** | Pas de nouveau service ni de nouvelle dépendance ; tests sur base et stockage simulés ; **écart** : pages de terrain avec script client (stockage local, envoi différé), voir *Complexity Tracking* | ⚠️ justifié |
 | **VIII. Retour d'expérience** | Point de vigilance trouvé en conception (CSP d'un rapport en cache après modification du script, R2) : correctif et test prévus ; entrée `LESSON-LEARNED.md` si l'incident se produit | ✅ |
 | **IX. Agents IA** | Branche dédiée, PR, fusion humaine | ✅ |
-| Données personnelles | Photos non diffusées (auteur et mainteneur) ; auteur affiché sous pseudonyme + domaine, adresse visible du seul mainteneur (R6, **à valider par le mainteneur**) ; anonymisation à la suppression du compte ; page « Données personnelles » de 002 complétée | ✅ |
+| Données personnelles | Photos non diffusées (auteur et mainteneur) ; auteur affiché sous pseudonyme + domaine, adresse visible du seul mainteneur (R6, validé le 2026-09-29) ; photos conservées sans limite (décision du mainteneur), justification sur la page « Données personnelles » ; anonymisation à la suppression du compte ; page « Données personnelles » de 002 complétée | ✅ |
 
 **Re-check après la conception (phase 1)** : conforme. Le contrat de 002 prévoyait « pas
 d'application JavaScript lourde ; seul script client : ALTCHA » ; 003 ajoute un script de
@@ -125,4 +125,4 @@ de versions).
 - **Avant la mise en service** : infrastructure de 002 (phase 7) et bucket `bitumap-terrain`.
 - **Débloque** : validation de 004 (≥ 100 relevés dans 3 communes), US4 de 006 (points déjà
   relevés), calage du seuil de 007, échantillon de T073 (002).
-- **À valider par le mainteneur** : affichage de l'auteur sous pseudonyme + domaine (R6).
+- **Clarifications du 2026-09-29** intégrées : pseudonyme + domaine (R6), repères des niveaux (FR-005b : avertissement à la saisie si la mesure contredit le niveau), photos sans limite de durée.

@@ -93,7 +93,7 @@ Décisions de conception ; chaque point résout une inconnue du contexte techniq
   de son adresse (« agent 7F3A · ville-courbevoie.fr ») ; l'adresse complète n'est visible
   que par le mainteneur. Le pseudonyme est dérivé du compte par empreinte à clé secrète.
   À la suppression du compte : « auteur supprimé ».
-- **À valider par le mainteneur** au plan (écart de forme avec « l'auteur est affiché »).
+- **Validé par le mainteneur** le 2026-09-29 (clarification de la spec, FR-010).
 
 ## R7. Points absents d'un nouveau rapport
 

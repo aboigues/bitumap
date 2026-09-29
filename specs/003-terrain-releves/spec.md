@@ -30,6 +30,14 @@ Hors périmètre : modification du score par les relevés (le calcul reste déte
 principe IV), relevés sur un emplacement qui n'est pas un point du rapport, parcours de
 surveillance (006), projection (007).
 
+## Clarifications
+
+### Session 2026-09-29
+
+- Q: Sous quelle forme afficher l'auteur d'un relevé aux autres utilisateurs connectés ? → A: pseudonyme stable et domaine de l'adresse (« agent 7F3A · ville-courbevoie.fr ») ; adresse complète visible par le seul mainteneur.
+- Q: Comment définir les niveaux d'orniérage constaté pour que deux agents classent de la même façon ? → A: repères chiffrés affichés à la saisie (léger < 10 mm, marqué 10–20 mm, grave > 20 mm, profondeur maximale à la règle) ; une mesure qui contredit le niveau déclenche un avertissement, sans bloquer.
+- Q: Combien de temps conserver les photos des relevés ? → A: sans limite de durée, comme le relevé (sauf retrait).
+
 ## User Scenarios & Testing *(mandatory)*
 
 Acteurs :
@@ -69,6 +77,9 @@ puis le retrouver dans le rapport.
 4. **Given** une saisie incomplète (aucun niveau d'orniérage), **When** l'agent valide,
    **Then** la validation est refusée avec un message clair : le niveau est le seul champ
    obligatoire.
+5. **Given** un niveau « léger » et une profondeur saisie de 25 mm, **When** l'agent valide,
+   **Then** un avertissement signale que 25 mm correspond à « grave » ; l'agent peut
+   corriger ou confirmer son choix.
 
 ---
 
@@ -221,6 +232,11 @@ qu'elle n'apparaît plus ni dans le rapport ni dans l'export.
   automatiquement au retour du réseau, avec un état visible « en attente d'envoi ».
 - **FR-005**: Un relevé DOIT être refusé sans niveau d'orniérage, avec un message clair ; les
   autres champs sont facultatifs.
+- **FR-005b**: La saisie DOIT afficher les repères de chaque niveau : **léger** < 10 mm,
+  **marqué** de 10 à 20 mm, **grave** > 20 mm (profondeur maximale mesurée à la règle), pour
+  un classement identique d'un agent à l'autre, même à l'œil. Quand une profondeur est saisie
+  et ne correspond pas au niveau choisi, un avertissement s'affiche ; le relevé reste
+  enregistrable avec le niveau choisi par l'agent.
 
 **Consultation**
 
@@ -235,8 +251,10 @@ qu'elle n'apparaît plus ni dans le rapport ni dans l'export.
   et niveau constaté.
 - **FR-010**: Tout utilisateur connecté DOIT pouvoir consulter les relevés de toutes les
   communes et en saisir sur tout point d'un rapport (savoir terrain partagé ; décision du
-  mainteneur du 2026-09-29). L'auteur de chaque relevé est affiché ; un utilisateur non
-  connecté n'a accès à aucun relevé.
+  mainteneur du 2026-09-29). L'auteur de chaque relevé est affiché sous la forme d'un
+  **pseudonyme stable et du domaine de son adresse** (« agent 7F3A · ville-courbevoie.fr ») ;
+  l'adresse complète n'est visible que par le mainteneur ; l'auteur voit ses propres
+  relevés marqués « vous ». Un utilisateur non connecté n'a accès à aucun relevé.
 
 **Historique et correction**
 
@@ -259,7 +277,11 @@ qu'elle n'apparaît plus ni dans le rapport ni dans l'export.
 - **FR-015**: Une photo NE DOIT être visible que par son auteur et par le mainteneur
   (RGPD : visages et plaques jamais diffusés ; décision du mainteneur du 2026-09-29). Les
   autres lecteurs voient le relevé sans ses photos, avec seulement leur nombre (« 2 photos,
-  visibles par leur auteur »).
+  visibles par leur auteur »). Les photos sont conservées **sans limite de durée**, comme le
+  relevé, sauf retrait (décision du mainteneur du 2026-09-29) ; justification RGPD : suivi de
+  l'état de la voirie dans le temps (comparaison de constats sur plusieurs années), accès
+  restreint à l'auteur et au mainteneur, retrait sur demande ; la page « Données
+  personnelles » l'indique.
 - **FR-016**: Le mainteneur DOIT pouvoir retirer une photo ou un relevé signalé ; la photo
   retirée n'apparaît plus ni dans le rapport ni dans l'export.
 - **FR-017**: À la suppression d'un compte (002, FR-027), ses relevés DOIVENT rester
@@ -324,7 +346,9 @@ qu'elle n'apparaît plus ni dans le rapport ni dans l'export.
 - La saisie se fait dans un navigateur de téléphone récent, sans application à installer ;
   l'appareil photo du téléphone est utilisé directement.
 - Les relevés et les photos sont conservés sans limite de durée (patrimoine de connaissance
-  de la voirie), sauf retrait ; les données personnelles (auteur) suivent 002 FR-026/FR-027.
+  de la voirie, confirmé par le mainteneur le 2026-09-29), sauf retrait ; les données
+  personnelles de l'auteur suivent 002 FR-026/FR-027 ; le plafond global de stockage (FR-018)
+  borne le coût.
 - Les relevés restent hébergés en France, dans le projet `BITUMAP` (constitution, principe
   III), sans transmission à un tiers.
 - Les quotas de FR-018 sont des valeurs de départ, ajustables par configuration, comme ceux
