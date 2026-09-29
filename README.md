@@ -352,5 +352,8 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 | 003 | Relevés terrain : annotations et photos par commune et par point | ⬜ |
 | 004 | Méthode v2 : ensoleillement LiDAR HD, îlots de chaleur approfondis, type de route intégré au score | ⬜ |
 | 005 | Échelle du département, export PDF | ⬜ |
+| 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture, à pied ou à vélo ([#21](https://github.com/aboigues/bitumap/issues/21)) | ⬜ |
+| 007 | Projection : évolution d'un indice de potentiel d'orniérage par point selon la fréquentation et trois scénarios de température (neutre, TRACC +2,7 °C, TRACC +4 °C ; indicateurs DRIAS) ; indice relatif, calibrage en millimètres après les relevés terrain de 003 ([#20](https://github.com/aboigues/bitumap/issues/20)) | ⬜ |
 
-L'ordre de 003 et 004 sera arbitré selon les besoins du terrain.
+L'ordre de 003, 004, 006 et 007 sera arbitré selon les besoins du terrain. 007 et 004 partagent
+les données climatiques : le facteur chaleur de 004 et l'indice de 007 devront être réconciliés.
