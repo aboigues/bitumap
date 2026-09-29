@@ -1,4 +1,5 @@
-"""OpenStreetMap (ODbL) : itinéraires de bus, feux, giratoires, revêtement, ouvrages d'art.
+"""OpenStreetMap (ODbL) : itinéraires de bus, feux, giratoires, revêtement, ouvrages d'art,
+terminus desservis depuis chaque quai (direction, FR-030).
 
 Portée régionale (FR-007b) : une passe sur l'extrait Geofabrik Île-de-France (≈ 3 min,
 ≈ 600 Mo de mémoire) produit un fichier compact mis en cache ; chaque commune n'en lit
@@ -8,6 +9,7 @@ ensuite que son emprise.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -42,6 +44,7 @@ class DonneesOsm:
     )  # way_id, lignes, nb_itineraires, nom, ref, highway, surface, pont, sens_unique
     feux: gpd.GeoDataFrame  # node_id, pieton
     giratoires: gpd.GeoDataFrame  # way_id, nom
+    quais: gpd.GeoDataFrame  # node_id, ref_idfm, terminus (JSON {ligne: [terminus]})
 
 
 def telecharger(dossier: Path) -> tuple[Path, date]:
@@ -71,21 +74,51 @@ def telecharger(dossier: Path) -> tuple[Path, date]:
     return cible, extraction
 
 
+_QUAIS_VIDE = {"node_id": [], "ref_idfm": [], "terminus": [], "geometry": []}
+
+
+def terminus(tags) -> str | None:
+    """Terminus d'un itinéraire : ``to``, sinon la fin du nom « Bus 163 : A → B »."""
+    valeur = tags.get("to") or ""
+    if not valeur and "→" in (nom := tags.get("name", "")):
+        valeur = nom.rsplit("→", 1)[1]
+    return " ".join(valeur.split()) or None
+
+
 def extraire_region(pbf: Path) -> DonneesOsm:
-    """Passe régionale : relations bus → tronçons parcourus, feux, giratoires."""
+    """Passe régionale : relations bus → tronçons parcourus, terminus par quai ; feux,
+    giratoires, quais (nœuds membres d'un itinéraire portant l'identifiant IDFM)."""
     lignes_par_voie: dict[int, set[str]] = {}
     itineraires_par_voie: dict[int, int] = {}
+    terminus_par_noeud: dict[int, dict[str, set[str]]] = {}
     filtre_bus = osmium.filter.TagFilter(("route", "bus"), ("route", "trolleybus"))
     for rel in osmium.FileProcessor(str(pbf), osmium.osm.RELATION).with_filter(filtre_bus):
         ref = rel.tags.get("ref", "") or rel.tags.get("name", "")
+        fin = terminus(rel.tags)
         for membre in rel.members:
             if membre.type == "w" and membre.role in ("", "forward", "backward"):
                 lignes_par_voie.setdefault(membre.ref, set()).add(ref)
                 itineraires_par_voie[membre.ref] = itineraires_par_voie.get(membre.ref, 0) + 1
+            elif membre.type == "n" and fin:
+                terminus_par_noeud.setdefault(membre.ref, {}).setdefault(ref, set()).add(fin)
 
-    voies, feux, giratoires = [], [], []
+    voies, feux, giratoires, quais = [], [], [], []
     for obj in osmium.FileProcessor(str(pbf), osmium.osm.NODE | osmium.osm.WAY).with_locations():
         if obj.is_node():
+            ref_idfm = obj.tags.get("ref:FR:STIF") or obj.tags.get("ref:FR:IDFM")
+            if ref_idfm and obj.id in terminus_par_noeud:
+                par_ligne = terminus_par_noeud[obj.id]
+                quais.append(
+                    {
+                        "node_id": obj.id,
+                        "ref_idfm": ref_idfm,
+                        "terminus": json.dumps(
+                            {ligne: sorted(t) for ligne, t in sorted(par_ligne.items())},
+                            ensure_ascii=False,
+                        ),
+                        "geometry": Point(obj.location.lon, obj.location.lat),
+                    }
+                )
             if obj.tags.get("highway") == "traffic_signals":
                 feux.append(
                     {
@@ -131,10 +164,13 @@ def extraire_region(pbf: Path) -> DonneesOsm:
         gpd.GeoDataFrame(voies, crs=crs),
         gpd.GeoDataFrame(feux, crs=crs),
         gpd.GeoDataFrame(giratoires, crs=crs),
+        gpd.GeoDataFrame(quais or _QUAIS_VIDE, geometry="geometry", crs=crs),
     )
 
 
-COUCHES = ("voies_bus", "feux", "giratoires")
+COUCHES = ("voies_bus", "feux", "giratoires", "quais")
+# Version du fichier régional mis en cache : à incrémenter quand ses couches changent.
+VERSION_CACHE = 2
 
 
 def enregistrer(donnees: DonneesOsm, fichier: Path) -> None:

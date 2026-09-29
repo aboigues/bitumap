@@ -44,6 +44,7 @@ class Point:
     pointe_h: float | None = None
     lignes: list[str] = field(default_factory=list)
     route: Route = field(default_factory=Route)
+    direction: str | None = None  # terminus desservis depuis le quai (FR-030), arrêts seulement
     facteurs: list[Facteur] = field(default_factory=list)
     panoramax: dict | None = None
     score_brut: float = 0.0
@@ -62,8 +63,11 @@ class Point:
 
     def en_dict(self) -> dict:
         from bitumap.facteurs.voirie import libelle
+        from bitumap.points.direction import designation, identifiant
 
         d = asdict(self)
         d["type_libelle"] = self.libelle_type
         d["route"]["libelle"] = libelle(self.route.classement)
+        d["designation"] = designation(self)
+        d["identifiant"] = identifiant(self)
         return d

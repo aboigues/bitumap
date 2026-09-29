@@ -8,6 +8,7 @@ from html import escape
 from shapely.geometry import shape
 
 from bitumap.modele import Point
+from bitumap.points.direction import designation, identifiant
 
 LARGEUR = 1000
 COULEURS = {"P1": "var(--p1)", "P2": "var(--p2)", "P3": "var(--p3)"}
@@ -39,10 +40,11 @@ def _chemin(coords, proj: Projection, fermer: bool) -> str:
 
 def _forme(p: Point, x: float, y: float) -> str:
     couleur = COULEURS.get(p.priorite, "var(--p3)")
-    titre = f"<title>{escape(p.nom)} — {escape(p.priorite)}, rang {p.rang}</title>"
+    nom = escape(f"{designation(p)} ({identifiant(p)})")
+    titre = f"<title>{nom} — {escape(p.priorite)}, rang {p.rang}</title>"
     commun = (
         f'data-point="{escape(p.id)}" tabindex="0" role="button" class="pt" '
-        f'aria-label="{escape(p.nom)}, {escape(p.priorite)}, rang {p.rang}"'
+        f'aria-label="{nom}, {escape(p.priorite)}, rang {p.rang}"'
     )
     r = 7 if p.priorite == "P1" else 5
     if p.type == "feu":

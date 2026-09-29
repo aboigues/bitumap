@@ -14,6 +14,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from bitumap.calcul import ResultatCommune
 from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
+from bitumap.points import direction
 from bitumap.rapport import carte_svg
 from bitumap.score.methode import VERSION_METHODE
 
@@ -32,6 +33,8 @@ _env = Environment(
     lstrip_blocks=True,
 )
 _env.filters["route"] = libelle
+_env.filters["designation"] = direction.designation
+_env.filters["identifiant"] = direction.identifiant
 
 
 def _json_dans_html(donnees) -> str:

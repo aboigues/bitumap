@@ -94,8 +94,9 @@ a{color:inherit;text-decoration-color:var(--accent)}
     {% for p in points %}
       <li data-point="{{ p.id }}" tabindex="0">
         <span class="rang">{{ p.rang }}</span>
-        <span><strong>{{ p.nom }}</strong><br><span class="petit">{{ p.libelle_type }} · {{ p.voie or "voie inconnue" }}
-          · {{ p.route.classement|route }}{% if p.route.numero %} {{ p.route.numero }}{% endif %}</span></span>
+        <span><strong>{{ p|designation }}</strong><br><span class="petit">{{ p.libelle_type }}
+          · {{ p.route.classement|route }}{% if p.route.numero %} {{ p.route.numero }}{% endif %}
+          · {{ p|identifiant }}</span></span>
         <span class="pastille {{ p.priorite }}">{{ p.priorite }}</span>
       </li>
     {% endfor %}

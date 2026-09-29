@@ -13,7 +13,8 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
 3. Carte SVG : contour communal, voies très fréquentées par les bus, points colorés par
    priorité et formés par type ; sélection d'un point ⇒ fiche.
 4. Liste classée : filtres priorité / type de point / type de route (FR-018).
-5. Fiche point : champs de `points.geojson`, facteurs avec provenance et statut, photo de rue
+5. Fiche point : désignation « nom · direction · voie · lignes » et identifiant IDFM du quai
+   (FR-030, aussi dans la liste et l'infobulle de la carte), champs de `points.geojson`, facteurs avec provenance et statut, photo de rue
    (lien, date, licence), âge de l'enrobé « à confirmer » avec modèle et date.
 6. Méthode : version, facteurs et effets, règles de priorité, **limites connues**
    (ensoleillement et îlots de chaleur à approfondir en 004).
@@ -28,6 +29,9 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
   "id": "A26860",
   "type": "arret",
   "nom": "Place Mermoz",
+  "direction": "Porte de Champerret",
+  "designation": "Place Mermoz · vers Porte de Champerret · Boulevard Georges Clemenceau · 167, 275, N52",
+  "identifiant": "quai IDFM 26860",
   "voie": "Boulevard Georges Clemenceau",
   "route": {"classement": "départementale", "gestionnaire": "Hauts-de-Seine",
             "numero": "D9B", "statut": "concordant"},
@@ -43,6 +47,9 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
   "score": 100, "rang": 1, "priorite": "P1"
 }
 ```
+
+`direction` : terminus desservis depuis le quai (research R11), `null` si inconnue (affichée
+« direction non déterminée ») ou pour un carrefour ; descriptive, sans effet sur le score.
 
 ## `sources.json`
 
