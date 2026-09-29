@@ -45,6 +45,8 @@ ol.liste li.sel{background:var(--puce);box-shadow:inset 5px 0 0 var(--sel),0 0 0
 .pastille{background:var(--c);color:var(--sur-pastille)}
 .fiche h3{margin:.2rem 0}.fiche dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:.5rem 0}
 .fiche dt{color:var(--discret)}.fiche dd{margin:0}
+.fiche h4{margin:.8rem 0 .2rem;font-size:.95rem}.constate{border-left:4px solid var(--sel);padding-left:8px}
+.releve-marque{font-size:.75rem;font-weight:600;color:var(--sel);margin-left:6px}
 table{border-collapse:collapse;width:100%;font-size:.9rem;overflow-wrap:anywhere}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ligne)}
 .legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--discret);margin-top:6px}
 a{color:inherit;text-decoration-color:var(--accent)}
@@ -96,6 +98,11 @@ a{color:inherit;text-decoration-color:var(--accent)}
       <label>Route <select data-filtre="route"><option value="tous">toutes</option>
         {% for c, l in synthese.classements %}<option value="{{ c }}">{{ l }}</option>{% endfor %}
       </select></label>
+      <label>Constaté <select data-filtre="constate"><option value="tous">tous</option>
+        <option value="releves">relevés</option><option value="non_releves">non relevés</option>
+        <option value="marque_grave">marqué ou grave</option><option value="absent">absent</option>
+        <option value="leger">léger</option><option value="marque">marqué</option>
+        <option value="grave">grave</option></select></label>
       <span id="compte" class="petit"></span>
     </div>
     <ol class="liste">
@@ -110,6 +117,14 @@ a{color:inherit;text-decoration-color:var(--accent)}
     {% endfor %}
     </ol>
   </div>
+</section>
+
+<section class="panneau" id="synthese-constate" hidden aria-label="Constaté sur le terrain">
+  <h2>Constaté sur le terrain</h2>
+  <p class="petit" id="constate-resume"></p>
+  <table><thead><tr><th>Niveau estimé</th><th>absent</th><th>léger</th><th>marqué</th><th>grave</th></tr></thead>
+    <tbody id="constate-tableau"></tbody></table>
+  <p class="petit">Relevés saisis sur le terrain ; ils ne modifient ni le score ni le classement.</p>
 </section>
 
 <section class="panneau"><h2>Méthode {{ version_methode }}</h2>
@@ -154,6 +169,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
 
 <template id="gabarit-fiche">
   <h3 class="f-titre"></h3><div class="petit f-sous"></div>
+  <h4>Constaté</h4><div class="constate f-constate"></div>
+  <h4>Estimé</h4>
   <dl><dt>Classement</dt><dd class="f-rang"></dd><dt>Route</dt><dd class="f-route"></dd>
     <dt>Bus</dt><dd class="f-bus"></dd><dt>Lignes</dt><dd class="f-lignes"></dd>
     <dt>Photo</dt><dd class="f-photo"></dd></dl>

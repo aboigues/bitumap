@@ -132,6 +132,22 @@ def session_requise(requete: Request) -> Session:
 SessionRequise = Annotated[Session, Depends(session_requise)]
 
 
+def est_mainteneur(session: Session | None) -> bool:
+    """Le mainteneur est le compte dont l'adresse est ``BITUMAP_EMAIL_MAINTENEUR`` (003 R5)."""
+    attendu = reglages().email_mainteneur
+    return bool(session and attendu and session.email.lower() == attendu.strip().lower())
+
+
+def mainteneur_requis(requete: Request) -> Session:
+    session = session_requise(requete)
+    if not est_mainteneur(session):  # 404 : l'existence des pages n'est pas révélée
+        raise ErreurPublique(404, "http", "Page introuvable.")
+    return session
+
+
+MainteneurRequis = Annotated[Session, Depends(mainteneur_requis)]
+
+
 def verifier_csrf(session: Session, csrf: str) -> None:
     if not csrf or not hmac.compare_digest(session.csrf, csrf):
         raise ErreurPublique(403, "csrf_invalide", "Formulaire expiré : rechargez la page.")

@@ -91,12 +91,13 @@ def creer_application() -> FastAPI:
     def sante() -> dict:
         return {"etat": "ok"}
 
-    from bitumap.api import antibot, auth, compte, demandes, pages
+    from bitumap.api import antibot, auth, compte, demandes, pages, terrain
 
     app.include_router(antibot.routeur)
     app.include_router(auth.routeur)
     app.include_router(compte.routeur)
     app.include_router(pages.routeur)
     app.include_router(demandes.routeur)
+    app.include_router(terrain.routeur)
     app.mount("/statique", StaticFiles(directory=str(DOSSIER / "statique")), name="statique")
     return app

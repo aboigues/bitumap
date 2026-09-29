@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block titre %}Relevé · {{ point.designation if point else point_id }} · bitumap{% endblock %}
+{% block tete %}
+<link rel="manifest" href="/terrain/manifeste.webmanifest">
+<script type="module" src="/statique/terrain/terrain.js"></script>
+{% endblock %}
+{% block contenu %}
+<p><a href="/terrain/{{ insee }}">← Points de la commune</a></p>
+<h1>{{ point.designation if point else point_id }}</h1>
+{% if point %}
+<p class="petit">{{ point_id }} · rang {{ point.rang }} · {{ libelles_niveau(point.groupe) }}</p>
+{% else %}
+<p class="note">Ce point n'est plus dans le rapport en vigueur : seul son historique est consultable.</p>
+{% endif %}
+
+<p class="attente" id="attente" role="status" hidden>
+  <span id="attente-nombre">0</span> relevé(s) en attente d'envoi
+  <span id="attente-alerte" hidden>— certains attendent depuis plus de 3 jours : reconnectez-vous au réseau.</span>
+  <span id="attente-refus"></span>
+</p>
+
+{% if point %}
+<form id="releve" class="carte" novalidate
+      data-insee="{{ insee }}" data-point="{{ point_id }}" data-csrf="{{ session.csrf }}"
+      data-lon="{{ point.lon }}" data-lat="{{ point.lat }}">
+  <fieldset>
+    <legend>Orniérage constaté (obligatoire)</legend>
+    <label><input type="radio" name="niveau" value="absent" required> absent</label>
+    <label><input type="radio" name="niveau" value="leger"> léger <span class="petit">(moins de 10 mm)</span></label>
+    <label><input type="radio" name="niveau" value="marque"> marqué <span class="petit">(10 à 20 mm)</span></label>
+    <label><input type="radio" name="niveau" value="grave"> grave <span class="petit">(plus de 20 mm)</span></label>
+    <p class="petit">Profondeur maximale mesurée à la règle ; à l'œil si vous n'avez pas d'instrument.</p>
+  </fieldset>
+
+  <label for="profondeur_mm">Profondeur maximale (mm, facultatif)</label>
+  <input id="profondeur_mm" name="profondeur_mm" type="number" inputmode="numeric" min="0" max="200">
+  <label for="instrument">Instrument (requis avec une profondeur)</label>
+  <input id="instrument" name="instrument" maxlength="100" placeholder="règle et cale, jauge…">
+
+  <label for="observation">Observation (facultatif)</label>
+  <textarea id="observation" name="observation" maxlength="1000" rows="3"></textarea>
+
+  <label for="annee_refection">Année de la dernière réfection (facultatif)</label>
+  <input id="annee_refection" name="annee_refection" type="number" inputmode="numeric" min="1950" max="{{ annee }}">
+  <label for="source_refection">Source de cette année</label>
+  <select id="source_refection" name="source_refection">
+    <option value="">—</option>
+    {% for valeur, libelle in sources.items() %}<option value="{{ valeur }}">{{ libelle }}</option>
+    {% endfor %}  </select>
+
+  <label for="photos">Photos (5 au plus, chaussée cadrée, sans personne)</label>
+  <input id="photos" name="photos" type="file" accept="image/jpeg,image/png" multiple capture="environment">
+
+  <p id="avertissement" class="avertissement" role="alert" hidden></p>
+  <p id="erreur" class="erreur" role="alert" hidden></p>
+  <div class="actions">
+    <button type="submit" id="valider">Enregistrer le relevé</button>
+    <button type="button" id="confirmer" hidden>Confirmer malgré l'écart</button>
+  </div>
+  <p id="confirmation" role="status" hidden></p>
+</form>
+{% endif %}
+
+<h2>Historique du point</h2>
+{% if historique %}
+<ol class="historique">
+{% for r in historique %}
+  <li>
+    <strong>{{ niveaux[r.niveau] }}</strong>
+    {% if r.profondeur_mm is not none %} · {{ r.profondeur_mm }} mm ({{ r.instrument }}){% endif %}
+    · {{ r.cree_le[:16].replace('T', ' ') }} · {{ r.auteur }}
+    {% if r.version > 1 %} · version {{ r.version }}{% endif %}
+    {% if r.position_eloignee %} · position éloignée{% endif %}
+    {% if r.annee_refection %}<br><span class="petit">Réfection {{ r.annee_refection }} ({{ sources[r.source_refection] }})</span>{% endif %}
+    {% if r.observation %}<br><span class="petit">{{ r.observation }}</span>{% endif %}
+    {% if r.photos %}<br>{% for photo in r.photos %}<img src="/terrain/photos/{{ photo }}" alt="Photo du relevé" loading="lazy" width="160">{% endfor %}
+    {% elif r.nb_photos %}<br><span class="petit">{{ r.nb_photos }} photo(s), visibles par leur auteur</span>{% endif %}
+  </li>
+{% endfor %}
+</ol>
+{% else %}
+<p>Aucun relevé pour ce point.</p>
+{% endif %}
+{% endblock %}

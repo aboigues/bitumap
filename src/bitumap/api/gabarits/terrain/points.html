@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titre %}Relevés terrain · bitumap{% endblock %}
+{% block tete %}
+<link rel="manifest" href="/terrain/manifeste.webmanifest">
+<script type="module" src="/statique/terrain/terrain.js"></script>
+{% endblock %}
+{% block contenu %}
+<h1>Relevés terrain</h1>
+<p><a href="/rapports/{{ insee }}/{{ empreinte }}">Rapport de la commune</a></p>
+<p class="attente" id="attente" role="status" hidden>
+  <span id="attente-nombre">0</span> relevé(s) en attente d'envoi
+  <span id="attente-alerte" hidden>— certains attendent depuis plus de 3 jours : reconnectez-vous au réseau.</span>
+  <span id="attente-refus"></span>
+</p>
+
+<label for="recherche">Rechercher un point</label>
+<input id="recherche" type="search" autocomplete="off" data-filtre-points>
+
+<ol class="liste-points">
+{% for p in points %}
+  {% set r = releves.get(p.id) %}
+  <li data-texte="{{ (p.designation ~ ' ' ~ p.id)|lower }}">
+    <a href="/terrain/{{ insee }}/{{ p.id }}">
+      <strong>{{ p.rang }} · {{ p.designation }}</strong>
+    </a>
+    <span class="petit">{{ libelles_niveau(p.groupe) }} · {{ p.id }}
+      {% if r %} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le[:10] }}, {{ r.nb_releves }} relevé(s)){% else %} · non relevé{% endif %}
+    </span>
+  </li>
+{% endfor %}
+</ol>
+
+{% if absents %}
+<h2>Points relevés absents du rapport en vigueur</h2>
+<ul>
+{% for r in absents %}
+  <li><a href="/terrain/{{ insee }}/{{ r.point_id }}">{{ r.point_designation }}</a>
+    <span class="petit">{{ r.point_id }} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le[:10] }})</span></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

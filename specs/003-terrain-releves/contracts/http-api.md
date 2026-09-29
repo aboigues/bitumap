@@ -1,0 +1,64 @@
+# Contrat : interface HTTP des relevés terrain (003)
+
+Complète [le contrat de 002](../../002-on-demand-report/contracts/http-api.md) : mêmes
+en-têtes de sécurité, même session (`__Host-session`), même jeton `csrf` sur chaque requête
+qui modifie, mêmes erreurs `{ "erreur": "<code>", "message": "<texte>" }` sans détail
+technique. **Toutes les routes exigent une session** (`401` sinon).
+
+## Pages de terrain (téléphone)
+
+| Méthode, chemin | Réponse |
+|---|---|
+| `GET /terrain/{insee}` | liste des points du rapport en vigueur (désignation, niveau, dernier constat), recherche et filtre ; compteur « en attente d'envoi » |
+| `GET /terrain/{insee}/{point_id}` | fiche de saisie d'un relevé, historique du point |
+| `GET /terrain/manifeste.webmanifest` | manifeste d'application (ajout à l'écran d'accueil, R3) |
+
+En-têtes propres à ces pages : `Permissions-Policy: geolocation=(self)` ;
+`connect-src 'self' https://bitumap-terrain.s3.fr-par.scw.cloud` (envoi direct des photos,
+R4) ; `img-src 'self' blob: data:` (aperçu des photos avant envoi).
+
+## Relevés
+
+| Méthode, chemin | Entrée | Réponse | Erreurs |
+|---|---|---|---|
+| `PUT /terrain/releves/{id}` | JSON : `commune_insee`, `point_id`, `cree_le`, `niveau`, champs facultatifs (data-model), `lon`/`lat` facultatifs, `confirme_malgre_incoherence` (booléen), `csrf` | `201` créé, `200` si le même relevé existe déjà (idempotent) ; si la profondeur contredit les repères du niveau et que `confirme_malgre_incoherence` est faux : `200` **sans enregistrement**, `{"avertissement": "mesure_incoherente", "niveau_suggere": "grave"}` (l'agent corrige ou confirme) | `400 niveau_requis`, `400 saisie_invalide`, `404 point_inconnu`, `409 identifiant_pris` (id d'un autre compte), `429 quota_releves` |
+| `POST /terrain/releves/{id}/versions` | champs modifiables, `csrf` | `201` nouvelle version | `403 pas_auteur`, `404` |
+| `POST /terrain/releves/{id}/retrait` | `csrf`, `motif` | `200` ; relevé masqué, trace conservée | `403 pas_auteur` (sauf mainteneur), `404` |
+| `GET /terrain/releves/{id}` | — | relevé, versions, nombre de photos ; photos seulement pour l'auteur ou le mainteneur | `404` |
+
+## Photos (R4, R5)
+
+| Méthode, chemin | Entrée | Réponse | Erreurs |
+|---|---|---|---|
+| `POST /terrain/releves/{id}/photos/{photo_id}/formulaire` | `csrf`, `octets` annoncés | formulaire d'envoi signé (URL, champs), valable 5 min, taille ≤ 10 Mo, `image/jpeg` ou `image/png` | `403 pas_auteur`, `409 trop_de_photos` (> 5), `413 photo_trop_lourde`, `429 quota_photos`, `507 stockage_plein` |
+| `POST /terrain/releves/{id}/photos/{photo_id}/confirmation` | `csrf`, `lon`/`lat`/`prise_le` facultatifs | `201` photo `visible` après contrôle et réencodage ; idempotent | `400 image_invalide` (contenu non image), `404 envoi_absent` |
+| `GET /terrain/photos/{photo_id}` | — | image JPEG sans métadonnée ; `Cache-Control: private, no-store` | `404` **aussi** quand l'utilisateur n'est ni l'auteur ni le mainteneur (aucune fuite d'existence) |
+| `POST /terrain/photos/{photo_id}/retrait` | `csrf`, `motif` | `200` ; auteur : photo masquée ; mainteneur (RGPD) : **toutes les versions** du fichier supprimées du bucket | `403`, `404` |
+
+## Export (FR-013, FR-014)
+
+| Méthode, chemin | Réponse |
+|---|---|
+| `GET /terrain/{insee}/releves.csv` | UTF-8 avec BOM, `;` ; un relevé visible par ligne (dernière version) : point, désignation, lon, lat, niveau estimé du rapport en vigueur, niveau constaté, profondeur, instrument, année et source de réfection, observation, date, auteur (pseudonyme), nombre de photos, liens des photos **seulement pour les relevés de l'utilisateur** |
+| `GET /terrain/{insee}/releves.geojson` | mêmes champs en `properties`, WGS 84 |
+| `GET /terrain/{insee}/echantillon_refection.json` | `{"points": [{id, nom, lon, lat, refection_annee, source}]}` pour les points à année « constatée » ou « services techniques » (format de `bitumap.ia.evaluer`, 002 T072) |
+
+## Mainteneur
+
+| Méthode, chemin | Réponse |
+|---|---|
+| `GET /terrain/moderation` | recherche d'un relevé ou d'une photo par identifiant, commune ou point ; retrait RGPD (SC-008) ; accès réservé au compte `BITUMAP_EMAIL_MAINTENEUR`, `404` sinon |
+
+## Rapport (modification de 002)
+
+`GET /rapports/{insee}/{empreinte}` : le document servi reçoit, avant `</body>`, un bloc
+`<script type="application/json" id="releves">` avec, pour chaque point de la commune, le
+dernier relevé visible (niveau, profondeur, instrument, année de réfection, observation,
+date, pseudonyme d'auteur, nombre de photos, marqueur « position éloignée ») et le nombre de
+relevés. La CSP autorise l'empreinte du script en ligne **du document servi** (R2). Les
+photos n'y figurent jamais.
+
+## Limites
+
+200 relevés et 1 000 photos par compte et par jour ; 5 photos par relevé ; 10 Mo par photo ;
+plafond global de stockage des photos (`BITUMAP_PHOTOS_MAX_GO`).
