@@ -33,6 +33,29 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-010 — Fichier d'une autre branche recréé par un éditeur ouvert (2026-09-29) — Close
+
+- **Contexte** : développement, spécifications 003 à 007 sur des branches successives, dépôt
+  sous `/mnt/c` (WSL) ouvert en parallèle dans un éditeur Windows.
+- **Symptôme** : sur la branche `006-parcours-surveillance`, `specs/004-methode-v2/spec.md`
+  apparaît « non suivi » (version brouillon, fins de ligne CRLF) ; supprimé, il revient en
+  45 s.
+- **Causes racines** :
+  1. Pourquoi réapparaît-il ? Un éditeur Windows avait ce fichier ouvert : après le
+     `git switch` qui le retirait, l'éditeur l'a réenregistré avec son contenu en mémoire.
+  2. Pourquoi le brouillon ? L'éditeur tenait la version ouverte avant les clarifications ;
+     les fins de ligne CRLF trahissent l'enregistrement côté Windows.
+  3. Pourquoi soupçonner d'abord kDrive ? Symptôme identique à LL-002 ; la fermeture du
+     fichier par le mainteneur a supprimé la recréation (vérifié : aucune réapparition en
+     60 s), ce qui met kDrive hors de cause.
+- **Correctif** : fichier fermé dans l'éditeur, copie parasite supprimée ; rien n'avait été
+  commité (ajouts par chemins explicites, LL-002).
+- **Mesure préventive** : fermer dans l'éditeur les fichiers d'une branche avant d'en changer
+  (ou désactiver la restauration automatique des fichiers supprimés) ; relire `git status`
+  après chaque changement de branche et n'ajouter que des chemins explicites. Un fichier
+  non suivi en CRLF sur une branche où il n'existe pas signale un réenregistrement Windows.
+- **Références** : branche `007-projection-ete`.
+
 ### LL-009 — Coût IA du jour arrondi à chaque opération (2026-09-29) — Close
 
 - **Contexte** : développement US4, test du plafond de coût par rapport
