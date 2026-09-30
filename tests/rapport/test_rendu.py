@@ -226,6 +226,22 @@ def test_cinq_couleurs_de_niveau_distinctes(rapport):
     assert 'fill="var(--P1a)"' in html
 
 
+def test_lien_photos_aeriennes(rapport):
+    # Vérification hors Panoramax : comparaison IGN « Remonter le temps », aujourd'hui (couche
+    # 10) contre 2016-2020 (couche 11) ; format vérifié dans un navigateur (LL-007).
+    assert rendu.lien_photos_aeriennes(2.255795179, 48.89694812) == (
+        "https://remonterletemps.ign.fr/comparer/?lon=2.255795&lat=48.896948&z=19"
+        "&layer1=10&layer2=11&mode=split-h"
+    )
+    points = rapport["donnees"]["points"]
+    assert all(
+        p["photos_aeriennes"].startswith("https://remonterletemps.ign.fr/comparer/?")
+        for p in points
+    )
+    assert 'class="f-aerien"' in rapport["html"]
+    assert "p.photos_aeriennes" in rendu.SCRIPT and 'rel = "noopener noreferrer"' in rendu.SCRIPT
+
+
 def test_ensoleillement_v2_dans_la_fiche():
     # 004 T020 : heures juin–août, cause d'ombre et source LiDAR dans la fiche ; version 2.0.
     resultat = copy.deepcopy(_resultat())
