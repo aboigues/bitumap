@@ -224,3 +224,27 @@ def test_cinq_couleurs_de_niveau_distinctes(rapport):
     for code in ("P1a", "P1b", "P1c", "P2", "P3"):
         assert f'class="chiffre niveau {code}"' in html
     assert 'fill="var(--P1a)"' in html
+
+
+def test_feux_a_leur_place_sur_la_carte(rapport):
+    # Un attribut « transform » sur un point est réinterprété par « transform-box: fill-box »
+    # (agrandissement du point choisi) : les losanges des feux partaient hors de la commune.
+    from shapely.geometry import shape
+
+    from bitumap.rapport import carte_svg
+
+    html = rapport["html"]
+    svg = html[html.index("<svg") : html.index("</svg>")]
+    assert not re.search(r'<[^>]*class="pt[^"]*"[^>]*\btransform=', svg)
+    resultat = rapport["resultat"]
+    geom = shape(resultat.contour.get("geometry", resultat.contour))
+    proj = carte_svg.Projection(*geom.bounds)
+    feux = [p for p in resultat.points if p.type == "feu"]
+    assert feux
+    for p in feux:
+        m = re.search(rf'<polygon data-point="{re.escape(p.id)}"[^>]*points="([^"]+)"', svg)
+        sommets = [tuple(map(float, s.split(","))) for s in m.group(1).split()]
+        cx = sum(x for x, _ in sommets) / 4
+        cy = sum(y for _, y in sommets) / 4
+        x, y = proj(p.lon, p.lat)
+        assert abs(cx - x) < 0.2 and abs(cy - y) < 0.2, p.id

@@ -51,10 +51,12 @@ def _forme(p: Point, x: float, y: float) -> str:
     )
     r = RAYONS.get(p.groupe, 5)
     if p.type == "feu":
-        return (
-            f'<rect {commun} x="{x - r}" y="{y - r}" width="{2 * r}" height="{2 * r}" '
-            f'transform="rotate(45 {x} {y})" fill="{couleur}">{titre}</rect>'
-        )
+        # Losange tracé par ses sommets, sans rotation : un attribut « transform » serait
+        # réinterprété par « transform-box: fill-box » (agrandissement du point choisi) et
+        # déplacerait le feu loin de sa place.
+        d = round(r * math.sqrt(2), 1)  # même surface qu'un carré de côté 2r
+        sommets = f"{x},{y - d} {x + d},{y} {x},{y + d} {x - d},{y}"
+        return f'<polygon {commun} points="{sommets}" fill="{couleur}">{titre}</polygon>'
     if p.type == "giratoire":
         return (
             f'<circle {commun} cx="{x}" cy="{y}" r="{r + 2}" fill="none" stroke="{couleur}" '
