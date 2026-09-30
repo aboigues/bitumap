@@ -240,6 +240,8 @@ def test_lien_photos_aeriennes(rapport):
     )
     assert 'class="f-aerien"' in rapport["html"]
     assert "p.photos_aeriennes" in rendu.SCRIPT and 'rel = "noopener noreferrer"' in rendu.SCRIPT
+
+
 def test_ensoleillement_v2_dans_la_fiche():
     # 004 T020 : heures juin–août, cause d'ombre et source LiDAR dans la fiche ; version 2.0.
     resultat = copy.deepcopy(_resultat())
