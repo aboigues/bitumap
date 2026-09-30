@@ -130,6 +130,14 @@
       a.textContent = "Photo de rue du " + p.panoramax.date + " (" + p.panoramax.licence + ", " + p.panoramax.distance_m + " m)";
       photo.appendChild(a);
     } else { photo.textContent = "Aucune photo de rue récente à moins de 30 m."; }
+    // Réfection ou réaménagement récent : visible en comparant les photos aériennes (IGN).
+    var aerien = gabarit.querySelector(".f-aerien");
+    if (aerien && p.photos_aeriennes) {
+      var lien = document.createElement("a");
+      lien.href = p.photos_aeriennes; lien.rel = "noopener noreferrer"; lien.target = "_blank";
+      lien.textContent = "Comparer aujourd'hui et 2016-2020 (IGN, Remonter le temps)";
+      aerien.appendChild(lien);
+    }
     fiche.replaceChildren(gabarit);
   }
 

@@ -248,3 +248,47 @@ def test_feux_a_leur_place_sur_la_carte(rapport):
         cy = sum(y for _, y in sommets) / 4
         x, y = proj(p.lon, p.lat)
         assert abs(cx - x) < 0.2 and abs(cy - y) < 0.2, p.id
+def test_lien_photos_aeriennes(rapport):
+    # Vérification hors Panoramax : comparaison IGN « Remonter le temps », aujourd'hui (couche
+    # 10) contre 2016-2020 (couche 11) ; format vérifié dans un navigateur (LL-007).
+    assert rendu.lien_photos_aeriennes(2.255795179, 48.89694812) == (
+        "https://remonterletemps.ign.fr/comparer/?lon=2.255795&lat=48.896948&z=19"
+        "&layer1=10&layer2=11&mode=split-h"
+    )
+    points = rapport["donnees"]["points"]
+    assert all(
+        p["photos_aeriennes"].startswith("https://remonterletemps.ign.fr/comparer/?")
+        for p in points
+    )
+    assert 'class="f-aerien"' in rapport["html"]
+    assert "p.photos_aeriennes" in rendu.SCRIPT and 'rel = "noopener noreferrer"' in rendu.SCRIPT
+
+
+def test_ensoleillement_v2_dans_la_fiche():
+    # 004 T020 : heures juin–août, cause d'ombre et source LiDAR dans la fiche ; version 2.0.
+    resultat = copy.deepcopy(_resultat())
+    point = resultat.points[0]
+    point.facteurs = [f for f in point.facteurs if f.nom != "ensoleillement"]
+    point.facteurs.append(
+        Facteur(
+            "ensoleillement",
+            6.5,
+            1.02,
+            explication="Soleil de juin à août : 6.5 h/jour ; ombre surtout due : arbres "
+            "(LiDAR HD de mars 2023)",
+            unite="h/jour",
+            details={
+                "cause_ombre": "arbre",
+                "source": "lidar_hd",
+                "millesime_lidar": "22LHDKE 2023-03-03",
+            },
+        )
+    )
+    html = rendu.rendre(resultat, JournalGeneration("92026", "2.0"))["rapport.html"][0].decode()
+    analyse = _Ressources()
+    analyse.feed(html)
+    donnees = json.loads(next(t for a, t in analyse.scripts if a.get("id") == "donnees"))
+    soleil = next(f for f in donnees["points"][0]["facteurs"] if f["nom"] == "ensoleillement")
+    assert soleil["details"]["cause_ombre"] == "arbre"
+    assert "LiDAR HD de mars 2023" in soleil["explication"]
+    assert "Méthode 2.0" in html

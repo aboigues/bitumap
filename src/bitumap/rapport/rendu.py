@@ -28,6 +28,20 @@ CSP_RAPPORT = (
 )
 
 
+# Vérification hors Panoramax : comparaison des photos aériennes de l'IGN (« Remonter le
+# temps »), aujourd'hui contre 2016-2020 ; une réfection ou un réaménagement récent s'y voit.
+# L'application désigne les couches par leur numéro (vérifié dans un navigateur le
+# 2026-09-30, LL-007) : 10 = aujourd'hui, 11 = 2016-2020.
+REMONTER_LE_TEMPS = (
+    "https://remonterletemps.ign.fr/comparer/?lon={lon:.6f}&lat={lat:.6f}&z=19"
+    "&layer1=10&layer2=11&mode=split-h"
+)
+
+
+def lien_photos_aeriennes(lon: float, lat: float) -> str:
+    return REMONTER_LE_TEMPS.format(lon=lon, lat=lat)
+
+
 class _ScriptsEnLigne(HTMLParser):
     """Scripts exécutables en ligne d'un document (les blocs de données JSON exclus)."""
 
@@ -109,7 +123,10 @@ def rendre(
 ) -> dict[str, tuple[bytes, str]]:
     """Fichiers du rapport : {nom: (contenu, type)} ; ``rapport.html`` en dernier à l'écriture."""
     sources = [p.en_dict() for p in resultat.provenances]
-    points_dict = [p.en_dict() for p in resultat.points]
+    points_dict = [
+        {**p.en_dict(), "photos_aeriennes": lien_photos_aeriennes(p.lon, p.lat)}
+        for p in resultat.points
+    ]
     html = _env.get_template("rapport.html.j2").render(
         commune=resultat.nom,
         date=date.today().isoformat(),
