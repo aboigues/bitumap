@@ -14,8 +14,11 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
    priorité et formés par type ; sélection d'un point ⇒ fiche.
 4. Liste classée : filtres priorité / type de point / type de route (FR-018).
 5. Fiche point : désignation « nom · direction · voie · lignes » et identifiant IDFM du quai
-   (FR-030, aussi dans la liste et l'infobulle de la carte), champs de `points.geojson`, facteurs avec provenance et statut, photo de rue, **vue aérienne** (lien de comparaison IGN « Remonter le temps », aujourd'hui contre 2016-2020 : une réfection ou un réaménagement récent s'y voit ; couches désignées par leur numéro, 10 et 11, vérifié dans un navigateur)
-   (lien, date, licence), âge de l'enrobé « à confirmer » avec modèle et date.
+   (FR-030, aussi dans la liste et l'infobulle de la carte), champs de `points.geojson`, facteurs avec provenance et statut, photo de rue
+   (lien, date, licence), **vue aérienne** (lien de comparaison IGN « Remonter le temps »,
+   aujourd'hui contre 2016-2020 : une réfection ou un réaménagement récent s'y voit ; couches
+   désignées par leur numéro, 10 et 11, vérifié dans un navigateur), âge de l'enrobé « à
+   confirmer » avec modèle et date.
 6. Méthode : version, facteurs et effets, règles de priorité, **limites connues**
    (ensoleillement et îlots de chaleur à approfondir en 004).
 7. Sources : nom, licence, lien, date d'extraction (principe III).
