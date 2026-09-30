@@ -33,6 +33,29 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-015 — Hook de protection de main inactif hors de /mnt/c (2026-09-30) — Close
+
+- **Contexte** : préparation du déplacement du dépôt de `/mnt/c` (disque Windows, dossier
+  kDrive exclu) vers le disque natif de WSL ; inventaire avant migration.
+- **Symptôme** (prévisible, non observé en usage) : les 21 fichiers versionnés commençant par
+  `#!`, dont `.claude/hooks/guard-main.sh`, étaient en mode `100644`. Rejoué depuis le disque
+  natif, le hook répond `permission denied` (code 126) ; Claude Code traite ce code comme une
+  erreur non bloquante : un `git push origin main` n'aurait plus été refusé par le hook.
+- **Causes racines** :
+  1. Pourquoi ? Le bit d'exécution n'a jamais été enregistré dans git pour ces scripts.
+  2. Pourquoi non vu ? Sous `/mnt/c`, WSL présente tous les fichiers en `rwxrwxrwx` et
+     `core.filemode` vaut `false` : les scripts s'exécutaient et git ne voyait aucun écart.
+  3. Pourquoi aucun contrôle ? Aucun test ne vérifiait le mode des scripts ; les interdictions
+     de `.claude/settings.json` (push sur main, fusion de PR) masquaient en partie l'absence
+     du hook.
+- **Correctif** : `git update-index --chmod=+x` sur les 21 fichiers commençant par `#!`.
+- **Mesure préventive** : test `tests/unit/test_scripts_executables.py` (tout fichier suivi
+  commençant par `#!` est en `100755`, et le hook de protection de main en particulier),
+  exécuté en CI sur un système de fichiers Linux. Règle : un script ajouté sous `/mnt/c`
+  passe par `git update-index --chmod=+x` ; le dépôt de travail est à déplacer sur le disque
+  natif de WSL.
+- **Références** : branche `chore/bits-execution-scripts`.
+
 ### LL-014 — Une photo retirée pouvait être renvoyée sous le même identifiant (2026-09-30) — Close
 
 - **Contexte** : revue de sécurité de 003 (T042), branche de la modération (US5) ; défaut
