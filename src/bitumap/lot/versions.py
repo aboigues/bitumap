@@ -13,7 +13,7 @@ from datetime import date
 from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.lot.empreinte import empreinte
-from bitumap.score.methode import VERSION_METHODE
+from bitumap.score.methode import VERSION_METHODE, ete_reference, version_appliquee
 
 SOURCES_VERSIONNEES = ("idfm", "osm", "chaleur")
 VERSION_CHALEUR = date(2022, 1, 1)
@@ -48,6 +48,15 @@ def rafraichies_aujourdhui() -> bool:
 
 def empreinte_courante(insee: str) -> str:
     """Empreinte d'un rapport qui serait produit maintenant pour cette commune."""
+    return empreinte_pour(insee, {s: v for s, v in courantes().items() if s in SOURCES_VERSIONNEES})
+
+
+def empreinte_pour(insee: str, versions_sources: dict[str, date]) -> str:
+    """Empreinte selon la méthode appliquée ; en 2.0, l'été de référence y entre : un nouvel
+    été rend les rapports précédents non réutilisables (004 FR-007, R8)."""
     r = reglages()
-    versions = {s: v for s, v in courantes().items() if s in SOURCES_VERSIONNEES}
-    return empreinte(insee, VERSION_METHODE, versions, r.ia_modele, r.ia_version_prompt)
+    version = version_appliquee()
+    sources: dict[str, date | str] = dict(versions_sources)
+    if version != VERSION_METHODE:
+        sources["ete_reference"] = str(ete_reference())
+    return empreinte(insee, version, sources, r.ia_modele, r.ia_version_prompt)

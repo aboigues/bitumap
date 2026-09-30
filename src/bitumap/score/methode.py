@@ -4,7 +4,32 @@ Toute modification d'un facteur, d'une pondération ou d'une règle de priorité
 cette version et est décrite dans ``docs/methode/CHANGELOG.md``.
 """
 
+from datetime import date
+
+from bitumap.config import reglages
+
 VERSION_METHODE = "1.2"
+VERSION_METHODE_V2 = "2.0"  # 004 : en préparation, appliquée si BITUMAP_METHODE=2.0
+
+# Mois à partir duquel l'été écoulé est complet et ses mesures publiées (température de
+# surface de niveau 2, données quotidiennes) : il devient l'été de référence par défaut.
+MOIS_ETE_COMPLET = 10
+
+
+def version_appliquee() -> str:
+    """Version de méthode des nouveaux rapports (``BITUMAP_METHODE``)."""
+    return reglages().methode
+
+
+def ete_reference(aujourdhui: date | None = None) -> int:
+    """Été dont proviennent les indicateurs annuels (FR-007) : fixé par
+    ``BITUMAP_ETE_REFERENCE``, sinon dernier été complet."""
+    fixe = reglages().ete_reference
+    if fixe is not None:
+        return fixe
+    jour = aujourdhui or date.today()
+    return jour.year if jour.month >= MOIS_ETE_COMPLET else jour.year - 1
+
 
 # Priorités par rang (FR-012) : P1 = 20 % premiers, P2 = 40 % suivants, P3 = reste.
 PART_P1 = 0.20

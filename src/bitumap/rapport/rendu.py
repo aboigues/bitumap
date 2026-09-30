@@ -17,7 +17,7 @@ from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
 from bitumap.points import direction
 from bitumap.rapport import carte_svg
-from bitumap.score.methode import LIBELLES_GROUPES, VERSION_METHODE
+from bitumap.score.methode import LIBELLES_GROUPES
 
 SCRIPT = (resources.files("bitumap.rapport") / "interactions.js").read_text("utf-8")
 # Empreinte du seul script autorisé dans les rapports (CSP servie par l'API).
@@ -113,7 +113,7 @@ def rendre(
     html = _env.get_template("rapport.html.j2").render(
         commune=resultat.nom,
         date=date.today().isoformat(),
-        version_methode=VERSION_METHODE,
+        version_methode=journal.version_methode,
         points=resultat.points,
         synthese=_synthese(resultat),
         carte=carte_svg.dessiner(resultat.contour, resultat.voies_bus, resultat.points),

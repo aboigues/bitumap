@@ -43,6 +43,9 @@ déclarée sur Scaleway.)
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |
 | `BITUMAP_EMAIL_EXPEDITEUR` | adresse sur le domaine vérifié | FR-028 |
 | `BITUMAP_URL_PUBLIQUE` | URL du service | liens des e-mails |
+| `BITUMAP_METHODE` | `1.2` | méthode des nouveaux rapports (`1.2` ou `2.0`, toute autre valeur refusée) ; passe à `2.0` à la mise en service de 004, décidée par le mainteneur |
+| `BITUMAP_ETE_REFERENCE` | dernier été complet (à partir d'octobre) | été des indicateurs annuels de 004 (FR-007) ; entre dans l'empreinte en 2.0 |
+| `BITUMAP_STATION_METEO` | `75114001` (Paris-Montsouris) | station des données quotidiennes (004 R4, partagée avec 007) |
 | `BITUMAP_CONTACT_SECURITE` | avis de sécurité privés GitHub du dépôt | `Contact` de `/.well-known/security.txt` |
 
 **Aucune valeur secrète par défaut** (revue de la PR #14) : `BITUMAP_DB_URL`,
@@ -63,6 +66,7 @@ OpenTofu (planification et `timeout` du job).
 | `bitumap-s3` (clé d'accès de l'application d'exécution) | API, job |
 | `bitumap-tem` (clé d'envoi d'e-mails) | API, job |
 | `bitumap-genai` (clé Generative APIs) | job |
+| `bitumap-usgs-utilisateur`, `bitumap-usgs-jeton` (compte EROS de l'USGS et jeton d'application M2M : `BITUMAP_USGS_UTILISATEUR`, `BITUMAP_USGS_JETON`) | job, méthode 2.0 (température de surface, 004 R3) ; en local, `.env` ; aucun secret GitHub (la CI lit les fixtures) |
 
 Chaque composant tourne avec **sa propre** application IAM limitée à ce dont il a besoin
 (`bitumap-api` : base, lecture des rapports, e-mail ; `bitumap-job` : base, écriture rapports
