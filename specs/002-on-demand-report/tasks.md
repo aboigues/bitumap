@@ -198,6 +198,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [ ] T074 Étendre `infra/bootstrap/bootstrap.sh` et son README : applications IAM `bitumap-api`, `bitumap-job`, `bitumap-ci` avec politiques minimales (plan, suivi de complexité), clés écrites **directement** dans Secret Manager, jamais affichées ; exécuter **deux fois** (LL-001)
 - [ ] T075 [P] Créer `infra/tofu/versions.tf` et `infra/tofu/backend.tf` : OpenTofu 1.12, fournisseur Scaleway 2.83, backend S3 sur le bucket d'état avec `use_lockfile = true`, bloc `encryption` (clé dérivée d'une phrase secrète fournie par variable d'environnement, hors dépôt)
 - [ ] T076 [P] Créer `infra/tofu/stockage.tf` : bucket `bitumap-rapports` (privé, versionné) et `bitumap-cache` (privé, expiration 30 jours)
+- [ ] T095 [P] Compléter `infra/tofu/stockage.tf` pour 003 (relevés terrain, `specs/003-terrain-releves/tasks.md` T040) : bucket `bitumap-terrain` privé et **versionné** ; règle de cycle de vie du préfixe `quarantaine/` : expiration à 1 jour **versions non courantes et marqueurs de suppression compris** (LL-013), aucune expiration ailleurs (photos conservées sans limite, 003 R12) ; règle CORS limitée à `BITUMAP_URL_PUBLIQUE` pour l'envoi présigné (`POST`) ; droits de `bitumap-api` sur ce bucket : lecture, écriture, liste des versions, suppression de versions (retrait RGPD) ; variable `BITUMAP_BUCKET_TERRAIN` et source `connect-src` de la CSP des pages de terrain vérifiées après `tofu apply`
 - [ ] T077 [P] Créer `infra/tofu/base.tf` : Serverless SQL Database (sans minimum de vCPU, pour revenir à zéro)
 - [ ] T078 [P] Créer `infra/tofu/registre.tf` : espace de noms privé du Container Registry
 - [ ] T079 [P] Créer `infra/tofu/secrets.tf` : secrets de `contracts/configuration.md` (valeurs aléatoires générées pour `bitumap-altcha-hmac` et `bitumap-sel-origine`)
@@ -218,6 +219,7 @@ SC-004, SC-006, SC-010, SC-012).
 
 Les tâches T089 à T092, ajoutées après `/speckit-analyze`, sont insérées dans leur phase à
 leur place d'exécution ; leur numéro ne suit donc pas l'ordre du fichier.
+T095 (bucket des relevés terrain) vient de la tâche T040 de 003.
 
 - **Setup (T001–T007, T089)** → **Foundational (T008–T021)** → user stories. T089 après
   T003 (les Dockerfiles doivent exister).

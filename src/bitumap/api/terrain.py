@@ -16,10 +16,10 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 
 from bitumap.api.application import DOSSIER, ErreurPublique, gabarits
-from bitumap.api.auth import SessionRequise, est_mainteneur, verifier_csrf
+from bitumap.api.auth import MainteneurRequis, SessionRequise, est_mainteneur, verifier_csrf
 from bitumap.config import reglages
 from bitumap.score.methode import LIBELLES_GROUPES
-from bitumap.terrain import depot, export, photos
+from bitumap.terrain import depot, export, moderation, photos
 from bitumap.terrain.points import points_en_vigueur
 
 routeur = APIRouter(prefix="/terrain")
@@ -121,7 +121,8 @@ async def retirer_releve(requete: Request, releve_id: str, session: SessionRequi
     _uuid(releve_id)
     corps = await _json(requete)
     verifier_csrf(session, str(corps.get("csrf", "")))
-    depot.retirer(releve_id, session.compte_id, _texte(corps.get("motif")))
+    moderation_rgpd = corps.get("rgpd") is True and est_mainteneur(session)
+    depot.retirer(releve_id, session.compte_id, _texte(corps.get("motif")), moderation_rgpd)
     return _reponse(200, {"id": releve_id, "retire": True})
 
 
@@ -130,7 +131,13 @@ async def retirer_photo(requete: Request, photo_id: str, session: SessionRequise
     _uuid(photo_id)
     corps = await _json(requete)
     verifier_csrf(session, str(corps.get("csrf", "")))
-    photos.retirer_par_auteur(photo_id, session.compte_id, _texte(corps.get("motif")))
+    motif = _texte(corps.get("motif"))
+    # RGPD (toutes les versions du fichier supprimées) : mainteneur seul, sur demande
+    # explicite ; sinon retrait simple par l'auteur, fichier conservé (R12).
+    if corps.get("rgpd") is True and est_mainteneur(session):
+        photos.retirer_rgpd(photo_id, session.compte_id, motif)
+    else:
+        photos.retirer_par_auteur(photo_id, session.compte_id, motif)
     return _reponse(200, {"id": photo_id, "retire": True})
 
 
@@ -170,6 +177,24 @@ async def confirmer_photo(
         raise ErreurPublique(400, "saisie_invalide", "Saisie invalide.") from erreur
     resultat = photos.confirmer(session.compte_id, releve_id, photo_id, lon, lat, prise_le)
     return _reponse(201, resultat)
+
+
+@routeur.get("/moderation")
+def page_moderation(requete: Request, session: MainteneurRequis, q: str = "") -> Response:
+    resultats = moderation.rechercher(q[:100]) if q.strip() else None
+    reponse = gabarits.TemplateResponse(
+        requete,
+        "terrain/moderation.html",
+        {
+            "session": session,
+            "q": q[:100],
+            "resultats": resultats,
+            "critere_invalide": bool(q.strip()) and resultats is None,
+            "niveaux": depot.LIBELLES_NIVEAUX,
+        },
+    )
+    reponse.headers.update(en_tetes_terrain())
+    return reponse
 
 
 @routeur.get("/photos/{photo_id}")

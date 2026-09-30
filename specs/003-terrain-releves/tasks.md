@@ -140,9 +140,9 @@ de chaque story **avant** son implémentation et vérifier qu'ils échouent.
 
 **Independent Test**: retirer une photo en mainteneur : plus visible nulle part, plus aucune version dans le bucket ; compte supprimé ⇒ relevés « auteur supprimé »
 
-- [ ] T035 [P] [US5] Écrire `tests/terrain/test_moderation.py` : `GET /terrain/moderation` réservé au mainteneur (`404` sinon) ; recherche par identifiant, commune ou point ; retrait RGPD d'une photo ⇒ `retiree_mainteneur`, **toutes les versions** de l'objet supprimées du bucket versionné, trace conservée sans fichier, absente du rapport et de l'export (SC-008) ; suppression d'un compte (002 `POST /compte/suppression`) ⇒ relevés visibles « auteur supprimé », photos visibles du seul mainteneur (FR-017)
-- [ ] T036 [US5] Implémenter le retrait RGPD dans `src/bitumap/terrain/photos.py` (suppression de toutes les versions de l'objet : liste des versions puis suppression une à une) et la page `src/bitumap/api/gabarits/terrain/moderation.html` avec sa route `GET /terrain/moderation` dans `src/bitumap/api/terrain.py`
-- [ ] T037 [US5] Vérifier dans `src/bitumap/api/compte.py` que la suppression de compte laisse les relevés (`ON DELETE SET NULL`) et que le pseudonyme devient « auteur supprimé » ; accès aux photos d'un auteur supprimé réservé au mainteneur
+- [X] T035 [P] [US5] Écrire `tests/terrain/test_moderation.py` : `GET /terrain/moderation` réservé au mainteneur (`404` sinon) ; recherche par identifiant, commune ou point ; retrait RGPD d'une photo ⇒ `retiree_mainteneur`, **toutes les versions** de l'objet supprimées du bucket versionné, trace conservée sans fichier, absente du rapport et de l'export (SC-008) ; suppression d'un compte (002 `POST /compte/suppression`) ⇒ relevés visibles « auteur supprimé », photos visibles du seul mainteneur (FR-017)
+- [X] T036 [US5] Implémenter le retrait RGPD dans `src/bitumap/terrain/photos.py` (suppression de toutes les versions de l'objet : liste des versions puis suppression une à une) et la page `src/bitumap/api/gabarits/terrain/moderation.html` avec sa route `GET /terrain/moderation` dans `src/bitumap/api/terrain.py`
+- [X] T037 [US5] Vérifier dans `src/bitumap/api/compte.py` que la suppression de compte laisse les relevés (`ON DELETE SET NULL`) et que le pseudonyme devient « auteur supprimé » ; accès aux photos d'un auteur supprimé réservé au mainteneur
 
 **Checkpoint**: obligations RGPD couvertes
 
@@ -150,12 +150,12 @@ de chaque story **avant** son implémentation et vérifier qu'ils échouent.
 
 ## Phase 8: Polish & sujets transverses
 
-- [ ] T038 [P] Compléter `src/bitumap/api/gabarits/confidentialite.html` : relevés (contenu, affichage de l'auteur en pseudonyme, adresse visible du mainteneur), photos (visibles de l'auteur et du mainteneur, **conservées sans limite de durée**, finalité : suivi de la voirie dans le temps), position de saisie facultative, retrait sur demande et contact (R12)
-- [ ] T039 [P] Mettre à jour `specs/002-on-demand-report/contracts/http-api.md` (bloc `releves` du rapport, CSP calculée sur le document servi) et `specs/002-on-demand-report/contracts/report-bundle.md` (lien vers les relevés)
-- [ ] T040 [P] Ajouter à la phase 7 de `specs/002-on-demand-report/tasks.md` une tâche d'infrastructure OpenTofu : bucket `bitumap-terrain` versionné, expiration du préfixe `quarantaine/` à 1 jour, règle CORS limitée à l'origine du service pour l'envoi présigné, droits de `bitumap-api` (lecture, écriture, suppression de versions)
-- [ ] T041 [P] Mettre à jour le `README.md` (feuille de route : 003 en cours ; section Stockage : `bitumap-terrain` et tables de relevés au lieu des fichiers JSON initialement prévus)
-- [ ] T042 Revue de sécurité de la branche (`/security-review`) : contrôle d'accès des photos, CSRF, formulaire présigné, en-têtes des pages de terrain ; corriger les constats
-- [ ] T043 Exécuter le quickstart de bout en bout (§ 2 à § 6) et `uv run pytest` complet ; `ruff check` et `ruff format --check`
+- [X] T038 [P] Compléter `src/bitumap/api/gabarits/confidentialite.html` : relevés (contenu, affichage de l'auteur en pseudonyme, adresse visible du mainteneur), photos (visibles de l'auteur et du mainteneur, **conservées sans limite de durée**, finalité : suivi de la voirie dans le temps), position de saisie facultative, retrait sur demande et contact (R12)
+- [X] T039 [P] Mettre à jour `specs/002-on-demand-report/contracts/http-api.md` (bloc `releves` du rapport, CSP calculée sur le document servi) et `specs/002-on-demand-report/contracts/report-bundle.md` (lien vers les relevés)
+- [X] T040 [P] Ajouter à la phase 7 de `specs/002-on-demand-report/tasks.md` une tâche d'infrastructure OpenTofu : bucket `bitumap-terrain` versionné, expiration du préfixe `quarantaine/` à 1 jour, versions non courantes comprises (LL-013), règle CORS limitée à l'origine du service pour l'envoi présigné, droits de `bitumap-api` (lecture, écriture, suppression de versions) *(Réalisé : tâche T095 de 002.)*
+- [X] T041 [P] Mettre à jour le `README.md` (feuille de route : 003 en cours ; section Stockage : `bitumap-terrain` et tables de relevés au lieu des fichiers JSON initialement prévus)
+- [X] T042 Revue de sécurité de la branche (`/security-review`) : contrôle d'accès des photos, CSRF, formulaire présigné, en-têtes des pages de terrain ; corriger les constats
+- [X] T043 Exécuter le quickstart de bout en bout (§ 2 à § 6) et `uv run pytest` complet ; `ruff check` et `ruff format --check`
 
 ---
 

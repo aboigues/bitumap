@@ -61,6 +61,20 @@ def test_information_rgpd_avant_creation_du_compte(client):
         assert attendu.lower() in page.text.lower(), attendu
 
 
+def test_information_rgpd_des_releves(client):
+    # 003 T038 (R12) : photos conservées sans limite, visibilité, retrait, auteur supprimé
+    page = " ".join(client.get("/confidentialite").text.split())
+    for attendu in (
+        "sans limite de durée",
+        "que de vous et du mainteneur",
+        "pseudonyme",
+        "position",
+        "effacée définitivement",
+        "auteur supprimé",
+    ):
+        assert attendu in page, attendu
+
+
 def test_widget_auto_heberge(client):
     accueil = client.get("/").text
     sources = re.findall(r'<script[^>]*src="([^"]+)"', accueil)

@@ -49,6 +49,23 @@ def test_photo_reencodee_sans_metadonnees(client, releve, s3):
     assert stockage.lire(reglages().bucket_terrain, f"quarantaine/{photo_id}") is None
 
 
+def _versions_quarantaine(photo_id):
+    reponse = stockage._client().list_object_versions(
+        Bucket=reglages().bucket_terrain, Prefix=f"quarantaine/{photo_id}"
+    )
+    return reponse.get("Versions", []) + reponse.get("DeleteMarkers", [])
+
+
+def test_original_non_conserve_par_le_versionnement(client, releve):
+    # Bucket versionné : une simple suppression garderait l'original (EXIF, GPS) en version
+    # non courante, récupérable (LL-013).
+    csrf, releve_id = releve
+    photo_id, _, _ = envoyer_photo(client, csrf, releve_id, images.jpeg_avec_exif())
+    assert _versions_quarantaine(photo_id) == []
+    rejete, _, _ = envoyer_photo(client, csrf, releve_id, images.faux_jpeg())
+    assert _versions_quarantaine(rejete) == []
+
+
 def test_png_accepte(client, releve):
     csrf, releve_id = releve
     _, _, confirmation = envoyer_photo(client, csrf, releve_id, images.png(), "image/png")
