@@ -4,6 +4,8 @@ Usage : uv run python tools/figer_fixtures.py 92026 Courbevoie tests/fixtures/co
         uv run python tools/figer_fixtures.py --couches tests/fixtures/courbevoie quais ouvrages
           (ajoute seulement ces couches OSM à des fixtures existantes : quais T093,
           ouvrages issue #18)
+        uv run python tools/figer_fixtures.py --hauteurs tests/fixtures/courbevoie 92026 Courbevoie
+          (ajoute seulement les hauteurs LiDAR HD des points, méthode 2.0 : 004 T016)
 Prérequis : extrait OSM régional (var/cache/osm-idf-AAMMJJ-vN.gpkg).
 """
 
@@ -63,6 +65,31 @@ def ajouter_couches(dossier: str, couches: list[str]) -> None:
         print(f"{len(gdf)} {couche} -> {dossier}/osm.gpkg")
 
 
+def ajouter_hauteurs(dossier: str, insee: str, nom: str) -> None:
+    """Fige les hauteurs LiDAR HD (004 T016) des points d'une commune déjà figée, sans
+    toucher aux autres sources : la non-régression 1.2 reste comparable."""
+    from bitumap.sources import lidar
+    from bitumap.sources.base import client_http
+    from bitumap.sources.fournisseur import _VERS_L93, FournisseurFige, _cle, ecrire_hauteurs
+
+    t0 = time.perf_counter()
+    points = calculer_commune(FournisseurFige(Path(dossier), insee), nom).points
+    memo: dict[str, str] = {}
+    hauteurs = {}
+    with client_http(timeout=120) as client:
+        for p in points:
+            lon, lat = round(p.lon, 6), round(p.lat, 6)
+            h = lidar.hauteurs(*_VERS_L93.transform(lon, lat), client, memo)
+            if h is not None:
+                hauteurs[_cle(lon, lat)] = h
+    ecrire_hauteurs(Path(dossier) / "hauteurs.npz", hauteurs)
+    taille = (Path(dossier) / "hauteurs.npz").stat().st_size / 1e6
+    print(
+        f"{len(hauteurs)}/{len(points)} points, {len(memo)} dalles, {taille:.1f} Mo, "
+        f"{time.perf_counter() - t0:.0f} s -> {dossier}/hauteurs.npz"
+    )
+
+
 def main(insee: str, nom: str, dossier: str) -> None:
     regional = _regional()
     date_osm = datetime.strptime(regional.stem.split("-")[2], "%y%m%d").date()
@@ -81,5 +108,7 @@ def main(insee: str, nom: str, dossier: str) -> None:
 if __name__ == "__main__":
     if sys.argv[1] == "--couches":
         ajouter_couches(sys.argv[2], sys.argv[3:])
+    elif sys.argv[1] == "--hauteurs":
+        ajouter_hauteurs(*sys.argv[2:5])
     else:
         main(*sys.argv[1:4])

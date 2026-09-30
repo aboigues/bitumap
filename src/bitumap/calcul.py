@@ -1,4 +1,5 @@
-"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.1).
+"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.2 ; la 2.0 est
+en préparation derrière ``BITUMAP_METHODE``, 004).
 
 Fonction déterministe à sources identiques (principe IV) ; le seul appel non déterministe,
 l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleurs.
@@ -19,7 +20,8 @@ from bitumap.modele import Facteur, Point
 from bitumap.points import construction as c
 from bitumap.points import direction
 from bitumap.score import combinaison
-from bitumap.sources import idfm, osm
+from bitumap.score.methode import VERSION_METHODE, version_appliquee
+from bitumap.sources import idfm, lidar, osm
 from bitumap.sources.base import Provenance
 from bitumap.sources.fournisseur import Fournisseur
 
@@ -72,6 +74,64 @@ def _zone_de_mesure(p: Point, voie, chaussee) -> list[tuple[float, float]]:
         else [(i - 2) * pas for i in range(5)]
     )
     return [(chaussee.x + d * tx, chaussee.y + d * ty) for d in decalages]
+
+
+RAYON_CARREFOUR_M = 10  # méthode 2.0 : voies bus mesurées autour d'un carrefour (004 R2)
+
+
+def _zone_carrefour(voies: list, centre) -> list[tuple[float, float]]:
+    """Méthode 2.0, carrefour ou giratoire : 5 points de mesure sur les voies bus à moins
+    de ``RAYON_CARREFOUR_M`` du centre : le centre et ±5 m sur les deux voies les plus
+    proches, ou ±5 et ±10 m sur une seule voie (004 R2)."""
+    if not voies:
+        return [(centre.x, centre.y)]
+    proches = sorted(voies, key=lambda v: v.distance(centre))[:2]
+    pas = RAYON_CARREFOUR_M / 2
+    decalages = (-pas, pas) if len(proches) == 2 else (-2 * pas, -pas, pas, 2 * pas)
+    points = [(centre.x, centre.y)]
+    for ligne in proches:
+        s = ligne.project(centre)
+        for d in decalages:
+            q = ligne.interpolate(min(max(0.0, s + d), ligne.length))
+            points.append((q.x, q.y))
+    return points
+
+
+def _ensoleillement_v2(
+    f,
+    p: Point,
+    g,
+    voie,
+    chaussee,
+    echantillons: list[tuple[float, float]],
+    reseau: c.Reseau,
+    vegetation,
+    batiments_l93,
+    tabliers_l93,
+    avertissements: list[str],
+) -> Facteur:
+    """Méthode 2.0 (004 US1) : hauteurs LiDAR autour du point ; zone d'arrêt (1.2) pour un
+    arrêt, 5 points sur les voies bus proches pour un carrefour ou un giratoire."""
+    try:
+        hauteurs = f.hauteurs(round(p.lon, 6), round(p.lat, 6))
+    except Exception as erreur:
+        avertissements.append(f"LiDAR HD indisponible pour {p.id} : {type(erreur).__name__}")
+        hauteurs = None
+    points_mesure = list(echantillons)
+    if p.type != "arret" and voie is not None and chaussee is not g:
+        proches = reseau.voies[reseau.voies.distance(chaussee) <= RAYON_CARREFOUR_M]
+        points_mesure = _zone_carrefour(list(proches.geometry), chaussee)
+    return ensoleillement.calculer_v2(
+        p.lon,
+        p.lat,
+        points_mesure,
+        hauteurs,
+        batiments_l93,
+        _tabliers_au_dessus(tabliers_l93, voie, chaussee),
+        vegetation,
+        sur_un_pont=voie is not None and bool(voie.pont),
+        centre=(g.x, g.y),
+    )
 
 
 def _tabliers_au_dessus(tabliers_l93: gpd.GeoDataFrame, voie, chaussee) -> gpd.GeoDataFrame:
@@ -198,6 +258,8 @@ def calculer_commune(
         avertissements.append(f"Altimétrie indisponible : {type(erreur).__name__}")
         altitudes = [None] * len(extremites)
 
+    v2 = version_appliquee() != VERSION_METHODE
+    lidar_lu = False
     for i, (p, g, voie) in enumerate(zip(points, geos_l93, voies_proches, strict=True)):
         p.facteurs.append(charge.calculer(p))
         p.facteurs += sollicitation.calculer(p, distances_feux.get(p.id))
@@ -222,8 +284,23 @@ def calculer_commune(
         if voie is not None and voie.geometry.distance(g) <= DISTANCE_CHAUSSEE_M:
             chaussee = voie.geometry.interpolate(voie.geometry.project(g))
             echantillons = _zone_de_mesure(p, voie, chaussee)
-        p.facteurs.append(
-            ensoleillement.calculer(
+        if v2:
+            soleil = _ensoleillement_v2(
+                f,
+                p,
+                g,
+                voie,
+                chaussee,
+                echantillons,
+                reseau,
+                vegetation,
+                batiments_l93,
+                tabliers_l93,
+                avertissements,
+            )
+            lidar_lu |= soleil.details.get("source") == "lidar_hd"
+        else:
+            soleil = ensoleillement.calculer(
                 p.lon,
                 p.lat,
                 [
@@ -233,7 +310,7 @@ def calculer_commune(
                 batiments_l93,
                 _tabliers_au_dessus(tabliers_l93, voie, chaussee),
             )
-        )
+        p.facteurs.append(soleil)
 
         if jointure is not None:
             ligne = jointure.loc[i]
@@ -283,6 +360,8 @@ def calculer_commune(
         if ch > 0
     ]
     provenances += f.provenances_ponctuelles()
+    if lidar_lu:
+        provenances.append(lidar.provenance())
     return ResultatCommune(
         f.insee, nom_commune, points, voies, contour, provenances, avertissements
     )
