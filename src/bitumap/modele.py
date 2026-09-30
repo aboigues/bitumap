@@ -21,6 +21,8 @@ class Facteur:
     visible: bool = True  # affiché dans la liste courte des facteurs marquants
     modele: str | None = None
     date: str | None = None
+    # Méthode 2.0 (004 data-model) : cause d'ombre, source, millésime, année de comptage…
+    details: dict[str, str | float | int | None] = field(default_factory=dict)
 
 
 @dataclass
@@ -52,6 +54,9 @@ class Point:
     rang: int = 0
     priorite: str = ""
     groupe: str = ""  # P1a, P1b, P1c (tiers des P1 par rang, méthode 1.1), P2 ou P3
+    # Méthode 2.0 (004 R6) : groupe du point en 1.2 et facteur qui explique le changement
+    niveau_v1: str | None = None
+    raison_changement: str | None = None
 
     @property
     def libelle_type(self) -> str:
@@ -73,4 +78,11 @@ class Point:
         d["designation"] = designation(self)
         d["identifiant"] = identifiant(self)
         d["groupe_libelle"] = LIBELLES_GROUPES.get(self.groupe, self.groupe)
+        # Champs 2.0 omis tant qu'ils sont vides : un rapport 1.2 reste identique.
+        for f in d["facteurs"]:
+            if not f["details"]:
+                del f["details"]
+        for cle in ("niveau_v1", "raison_changement"):
+            if d[cle] is None:
+                del d[cle]
         return d

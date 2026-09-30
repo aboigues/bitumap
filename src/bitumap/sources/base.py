@@ -12,6 +12,7 @@ from datetime import date
 from typing import Any
 
 import httpx
+import numpy as np
 
 USER_AGENT = "bitumap (+https://github.com/aboigues/bitumap)"
 
@@ -33,15 +34,42 @@ class Provenance:
     url: str
     date_extraction: date
     portee: str  # « regionale » ou « communale »
+    # Service hors de l'UE, déclaré dans le rapport (constitution, principe III ; 004 R3)
+    hors_ue: bool = False
 
-    def en_dict(self) -> dict[str, str]:
-        return {
+    def en_dict(self) -> dict[str, str | bool]:
+        d: dict[str, str | bool] = {
             "nom": self.nom,
             "licence": self.licence,
             "url": self.url,
             "date_extraction": self.date_extraction.isoformat(),
             "portee": self.portee,
         }
+        if self.hors_ue:
+            d["hors_ue"] = True
+        return d
+
+
+@dataclass
+class Hauteurs:
+    """Modèles LiDAR HD autour d'un point (004 R1) : altitudes en mètres (IGN69), grilles
+    nord en haut ; ``origine`` = coin nord-ouest en Lambert 93 ; nodata = NaN."""
+
+    mns: np.ndarray
+    mnt: np.ndarray
+    origine: tuple[float, float]
+    resolution: float
+    millesime: str  # « code_mission date_edition » de l'index des dalles
+
+
+@dataclass
+class Raster:
+    """Grille géoréférencée (température de surface, 004 R3) ; NaN = pas de mesure."""
+
+    valeurs: np.ndarray
+    transform: tuple[float, float, float, float, float, float]  # ordre GDAL
+    crs: str
+    ete: int
 
 
 @dataclass

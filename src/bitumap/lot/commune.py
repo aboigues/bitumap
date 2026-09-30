@@ -22,7 +22,7 @@ from bitumap.journal import JournalGeneration, evenement
 from bitumap.lot import prise_en_charge as file
 from bitumap.lot import versions
 from bitumap.rapport import rendu
-from bitumap.score.methode import VERSION_METHODE
+from bitumap.score.methode import version_appliquee
 from bitumap.sources.fournisseur import Fournisseur
 
 journal = logging.getLogger("bitumap.lot")
@@ -129,7 +129,7 @@ def traiter(
         notifier(demande, "terminee", empreinte)
         return Resultat(ident, nom, "terminee")
 
-    jg = JournalGeneration(insee, VERSION_METHODE, lot_id=lot_id)
+    jg = JournalGeneration(insee, version_appliquee(), lot_id=lot_id)
     budget = BudgetRapport()
     kwargs = {} if appel_ia is None else {"appel": appel_ia}
     analyseur = AnalyseurAge(vignettes, budget, jg.ia, **kwargs)

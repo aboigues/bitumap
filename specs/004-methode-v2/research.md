@@ -8,7 +8,7 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   au-dessus du sol : bâtiments, végétation, ouvrages d'art) et le **MNT LiDAR HD** (sol), en
   dalles de 1 km à 50 cm, rééchantillonnés à 1 m ; hauteur d'obstacle = MNS − altitude du sol
   au point de mesure, ce qui intègre le **relief**. Dalles mises en cache (bucket de cache),
-  millésime dans l'empreinte.
+  millésime inscrit dans le rapport (R8).
 - **Source** : [MNS LiDAR HD](https://www.data.gouv.fr/datasets/mns-lidar-hd), [MNH LiDAR
   HD](https://www.data.gouv.fr/datasets/mnh-lidar-hd) ; Licence Ouverte ; dalles GeoTIFF
   téléchargeables sur cartes.gouv.fr, Île-de-France disponible ([IGN, premiers
@@ -30,7 +30,7 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   - **Index des dalles et millésime** : couche vecteur `IGNF_LIDAR-HD_METADONNEE:metadata`
     (`https://data.geopf.fr/wfs/ows`) : dalle de 1 km (`coordonnees_nw`), URL des trois
     modèles, `code_mission`, `date_debut_acquisition`, `date_fin_acquisition`,
-    `date_edition`. Millésime retenu pour l'empreinte : `code_mission` + `date_edition`.
+    `date_edition`. Millésime affiché dans le rapport : `code_mission` + `date_edition` (R8).
   - **Volume** : Courbevoie = 16 dalles, toutes de la mission `22LHDKE` (édition
     2025-06-06). Une dalle complète pèse 15,6 Mo par modèle (1,8 s) ; la commune entière,
     environ 750 Mo pour trois modèles. **Décision** : extraction **par point**, comme la
@@ -174,10 +174,15 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
 
 ## R8. Version, empreinte, reproductibilité
 
-- **Décision** : `VERSION_METHODE = "2.0"` ; nouvelles sources versionnées dans l'empreinte :
-  millésime LiDAR des dalles, été de référence (température de surface), année des
-  comptages. Un nouvel été rend les rapports précédents non
-  réutilisables (FR-007). Déterminisme : dalles et scènes figées par identifiant, médianes
+- **Décision** : `VERSION_METHODE_V2 = "2.0"`, appliquée si `BITUMAP_METHODE=2.0`.
+  **Précisé au développement (T010, 2026-09-30)** : l'empreinte est calculée **avant** la
+  génération (réutilisation d'un rapport en cache) ; seules des versions connues à ce moment
+  peuvent y entrer. En 2.0, elle reçoit donc la version de méthode et l'**été de référence**
+  (réglage, ou dernier été complet à partir d'octobre) : un nouvel été rend les rapports
+  précédents non réutilisables (FR-007). Le millésime LiDAR (par dalle, donc par point) et
+  l'année des comptages sont traités comme la BD TOPO : **inscrits dans le rapport** (fiche
+  et sources) et bornés par la validité de 30 jours d'un rapport (002 FR-008), sans entrer
+  dans l'empreinte. Déterminisme : dalles et scènes figées par identifiant, médianes
   et tris stables (SC-006).
 - **Non-régression (constitution, principe VII)** : le cas Courbevoie reste un test de
   non-régression, adapté à la v2 : le seuil de 74 % de P1 du prototype (002 SC-003) cesse de

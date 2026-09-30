@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -60,6 +61,12 @@ class Reglages(BaseSettings):
     cache_rapport_jours: int = 30
     panoramax_rayon_m: int = 30
 
+    # Méthode de score (004, contrat methode-v2 § 3) : la 1.2 reste en service tant que le
+    # mainteneur n'a pas validé la 2.0 sur les relevés de 003 (FR-013).
+    methode: Literal["1.2", "2.0"] = "1.2"
+    ete_reference: int | None = None  # défaut : dernier été complet (score.methode)
+    station_meteo: str = "75114001"  # Paris-Montsouris (research R4)
+
     # Stockage objet
     bucket_rapports: str = "bitumap-rapports"
     bucket_cache: str = "bitumap-cache"
@@ -92,6 +99,9 @@ class Reglages(BaseSettings):
     s3_cle_secrete: SecretStr | None = None
     tem_cle: SecretStr | None = None
     genai_cle: SecretStr | None = None
+    # Température de surface (004 R3) : compte EROS de l'USGS, jeton d'application M2M
+    usgs_utilisateur: SecretStr | None = None
+    usgs_jeton: SecretStr | None = None
 
     # Cookies : « Secure » obligatoire hors développement local
     cookies_securises: bool = True
