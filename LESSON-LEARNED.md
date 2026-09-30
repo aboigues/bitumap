@@ -33,6 +33,30 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-017 — Feux dessinés hors de la commune sur la carte du rapport (2026-09-30) — Close
+
+- **Contexte** : relecture de la carte du rapport de Courbevoie par le mainteneur.
+- **Symptôme** : des losanges (carrefours à feux) apparaissent hors de la commune et loin
+  des voies de bus ; mesuré dans un navigateur : 58 feux sur 58 déplacés, de 266 px en
+  médiane (418 px au plus). Les données des points étaient justes (un seul point sur la
+  limite communale).
+- **Causes racines** :
+  1. Pourquoi ? Chaque losange était un carré tourné par l'attribut
+     `transform="rotate(45 x y)"`.
+  2. Pourquoi déplacé ? La règle CSS `.pt{transform-box:fill-box}`, ajoutée pour agrandir
+     le point sélectionné autour de son centre, change le repère de cet attribut : le
+     centre de rotation (x, y) est compté depuis le coin du losange, pas depuis l'origine
+     de la carte.
+  3. Pourquoi non vu ? Les tests vérifiaient le contenu du SVG (points présents, formes),
+     jamais la position rendue ; les cercles, sans rotation, étaient bien placés.
+- **Correctif** : losange tracé par ses quatre sommets (`polygon`), sans attribut
+  `transform`.
+- **Mesure préventive** : test `test_feux_a_leur_place_sur_la_carte` (aucun `transform` sur
+  un point de la carte ; centre de chaque losange à la position projetée du feu) ; mesure
+  dans un navigateur des positions rendues (58/58 à 0 px, sélection comprise). Règle : un
+  changement de CSS sur un élément SVG est vérifié sur le rendu, pas sur le code.
+- **Références** : défaut introduit par 33ab279 (PR #17, sélection visible) ; branche
+  `fix/carte-losanges-feux`.
 ### LL-016 — Ombres fictives du LiDAR malgré des tests verts (2026-09-30) — Close
 
 - **Contexte** : développement de 004 (US1, ensoleillement sur LiDAR HD), première exécution
