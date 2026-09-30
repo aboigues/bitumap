@@ -28,6 +28,9 @@ Prototype de référence : `docs/reference/prototype-courbevoie-v2.html`.
   `scw -p bitumap` (droits limités au projet). Le profil d'administration (nom non versionné) ne sert
   qu'à `infra/bootstrap/bootstrap.sh`, lancé par un humain.
 - Aucune ressource créée à la main : tout passe par OpenTofu (constitution).
+- Variables d'environnement et secrets déclarés sur Scaleway : jamais de nom commençant par
+  `SCW` (préfixe réservé à Scaleway) ; utiliser `BITUMAP_` / `bitumap-`
+  (`specs/002-on-demand-report/contracts/configuration.md`).
 
 ## Sécurité CI
 

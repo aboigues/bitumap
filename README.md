@@ -145,15 +145,16 @@ flowchart LR
 |---|---|---|
 | API et formulaire | **Serverless Containers** | revient à 0 instance au repos ; démarre à la requête |
 | Génération | **Serverless Jobs** | traitement long (plusieurs minutes pour une commune), facturé à l'exécution |
-| Rapports, cache, relevés | **Object Storage** (compatible S3) | pas de base de données permanente à payer (principe II) |
+| Rapports, cache, photos des relevés | **Object Storage** (compatible S3) | fichiers immuables ou volumineux, facturés au stockage (principe II) |
 | Secrets | **Secret Manager** | clé antibot, clés d'API ; jamais dans le code |
 | LLM vision | **Generative APIs** | hébergé en France, API compatible OpenAI |
 | Observabilité | **Cockpit** | journaux, métriques, alertes de coût |
 | Infrastructure | **OpenTofu** | tout est décrit en code ; amorçage : [`infra/bootstrap/`](infra/bootstrap/README.md) |
 
-Aucune base de données au départ : les métadonnées (état des générations, index des
-relevés) vivent dans le stockage objet sous forme de fichiers JSON. Une base de données
-serverless ne sera ajoutée que si un besoin mesuré l'exige (principe VII).
+Les métadonnées (comptes, demandes et lots de génération, relevés terrain et leurs versions,
+état des photos) sont dans une base **Serverless SQL** qui revient à zéro au repos : les
+fichiers JSON initialement prévus ne permettaient ni quotas atomiques, ni envoi idempotent
+depuis un téléphone (principe VII : besoin mesuré).
 
 ---
 
@@ -185,7 +186,7 @@ src/bitumap/
 │   └── age_enrobe.py  #   LLM vision, points P1 uniquement, « à confirmer »
 ├── score/             # combinaison déterministe, versionnée ; priorités P1/P2/P3
 ├── rapport/           # rendu HTML (carte, liste, fiches, méthode, sources, limites)
-├── terrain/           # relevés : annotations et photos par commune (feature 003)
+├── terrain/           # relevés : saisie, versions, photos, export, modération (feature 003)
 ├── stockage/          # accès objet : cache, rapports, relevés
 ├── api/               # formulaire, antibot, quotas, lancement et suivi des jobs
 └── job/               # point d'entrée de la génération (étapes 1 → 3)
@@ -286,20 +287,21 @@ bitumap-rapports/                    # rapports générés, immuables
   communes/{insee}/{empreinte}/journal.json      # durée, coûts LLM, avertissements
   generations/{id}.json                          # état d'une génération en cours
 
-bitumap-terrain/                     # relevés terrain (feature 003), versionnés
-  communes/{insee}/points/{point_id}/annotations/{horodatage}.json
-  communes/{insee}/points/{point_id}/photos/{horodatage}-{uuid}.jpg
-  communes/{insee}/index.json
+bitumap-terrain/                     # photos des relevés terrain (feature 003), versionné
+  quarantaine/{photo_id}                           # envoi brut, supprimé après contrôle
+  communes/{insee}/points/{point_id}/{releve_id}/{photo_id}.jpg
 ```
 
-- **Relevés terrain** : annotations et photos **classées par commune puis par point**,
-  jamais écrasées (versionnement du bucket) ; le rapport distingue « estimé » et
-  « constaté » (principe VI).
-- **Photos** : métadonnées EXIF de localisation nettoyées après extraction de la position,
-  visages et plaques floutés avant toute diffusion (RGPD). Envoi direct du navigateur vers le
-  stockage par lien signé, taille et type contrôlés.
-- **Cycle de vie** : le cache expire automatiquement ; les rapports et les relevés sont
-  conservés.
+- **Relevés terrain** : en base (tables `releve`, `releve_version`, `photo`), rattachés à un
+  point stable ; chaque correction crée une version, rien n'est écrasé ; le rapport servi
+  distingue « estimé » et « constaté » (principe VI).
+- **Photos** : envoi direct du navigateur vers `quarantaine/` par formulaire signé (taille et
+  type imposés), puis contrôle et réencodage par l'API **sans aucune métadonnée** (EXIF, GPS) ;
+  l'original est effacé, toutes versions comprises (LL-013). Visibles de leur auteur et du
+  mainteneur seulement, sans floutage (RGPD) ; retrait RGPD = suppression de toutes les
+  versions.
+- **Cycle de vie** : le cache expire automatiquement, `quarantaine/` sous un jour ; les
+  rapports, les relevés et les photos sont conservés.
 
 ---
 
@@ -348,8 +350,8 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 | # | Fonctionnalité | État |
 |---|---|---|
 | 001 | Socle de sécurité CI | ✅ livrée |
-| 002 | Formulaire (code postal, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire | 🟡 spécification |
-| 003 | Relevés terrain : annotations et photos par commune et par point | ⬜ |
+| 002 | Formulaire (code postal, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire | 🟡 en cours : US1–US4 fusionnées, infrastructure à venir |
+| 003 | Relevés terrain : annotations et photos par commune et par point | 🟡 en cours : saisie, constaté, corrections et export fusionnés ; modération (RGPD) en revue |
 | 004 | Méthode v2 : ensoleillement LiDAR HD, îlots de chaleur approfondis, type de route intégré au score | ⬜ |
 | 005 | Échelle du département, export PDF | ⬜ |
 | 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture ou à pied ([#21](https://github.com/aboigues/bitumap/issues/21)) | ⬜ |

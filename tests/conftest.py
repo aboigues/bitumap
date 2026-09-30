@@ -48,7 +48,8 @@ os.environ.setdefault("AWS_ACCESS_KEY_ID", "test")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "test")
 
 TABLES = (
-    "demandeur_demande, demande, lot, session, lien_connexion, compte, preuve_antibot,"
+    "photo, releve_version, releve,"
+    " demandeur_demande, demande, lot, session, lien_connexion, compte, preuve_antibot,"
     " compteur_quota, cout_ia_jour, source_version, alerte_envoyee, ia_cache_point"
 )
 
@@ -115,6 +116,44 @@ def demander_lien(client, email, **donnees):
     return client.post("/connexion", data={"email": email, "altcha": preuve(client), **donnees})
 
 
+EMAIL_MAINTENEUR = "mainteneur@exemple.fr"
+
+
+def connecter_mainteneur(client, courriels, monkeypatch):
+    """Connecte le compte mainteneur (adresse ``BITUMAP_EMAIL_MAINTENEUR``, 003 R5)."""
+    from bitumap.config import reglages
+
+    monkeypatch.setattr(reglages(), "email_mainteneur", EMAIL_MAINTENEUR)
+    return connecter(client, courriels, EMAIL_MAINTENEUR)
+
+
+_FICHIERS_COURBEVOIE: dict = {}
+
+
+def rapport_courbevoie() -> str:
+    """Produit le rapport figé de Courbevoie comme rapport en vigueur ; renvoie son empreinte.
+    Exige les fixtures ``base`` et ``s3`` ; le calcul n'est fait qu'une fois par session."""
+    from bitumap import stockage
+    from bitumap.lot import versions
+    from tests.lot.aides import regional_fige
+
+    if not _FICHIERS_COURBEVOIE:
+        from bitumap.calcul import calculer_commune
+        from bitumap.journal import JournalGeneration
+        from bitumap.rapport import rendu
+        from bitumap.score.methode import VERSION_METHODE
+        from tests.lot.aides import fabrique_figee
+
+        resultat = calculer_commune(fabrique_figee("92026"), "Courbevoie")
+        _FICHIERS_COURBEVOIE.update(
+            rendu.rendre(resultat, JournalGeneration("92026", VERSION_METHODE))
+        )
+    regional_fige(None)
+    empreinte = versions.empreinte_courante("92026")
+    stockage.ecrire_rapport("92026", empreinte, dict(_FICHIERS_COURBEVOIE))
+    return empreinte
+
+
 def connecter(client, courriels, email="agent@exemple.fr"):
     """Parcours complet de connexion par lien ; renvoie le jeton CSRF de la session."""
     demander_lien(client, email)
@@ -138,10 +177,18 @@ def s3(monkeypatch):
     stockage.reinitialiser_client()
     with mock_aws():
         client = stockage._client()
-        for bucket in (reglages().bucket_rapports, reglages().bucket_cache):
+        for bucket in (
+            reglages().bucket_rapports,
+            reglages().bucket_cache,
+            reglages().bucket_terrain,
+        ):
             client.create_bucket(
                 Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "eu-west-3"}
             )
+        # Photos des relevés : bucket versionné, comme en production (003 R1).
+        client.put_bucket_versioning(
+            Bucket=reglages().bucket_terrain, VersioningConfiguration={"Status": "Enabled"}
+        )
         yield client
     stockage.reinitialiser_client()
 

@@ -33,6 +33,100 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-014 — Une photo retirée pouvait être renvoyée sous le même identifiant (2026-09-30) — Close
+
+- **Contexte** : revue de sécurité de 003 (T042), branche de la modération (US5) ; défaut
+  présent depuis le MVP (#24), trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après le retrait d'une photo, par son auteur ou
+  par le mainteneur (RGPD), l'auteur pouvait redemander un formulaire d'envoi pour le même
+  identifiant, déposer une autre image et la confirmer : la photo redevenait `visible`,
+  annulant le retrait (FR-016).
+- **Causes racines** :
+  1. Pourquoi ? `formulaire` acceptait un identifiant existant quel que soit son état, et
+     `confirmer` ne distinguait que « visible » (rejeu) du reste, traité comme une
+     quarantaine.
+  2. Pourquoi ? L'idempotence (réenvoi depuis un téléphone hors réseau) a été pensée pour
+     deux états, `quarantaine` et `visible` ; les états de retrait, ajoutés ensuite, n'ont pas
+     été rapprochés des chemins d'envoi.
+  3. Pourquoi non vu ? Les tests de retrait vérifiaient l'effet du retrait, jamais une
+     tentative d'envoi postérieure ; la mise à jour finale n'avait pas de garde sur l'état
+     (course possible entre retrait et confirmation).
+- **Correctif** : `409 photo_retiree` au formulaire et à la confirmation d'une photo
+  retirée (quarantaine effacée) ; mise à jour `… AND etat = 'quarantaine'`, et, si la photo a
+  été retirée entre-temps, suppression de toutes les versions de l'objet écrit. Le rejeu
+  d'une photo `visible` efface aussi la quarantaine redéposée.
+- **Mesure préventive** : tests `test_photo_retiree_ne_peut_etre_renvoyee` (auteur, RGPD),
+  `test_retrait_pendant_l_envoi`, `test_depot_rejoue_apres_succes`. Règle : tout état
+  terminal (retrait, suppression) est testé contre chaque chemin d'écriture qui pourrait le
+  faire revenir en arrière, rejeux idempotents compris.
+- **Références** : branche `003-us5-moderation-finition`.
+
+### LL-013 — Original d'une photo récupérable dans le bucket versionné (2026-09-30) — Close
+
+- **Contexte** : développement de 003 (US5, modération), relecture du retrait RGPD ; défaut
+  latent, trouvé avant toute mise en production (aucune donnée réelle).
+- **Symptôme** : après réencodage d'une photo, l'original déposé en `quarantaine/` (avec ses
+  métadonnées EXIF, dont la position GPS) restait lisible : la clé portait encore une
+  version non courante et un marqueur de suppression (vérifié par une sonde sur le S3
+  simulé).
+- **Causes racines** :
+  1. Pourquoi ? La quarantaine était effacée par un simple `delete_object`, qui, dans un
+     bucket versionné, ajoute un marqueur de suppression sans détruire le contenu.
+  2. Pourquoi ce choix ? Le versionnement du bucket `bitumap-terrain` (décidé pour
+     l'historique) n'a pas été rapproché de l'effacement des données personnelles.
+  3. Pourquoi non vu ? Les tests vérifiaient que la clé n'était plus lisible (`lire` →
+     `None`), pas qu'aucune version n'existait (même famille que LL-003 : l'effet attendu
+     n'était pas mesuré).
+- **Correctif** : `stockage.effacer_definitivement` supprime toutes les versions et tous les
+  marqueurs d'une clé ; utilisé pour la quarantaine et pour le retrait RGPD d'une photo.
+- **Mesure préventive** : tests `test_original_non_conserve_par_le_versionnement` et
+  `test_retrait_rgpd_d_une_photo` (aucune version restante) ; T040 : la règle de cycle de vie
+  de `quarantaine/` expire aussi les versions non courantes. Règle : dans un bucket
+  versionné, tout effacement de donnée personnelle supprime toutes les versions et est
+  testé sur la liste des versions.
+- **Références** : branche `003-us5-moderation-finition`.
+
+### LL-012 — Constaté absent du rapport malgré des tests verts (2026-09-29) — Close
+
+- **Contexte** : développement de 003 (US2), essai du parcours dans un navigateur (émulation
+  mobile) avant la PR.
+- **Symptôme** : un relevé saisi n'apparaît ni dans la synthèse « Constaté » ni dans la fiche
+  du rapport ; aucune erreur en console. Les tests de `test_rapport_releves.py` passaient.
+- **Causes racines** :
+  1. Pourquoi ? Le script du rapport lit le bloc `releves` au chargement et ne le trouvait
+     pas : il valait `{}`.
+  2. Pourquoi ? L'API insérait le bloc juste avant `</body>`, donc **après** le script en
+     ligne, qui s'exécute dès qu'il est analysé.
+  3. Pourquoi non vu ? Les tests vérifiaient la présence et le contenu du bloc dans le HTML,
+     pas qu'il soit lisible par le script (même famille que LL-003 : présent ≠ effectif).
+- **Correctif** : le bloc est inséré juste après le bloc `donnees`, avant le script.
+- **Mesure préventive** : test `test_bloc_avant_le_script_qui_le_lit` (ordre des blocs) ;
+  le parcours navigateur du quickstart reste obligatoire avant chaque PR touchant le rapport
+  ou la saisie.
+- **Références** : branche `003-terrain-releves`.
+
+### LL-011 — CSP d'un rapport en cache liée à la version courante du script (2026-09-29) — Close
+
+- **Contexte** : conception de 003 (relevés terrain), rapport servi par l'API de 002 ;
+  défaut latent, trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après toute modification de
+  `rapport/interactions.js` (PR #17, #19), un rapport encore en cache (30 jours), produit
+  avec l'ancien script, serait servi avec une CSP n'autorisant que l'empreinte du **nouveau**
+  script : filtres, fiche et carte inertes.
+- **Causes racines** :
+  1. Pourquoi ? `CSP_RAPPORT` était une constante calculée au démarrage sur le script du code
+     en cours, alors que le script est figé dans chaque `rapport.html` stocké.
+  2. Pourquoi non vu ? Les tests génèrent le rapport et le servent avec le même code ; aucun
+     test ne servait un rapport produit par une version antérieure.
+  3. Pourquoi pas d'incident ? Aucun rapport n'est encore en production.
+- **Correctif** : `rapport.rendu.csp_du_document(html)` calcule, à chaque service,
+  l'empreinte des scripts en ligne **du document servi** (analyseur HTML, blocs de données
+  JSON exclus) ; le document vient du bucket privé, écrit par le job.
+- **Mesure préventive** : `tests/api/test_rapport_csp.py` (ancien script autorisé, bloc JSON
+  exclu, balise en majuscules reconnue, document sans script ⇒ `script-src 'none'`). Règle :
+  tout artefact stocké et servi plus tard est testé avec une version antérieure du code.
+- **Références** : branche `003-terrain-releves` (T006, T007).
+
 ### LL-009 — Coût IA du jour arrondi à chaque opération (2026-09-29) — Close
 
 - **Contexte** : développement US4, test du plafond de coût par rapport

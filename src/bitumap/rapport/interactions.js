@@ -3,9 +3,15 @@
 (function () {
   "use strict";
   var D = JSON.parse(document.getElementById("donnees").textContent);
+  // Constaté (003) : relevés insérés par l'API à la consultation ; absent d'un rapport ancien.
+  var blocReleves = document.getElementById("releves");
+  var R = blocReleves ? JSON.parse(blocReleves.textContent) : {};
+  var NIVEAUX = { absent: "absent", leger: "léger", marque: "marqué", grave: "grave" };
+  var SOURCES = { constatee: "constatée", services_techniques: "services techniques", estimee_agent: "estimée par l'agent" };
+  var INSEE = location.pathname.split("/")[2] || "";
   var parId = {};
   D.points.forEach(function (p) { parId[p.id] = p; });
-  var filtres = { priorite: "tous", type: "tous", route: "tous" };
+  var filtres = { priorite: "tous", type: "tous", route: "tous", constate: "tous" };
   var liste = document.getElementById("liste");
   var fiche = document.getElementById("fiche");
 
@@ -14,7 +20,69 @@
   function visible(p) {
     return (filtres.priorite === "tous" || p.priorite === filtres.priorite || p.groupe === filtres.priorite) &&
       (filtres.type === "tous" || p.type === filtres.type) &&
-      (filtres.route === "tous" || p.route.classement === filtres.route);
+      (filtres.route === "tous" || p.route.classement === filtres.route) &&
+      constatVisible(R[p.id]);
+  }
+
+  function constatVisible(r) {
+    var f = filtres.constate;
+    if (f === "tous") { return true; }
+    if (f === "releves") { return Boolean(r); }
+    if (f === "non_releves") { return !r; }
+    if (f === "marque_grave") { return Boolean(r) && (r.niveau === "marque" || r.niveau === "grave"); }
+    return Boolean(r) && r.niveau === f;
+  }
+
+  function remplirConstat(zone, id) {
+    var r = R[id];
+    var lien = document.createElement("a");
+    lien.href = "/terrain/" + INSEE + "/" + id;
+    if (!r) {
+      zone.textContent = "Non relevé. ";
+      lien.textContent = "Saisir un relevé";
+      zone.appendChild(lien);
+      return;
+    }
+    var lignes = [
+      NIVEAUX[r.niveau] + (r.profondeur_mm !== null ? " · " + r.profondeur_mm + " mm (" + r.instrument + ")" : ""),
+      r.cree_le.slice(0, 10) + " · " + r.auteur + (r.position_eloignee ? " · position éloignée" : ""),
+    ];
+    if (r.annee_refection) { lignes.push("Réfection " + r.annee_refection + " (" + (SOURCES[r.source_refection] || r.source_refection) + ")"); }
+    if (r.observation) { lignes.push(r.observation); }
+    if (r.nb_photos) { lignes.push(r.nb_photos + " photo(s), visibles par leur auteur"); }
+    zone.textContent = "";
+    lignes.forEach(function (l) { var d = document.createElement("div"); d.textContent = l; zone.appendChild(d); });
+    lien.textContent = r.nb_releves > 1 ? "Historique (" + r.nb_releves + " relevés)" : "Historique et nouveau relevé";
+    zone.appendChild(lien);
+  }
+
+  function syntheseConstat() {
+    var ids = Object.keys(R).filter(function (id) { return parId[id]; });
+    var section = document.getElementById("synthese-constate");
+    if (!section || !ids.length) { return; }
+    section.hidden = false;
+    var groupes = {};
+    D.points.forEach(function (p) { groupes[p.groupe] = p.groupe_libelle; });
+    var tableau = document.getElementById("constate-tableau");
+    Object.keys(groupes).sort().forEach(function (g) {
+      var tr = document.createElement("tr");
+      var th = document.createElement("td"); th.textContent = groupes[g]; tr.appendChild(th);
+      ["absent", "leger", "marque", "grave"].forEach(function (n) {
+        var td = document.createElement("td");
+        td.textContent = ids.filter(function (id) { return parId[id].groupe === g && R[id].niveau === n; }).length;
+        tr.appendChild(td);
+      });
+      tableau.appendChild(tr);
+    });
+    texte(document.getElementById("constate-resume"), ids.length + " point(s) relevé(s) sur " + D.points.length + ".");
+    document.querySelectorAll("li[data-point]").forEach(function (li) {
+      var r = R[li.getAttribute("data-point")];
+      if (!r) { return; }
+      var marque = document.createElement("span");
+      marque.className = "releve-marque";
+      marque.textContent = "relevé : " + NIVEAUX[r.niveau];
+      li.querySelector("strong").after(marque);
+    });
   }
 
   function appliquer() {
@@ -38,6 +106,7 @@
     });
     var gabarit = document.getElementById("gabarit-fiche").content.cloneNode(true);
     texte(gabarit.querySelector(".f-titre"), p.designation);
+    remplirConstat(gabarit.querySelector(".f-constate"), id);
     texte(gabarit.querySelector(".f-sous"), p.type_libelle + " · " + p.identifiant);
     texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.groupe_libelle + " · score " + p.score);
     var route = p.route.libelle + (p.route.numero ? " " + p.route.numero : "") +
@@ -75,6 +144,7 @@
     var cible = e.target.closest && e.target.closest("[data-point]");
     if (cible && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); montrer(cible.getAttribute("data-point")); }
   });
+  syntheseConstat();
   appliquer();
   if (D.points.length) { montrer(D.points[0].id); }
 })();
