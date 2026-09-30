@@ -248,6 +248,8 @@ def test_feux_a_leur_place_sur_la_carte(rapport):
         cy = sum(y for _, y in sommets) / 4
         x, y = proj(p.lon, p.lat)
         assert abs(cx - x) < 0.2 and abs(cy - y) < 0.2, p.id
+
+
 def test_lien_photos_aeriennes(rapport):
     # Vérification hors Panoramax : comparaison IGN « Remonter le temps », aujourd'hui (couche
     # 10) contre 2016-2020 (couche 11) ; format vérifié dans un navigateur (LL-007).
