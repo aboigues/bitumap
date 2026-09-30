@@ -224,3 +224,33 @@ def test_cinq_couleurs_de_niveau_distinctes(rapport):
     for code in ("P1a", "P1b", "P1c", "P2", "P3"):
         assert f'class="chiffre niveau {code}"' in html
     assert 'fill="var(--P1a)"' in html
+
+
+def test_ensoleillement_v2_dans_la_fiche():
+    # 004 T020 : heures juin–août, cause d'ombre et source LiDAR dans la fiche ; version 2.0.
+    resultat = copy.deepcopy(_resultat())
+    point = resultat.points[0]
+    point.facteurs = [f for f in point.facteurs if f.nom != "ensoleillement"]
+    point.facteurs.append(
+        Facteur(
+            "ensoleillement",
+            6.5,
+            1.02,
+            explication="Soleil de juin à août : 6.5 h/jour ; ombre surtout due : arbres "
+            "(LiDAR HD de mars 2023)",
+            unite="h/jour",
+            details={
+                "cause_ombre": "arbre",
+                "source": "lidar_hd",
+                "millesime_lidar": "22LHDKE 2023-03-03",
+            },
+        )
+    )
+    html = rendu.rendre(resultat, JournalGeneration("92026", "2.0"))["rapport.html"][0].decode()
+    analyse = _Ressources()
+    analyse.feed(html)
+    donnees = json.loads(next(t for a, t in analyse.scripts if a.get("id") == "donnees"))
+    soleil = next(f for f in donnees["points"][0]["facteurs"] if f["nom"] == "ensoleillement")
+    assert soleil["details"]["cause_ombre"] == "arbre"
+    assert "LiDAR HD de mars 2023" in soleil["explication"]
+    assert "Méthode 2.0" in html

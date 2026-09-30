@@ -30,7 +30,7 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   - **Index des dalles et millésime** : couche vecteur `IGNF_LIDAR-HD_METADONNEE:metadata`
     (`https://data.geopf.fr/wfs/ows`) : dalle de 1 km (`coordonnees_nw`), URL des trois
     modèles, `code_mission`, `date_debut_acquisition`, `date_fin_acquisition`,
-    `date_edition`. Millésime affiché dans le rapport : `code_mission` + `date_edition` (R8).
+    `date_edition`. Millésime affiché dans le rapport : `code_mission` + `date_fin_acquisition` (R8) ; la date du relevé dit au lecteur si les arbres avaient leurs feuilles.
   - **Volume** : Courbevoie = 16 dalles, toutes de la mission `22LHDKE` (édition
     2025-06-06). Une dalle complète pèse 15,6 Mo par modèle (1,8 s) ; la commune entière,
     environ 750 Mo pour trois modèles. **Décision** : extraction **par point**, comme la
@@ -54,6 +54,28 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   (hauteur MNH > 2 m et végétation sur l'infrarouge) ou « relief » (sinon).
 - **Raison** : 6 jours × 13 heures suffisent à représenter la saison (la course du soleil
   varie lentement) pour un coût borné (SC-005).
+- **Précisé au développement (US1, 2026-09-30), sur les 154 points de Courbevoie** :
+  - **Instants** : 12 instants horaires centrés (8 h 30 à 19 h 30) par jour, soit 1 h de
+    soleil par instant dégagé et 12 h au plus, comme la 1.2 (même effet borné).
+  - **Hauteur de référence** : sol (MNT) au point de mesure, ou dessus du tablier (MNS) si
+    le bus roule sur un pont.
+  - **Artefacts du MNS écartés** (constatés, images à l'appui) : les **véhicules présents
+    lors du survol** (2 à 3 m au bord des points de mesure) et les **objets fins** (mâts de
+    feux, lampadaires : « obstacles » de 8 à 16 m à 2 m des feux) cachaient le soleil à tort.
+    Le sursol est ouvert morphologiquement (3 × 3 m : objets de moins de 3 m de large
+    effacés) puis ramené au sol en dessous de 4 m.
+  - **Houppier d'hiver** : dans les cellules de végétation (infrarouge), trous comblés par la
+    hauteur maximale voisine (5 × 5 m).
+  - **Cause « arbre »** : végétation de l'infrarouge à 1 m près, **ou** sursol rugueux (plus
+    de 2 m d'écart entre cellules de sursol sur 5 × 5 m) : l'infrarouge manque les arbres à
+    l'ombre des immeubles (avenue Gambetta). Emprises BD TOPO élargies d'un mètre pour le
+    classement (calage des toits). Limite : une passerelle non répertoriée dans OSM (La
+    Défense, avenue de la Division Leclerc) est classée « arbre » ; l'ombre, elle, est juste.
+  - **Résultats** : 154/154 points mesurés au LiDAR ; causes : bâtiments 97, arbres 51,
+    ouvrages 5, relief 1 ; écart moyen à la 1.2 : −0,7 h/jour ; 30 points changent de
+    niveau ; A27418 (issue #18) à 0,2 h, cause « ouvrage » ; calcul 1,45 fois plus long que
+    la 1.2 hors téléchargement (le LiDAR ajoute environ 250 s par commune en ligne,
+    2 requêtes par point, pas de cache) ; déterministe.
 
 ## R3. Température de surface l'été (candidat chaleur n° 1)
 

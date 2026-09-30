@@ -146,3 +146,47 @@ def test_grilles_de_zone_identiques_aux_grilles_individuelles():
     ):
         attendue = ensoleillement.grille_hauteurs(x, y, batiments, None, tabliers)
         assert (grille == attendue).all()
+
+
+# --- Méthode 2.0 : tablier mesuré par le LiDAR (004 T015) -----------------------------------
+
+import numpy as np  # noqa: E402
+
+from bitumap.sources.base import Hauteurs  # noqa: E402
+
+SOL = 30.0
+COTE = 2 * ensoleillement.DEMI_COTE_M
+
+
+def _lidar_pont(largeur_nord=2, largeur_sud=8, epaisseur_tablier=1.5):
+    """Tablier est-ouest à 6 m au-dessus de la chaussée, de Y − largeur_sud à Y + largeur_nord."""
+    mns = np.full((COTE, COTE), SOL, dtype=np.float32)
+    mnt = mns.copy()
+    y0 = Y + ensoleillement.DEMI_COTE_M
+    mns[int(y0 - (Y + largeur_nord)) : int(y0 - (Y - largeur_sud)), :] = SOL + 6 + epaisseur_tablier
+    return Hauteurs(mns, mnt, (X - ensoleillement.DEMI_COTE_M, y0), 1.0, "22LHDKE 2023-03-03")
+
+
+def test_v2_chaussee_sous_un_tablier_mesure():
+    tabliers = ensoleillement.tabliers(_pont_ferroviaire_au_dessus())
+    f = ensoleillement.calculer_v2(LON, LAT, [(X, Y)], _lidar_pont(), SANS_BATIMENT, tabliers, None)
+    assert f.valeur <= 1.0
+    assert f.details["cause_ombre"] == "ouvrage" and "sous un pont ferroviaire" in f.explication
+
+
+def test_v2_bus_sur_le_pont_sans_ombre_du_tablier():
+    h = _lidar_pont()
+    f = ensoleillement.calculer_v2(
+        LON, LAT, [(X, Y)], h, SANS_BATIMENT, None, None, sur_un_pont=True
+    )
+    assert f.valeur == 12.0
+
+
+def test_v2_zone_d_arret_au_bord_du_tablier():
+    # Poteau au bord du tablier (issue #18) : le bus s'arrête en partie dessous.
+    tabliers = ensoleillement.tabliers(_pont_ferroviaire_au_dessus())
+    zone = [(X - 12 + 3 * i, Y) for i in range(5)]
+    h = _lidar_pont()
+    h.mns[:, int(X - 2 - (X - ensoleillement.DEMI_COTE_M)) :] = SOL  # tablier jusqu'à X − 2
+    f = ensoleillement.calculer_v2(LON, LAT, zone, h, SANS_BATIMENT, tabliers, None)
+    assert f.valeur < 12.0 and f.details["cause_ombre"] == "ouvrage"
