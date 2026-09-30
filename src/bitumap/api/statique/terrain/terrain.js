@@ -294,6 +294,34 @@ function initialiserSaisie(formulaire) {
   confirmer.addEventListener("click", () => enregistrer(true));
 }
 
+// Modération (mainteneur) : retraits RGPD, en ligne uniquement ; motif demandé.
+function initialiserModeration(liste) {
+  const erreur = document.getElementById("erreur");
+  const retirer = async (url, question) => {
+    const motif = window.prompt(question, "RGPD");
+    if (motif === null) return;
+    try {
+      await appeler("POST", url, { csrf: liste.dataset.csrf, motif, rgpd: true });
+      window.location.reload();
+    } catch (e) {
+      erreur.textContent = e.message;
+      erreur.hidden = false;
+    }
+  };
+  liste.querySelectorAll("[data-moderer-photo]").forEach((bouton) => {
+    bouton.addEventListener("click", () => retirer(
+      `/terrain/photos/${bouton.dataset.modererPhoto}/retrait`,
+      "Motif du retrait RGPD (le fichier sera supprimé définitivement) :",
+    ));
+  });
+  liste.querySelectorAll("[data-moderer-releve]").forEach((bouton) => {
+    bouton.addEventListener("click", () => retirer(
+      `/terrain/releves/${bouton.dataset.modererReleve}/retrait`,
+      "Motif du retrait du relevé :",
+    ));
+  });
+}
+
 function initialiserRecherche(champ) {
   champ.addEventListener("input", () => {
     const texte = champ.value.trim().toLowerCase();
@@ -311,6 +339,8 @@ async function demarrer() {
   if (formulaire) initialiserSaisie(formulaire);
   const recherche = document.querySelector("[data-filtre-points]");
   if (recherche) initialiserRecherche(recherche);
+  const moderation = document.getElementById("moderation");
+  if (moderation) initialiserModeration(moderation);
   window.addEventListener("online", synchroniser);
   await synchroniser();
 }

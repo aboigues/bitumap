@@ -81,6 +81,8 @@ class Reglages(BaseSettings):
     email_mainteneur: str | None = None  # fourni par OpenTofu, jamais versionné
     url_publique: str = "http://127.0.0.1:8000"
     projet_scaleway: str = ""  # identifiant du projet BITUMAP (fourni par OpenTofu)
+    # security.txt (RFC 9116) : signalement privé, comme SECURITY.md
+    contact_securite: str = "https://github.com/aboigues/bitumap/security/advisories/new"
 
     # Secrets (Secret Manager en production, jamais dans le dépôt)
     db_url: SecretStr

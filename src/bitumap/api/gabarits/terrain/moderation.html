@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titre %}Modération des relevés · bitumap{% endblock %}
+{% block tete %}
+<script type="module" src="/statique/terrain/terrain.js"></script>
+{% endblock %}
+{% block contenu %}
+<h1>Modération des relevés</h1>
+<p class="note">Réservé au mainteneur. Un retrait RGPD supprime définitivement le fichier de
+  la photo (toutes ses versions) ; la trace du retrait est conservée.</p>
+
+<form method="get" action="/terrain/moderation" class="carte">
+  <label for="q">Identifiant de relevé ou de photo, code INSEE ou identifiant de point</label>
+  <input id="q" name="q" value="{{ q }}" maxlength="100" autocomplete="off">
+  <button type="submit">Rechercher</button>
+</form>
+
+<p id="erreur" class="erreur" role="alert" hidden></p>
+
+{% if critere_invalide %}
+<p>Critère non reconnu : identifiant (UUID), code INSEE (5 chiffres) ou point (par exemple A23742).</p>
+{% elif resultats is not none %}
+  {% if resultats %}
+  <ol class="historique" id="moderation" data-csrf="{{ session.csrf }}">
+  {% for r in resultats %}
+    <li>
+      <strong>{{ r.point_id }} · {{ r.point_designation }}</strong> ({{ r.commune_insee }})<br>
+      <span class="petit">relevé {{ r.id }} · {{ r.cree_le[:16].replace('T', ' ') }} · version {{ r.version }}
+        · {{ niveaux[r.niveau] }} · {{ r.email or "auteur supprimé" }} ({{ r.auteur }})</span>
+      {% if r.observation %}<br><span class="petit">{{ r.observation }}</span>{% endif %}
+      {% if r.retire_le %}<br><em>retiré le {{ r.retire_le[:10] }} ({{ r.motif_retrait }})</em>
+      {% else %}<br><button type="button" class="lien" data-moderer-releve="{{ r.id }}">Retirer le relevé (RGPD)</button>{% endif %}
+      {% for p in r.photos %}
+        <div class="photo">
+          {% if p.etat == "visible" or p.etat == "retiree_auteur" %}<img src="/terrain/photos/{{ p.id }}" alt="Photo {{ p.id }}" loading="lazy" width="160">{% endif %}
+          <span class="petit">photo {{ p.id }} · {{ p.etat }}{% if p.motif_retrait %} ({{ p.motif_retrait }}){% endif %}</span>
+          {% if p.etat != "retiree_mainteneur" %}<button type="button" class="lien" data-moderer-photo="{{ p.id }}">Retrait RGPD de la photo</button>{% endif %}
+        </div>
+      {% endfor %}
+    </li>
+  {% endfor %}
+  </ol>
+  {% else %}
+  <p>Aucun relevé ne correspond.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

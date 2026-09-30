@@ -33,6 +33,59 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-014 — Une photo retirée pouvait être renvoyée sous le même identifiant (2026-09-30) — Close
+
+- **Contexte** : revue de sécurité de 003 (T042), branche de la modération (US5) ; défaut
+  présent depuis le MVP (#24), trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après le retrait d'une photo, par son auteur ou
+  par le mainteneur (RGPD), l'auteur pouvait redemander un formulaire d'envoi pour le même
+  identifiant, déposer une autre image et la confirmer : la photo redevenait `visible`,
+  annulant le retrait (FR-016).
+- **Causes racines** :
+  1. Pourquoi ? `formulaire` acceptait un identifiant existant quel que soit son état, et
+     `confirmer` ne distinguait que « visible » (rejeu) du reste, traité comme une
+     quarantaine.
+  2. Pourquoi ? L'idempotence (réenvoi depuis un téléphone hors réseau) a été pensée pour
+     deux états, `quarantaine` et `visible` ; les états de retrait, ajoutés ensuite, n'ont pas
+     été rapprochés des chemins d'envoi.
+  3. Pourquoi non vu ? Les tests de retrait vérifiaient l'effet du retrait, jamais une
+     tentative d'envoi postérieure ; la mise à jour finale n'avait pas de garde sur l'état
+     (course possible entre retrait et confirmation).
+- **Correctif** : `409 photo_retiree` au formulaire et à la confirmation d'une photo
+  retirée (quarantaine effacée) ; mise à jour `… AND etat = 'quarantaine'`, et, si la photo a
+  été retirée entre-temps, suppression de toutes les versions de l'objet écrit. Le rejeu
+  d'une photo `visible` efface aussi la quarantaine redéposée.
+- **Mesure préventive** : tests `test_photo_retiree_ne_peut_etre_renvoyee` (auteur, RGPD),
+  `test_retrait_pendant_l_envoi`, `test_depot_rejoue_apres_succes`. Règle : tout état
+  terminal (retrait, suppression) est testé contre chaque chemin d'écriture qui pourrait le
+  faire revenir en arrière, rejeux idempotents compris.
+- **Références** : branche `003-us5-moderation-finition`.
+
+### LL-013 — Original d'une photo récupérable dans le bucket versionné (2026-09-30) — Close
+
+- **Contexte** : développement de 003 (US5, modération), relecture du retrait RGPD ; défaut
+  latent, trouvé avant toute mise en production (aucune donnée réelle).
+- **Symptôme** : après réencodage d'une photo, l'original déposé en `quarantaine/` (avec ses
+  métadonnées EXIF, dont la position GPS) restait lisible : la clé portait encore une
+  version non courante et un marqueur de suppression (vérifié par une sonde sur le S3
+  simulé).
+- **Causes racines** :
+  1. Pourquoi ? La quarantaine était effacée par un simple `delete_object`, qui, dans un
+     bucket versionné, ajoute un marqueur de suppression sans détruire le contenu.
+  2. Pourquoi ce choix ? Le versionnement du bucket `bitumap-terrain` (décidé pour
+     l'historique) n'a pas été rapproché de l'effacement des données personnelles.
+  3. Pourquoi non vu ? Les tests vérifiaient que la clé n'était plus lisible (`lire` →
+     `None`), pas qu'aucune version n'existait (même famille que LL-003 : l'effet attendu
+     n'était pas mesuré).
+- **Correctif** : `stockage.effacer_definitivement` supprime toutes les versions et tous les
+  marqueurs d'une clé ; utilisé pour la quarantaine et pour le retrait RGPD d'une photo.
+- **Mesure préventive** : tests `test_original_non_conserve_par_le_versionnement` et
+  `test_retrait_rgpd_d_une_photo` (aucune version restante) ; T040 : la règle de cycle de vie
+  de `quarantaine/` expire aussi les versions non courantes. Règle : dans un bucket
+  versionné, tout effacement de donnée personnelle supprime toutes les versions et est
+  testé sur la liste des versions.
+- **Références** : branche `003-us5-moderation-finition`.
+
 ### LL-012 — Constaté absent du rapport malgré des tests verts (2026-09-29) — Close
 
 - **Contexte** : développement de 003 (US2), essai du parcours dans un navigateur (émulation

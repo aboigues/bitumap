@@ -35,6 +35,21 @@ def lire(bucket: str, cle: str) -> bytes | None:
         raise
 
 
+def effacer_definitivement(bucket: str, cle: str) -> int:
+    """Supprime **toutes les versions** d'un objet (et ses marqueurs de suppression) dans un
+    bucket versionné : une simple suppression y laisse le contenu récupérable (LL-013).
+    Seules les versions de la clé exacte sont touchées ; renvoie leur nombre."""
+    client = _client()
+    supprimees = 0
+    for page in client.get_paginator("list_object_versions").paginate(Bucket=bucket, Prefix=cle):
+        for version in page.get("Versions", []) + page.get("DeleteMarkers", []):
+            if version["Key"] != cle:
+                continue
+            client.delete_object(Bucket=bucket, Key=cle, VersionId=version["VersionId"])
+            supprimees += 1
+    return supprimees
+
+
 def existe(bucket: str, cle: str) -> bool:
     try:
         _client().head_object(Bucket=bucket, Key=cle)

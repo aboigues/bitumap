@@ -43,6 +43,7 @@ déclarée sur Scaleway.)
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |
 | `BITUMAP_EMAIL_EXPEDITEUR` | adresse sur le domaine vérifié | FR-028 |
 | `BITUMAP_URL_PUBLIQUE` | URL du service | liens des e-mails |
+| `BITUMAP_CONTACT_SECURITE` | avis de sécurité privés GitHub du dépôt | `Contact` de `/.well-known/security.txt` |
 
 **Aucune valeur secrète par défaut** (revue de la PR #14) : `BITUMAP_DB_URL`,
 `BITUMAP_ALTCHA_HMAC` et `BITUMAP_SEL_ORIGINE` sont obligatoires. En local, ils viennent de

@@ -20,6 +20,14 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
    (ensoleillement et îlots de chaleur à approfondir en 004).
 7. Sources : nom, licence, lien, date d'extraction (principe III).
 
+Constaté (003) : le rapport stocké ne contient aucun relevé. S'il trouve le bloc `releves`
+inséré par l'API à la consultation, le script ajoute une synthèse « Constaté », un filtre
+« relevé / non relevé », le dernier relevé dans la fiche point et un lien
+`/terrain/{insee}/{point_id}` (historique et nouveau relevé) ; sans ce bloc (fichier ouvert
+hors du service, rapport sans relevé), la synthèse « Constaté » reste masquée et aucune fiche
+n'affiche de relevé. Aucune photo ni adresse e-mail : seulement
+le pseudonyme de l'auteur.
+
 ## `points.geojson`
 
 `FeatureCollection` en WGS 84 ; une `Feature` par point ; `properties` :

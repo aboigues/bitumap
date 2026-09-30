@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from bitumap.config import reglages
 
 journal = logging.getLogger("bitumap.api")
 
@@ -90,6 +93,18 @@ def creer_application() -> FastAPI:
     @app.get("/sante")
     def sante() -> dict:
         return {"etat": "ok"}
+
+    @app.get("/.well-known/security.txt")
+    def security_txt() -> PlainTextResponse:
+        # RFC 9116 ; « Expires » glissant (moins d'un an) : le fichier ne périme jamais.
+        r = reglages()
+        expire = (datetime.now(UTC) + timedelta(days=180)).strftime("%Y-%m-%dT00:00:00Z")
+        return PlainTextResponse(
+            f"Contact: {r.contact_securite}\n"
+            f"Expires: {expire}\n"
+            "Preferred-Languages: fr, en\n"
+            f"Canonical: {r.url_publique.rstrip('/')}/.well-known/security.txt\n"
+        )
 
     from bitumap.api import antibot, auth, compte, demandes, pages, terrain
 

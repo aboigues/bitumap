@@ -71,6 +71,8 @@ def formulaire(
         ).fetchone()
         if existante is not None and str(existante["releve_id"]) != str(releve_id):
             raise ErreurPublique(409, "identifiant_pris", "Identifiant de photo déjà utilisé.")
+        if existante is not None and existante["etat"].startswith("retiree"):
+            raise _photo_retiree()  # un nouvel envoi ne doit pas annuler un retrait (LL-014)
         if existante is None:
             nombre = conn.execute(
                 "SELECT count(*) AS n FROM photo WHERE releve_id = %s"
@@ -115,9 +117,8 @@ def formulaire(
 
 
 def _supprimer_quarantaine(photo_id: str) -> None:
-    stockage._client().delete_object(
-        Bucket=reglages().bucket_terrain, Key=cle_quarantaine(photo_id)
-    )
+    # Toutes les versions : l'original (EXIF, GPS) ne doit pas survivre au réencodage.
+    stockage.effacer_definitivement(reglages().bucket_terrain, cle_quarantaine(photo_id))
 
 
 def reencoder(contenu: bytes) -> tuple[bytes, int, int]:
@@ -155,7 +156,11 @@ def confirmer(
     if photo is None:
         raise ErreurPublique(404, "envoi_absent", "Aucun envoi pour cette photo.")
     if photo["etat"] == "visible":
+        _supprimer_quarantaine(photo_id)  # dépôt rejoué après succès : original effacé
         return {"id": photo_id, "etat": "visible"}  # confirmation rejouée : idempotente
+    if photo["etat"] != "quarantaine":
+        _supprimer_quarantaine(photo_id)  # envoi refusé : l'original (EXIF) ne reste pas
+        raise _photo_retiree()
     brut = stockage.lire(r.bucket_terrain, cle_quarantaine(photo_id))
     if brut is None:
         raise ErreurPublique(404, "envoi_absent", "La photo n'a pas été reçue : renvoyez-la.")
@@ -170,12 +175,25 @@ def confirmer(
     stockage.ecrire(r.bucket_terrain, cle, propre, "image/jpeg")
     _supprimer_quarantaine(photo_id)
     with connexion() as conn:
-        conn.execute(
+        rendue_visible = conn.execute(
             "UPDATE photo SET etat = 'visible', cle_objet = %s, octets = %s, largeur = %s,"
-            " hauteur = %s, lon = %s, lat = %s, prise_le = %s WHERE id = %s",
+            " hauteur = %s, lon = %s, lat = %s, prise_le = %s"
+            " WHERE id = %s AND etat = 'quarantaine'",
             (cle, len(propre), largeur, hauteur, lon, lat, prise_le, photo_id),
-        )
+        ).rowcount
+    if not rendue_visible:  # retirée ou confirmée entre-temps : rien ne doit rester (LL-014)
+        with connexion() as conn:
+            etat = conn.execute("SELECT etat FROM photo WHERE id = %s", (photo_id,)).fetchone()
+        if etat is None or etat["etat"] != "visible":
+            stockage.effacer_definitivement(r.bucket_terrain, cle)
+            raise _photo_retiree()
     return {"id": photo_id, "etat": "visible"}
+
+
+def _photo_retiree() -> ErreurPublique:
+    return ErreurPublique(
+        409, "photo_retiree", "Cette photo a été retirée : elle ne peut être renvoyée."
+    )
 
 
 def retirer_par_auteur(photo_id: str, compte_id: str, motif: str | None) -> None:
@@ -199,13 +217,37 @@ def retirer_par_auteur(photo_id: str, compte_id: str, motif: str | None) -> None
         )
 
 
+def retirer_rgpd(photo_id: str, mainteneur_id: str, motif: str | None) -> None:
+    """Retrait RGPD par le mainteneur (FR-016, SC-008) : **toutes les versions** du fichier
+    supprimées du bucket versionné ; la ligne reste comme trace, sans fichier. Aussi pour une
+    photo déjà retirée par son auteur (fichier conservé jusque-là). Rejoué : sans effet."""
+    with connexion() as conn:
+        ligne = conn.execute(
+            "SELECT etat, cle_objet FROM photo WHERE id = %s", (photo_id,)
+        ).fetchone()
+    if ligne is None:
+        raise ErreurPublique(404, "http", "Page introuvable.")
+    if ligne["etat"] == "retiree_mainteneur":
+        return
+    bucket = reglages().bucket_terrain
+    stockage.effacer_definitivement(bucket, ligne["cle_objet"])
+    stockage.effacer_definitivement(bucket, cle_quarantaine(photo_id))
+    with connexion() as conn:
+        conn.execute(
+            "UPDATE photo SET etat = 'retiree_mainteneur', retire_le = now(), retire_par = %s,"
+            " motif_retrait = %s WHERE id = %s",
+            (mainteneur_id, (motif or "").strip()[:200] or "RGPD", photo_id),
+        )
+
+
 def lire(photo_id: str, compte_id: str, mainteneur: bool) -> bytes | None:
-    """Contenu d'une photo visible, pour son auteur ou le mainteneur ; ``None`` sinon (R5)."""
+    """Contenu d'une photo visible, pour son auteur ou le mainteneur ; ``None`` sinon (R5).
+    Le mainteneur voit aussi une photo retirée par son auteur (fichier conservé, modération)."""
     with connexion() as conn:
         ligne = conn.execute(
             "SELECT p.cle_objet, r.compte_id FROM photo p JOIN releve r ON r.id = p.releve_id"
-            " WHERE p.id = %s AND p.etat = 'visible'",
-            (photo_id,),
+            " WHERE p.id = %s AND (p.etat = 'visible' OR (%s AND p.etat = 'retiree_auteur'))",
+            (photo_id, mainteneur),
         ).fetchone()
     if ligne is None:
         return None
