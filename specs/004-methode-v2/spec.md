@@ -164,9 +164,10 @@ porte l'ancien niveau et la raison principale.
    validation, **Then** il voit, pour les communes de référence, les changements de niveau
    et les résultats de la validation.
 3. **Given** un point dont un relevé terrain de source « constatée » indique une réfection en
-   2020, sans orniérage constaté depuis, **When** le rapport est généré en 2026, **Then** son
-   score reçoit l'effet ×0,8 (six ans après les travaux), il recule dans le classement, et sa
-   fiche indique « réfection de 2020 (constatée) : ×0,8 » (FR-016, FR-017).
+   2020, sans orniérage constaté depuis, **When** le rapport d'été de référence 2026 est
+   consulté, **Then** son classement estimé est inchangé, il recule dans le classement
+   corrigé par le terrain (effet ×0,8, six ans après les travaux), et sa fiche indique
+   « réfection de 2020 (constatée) : ×0,8 » (FR-016, FR-017).
 
 ---
 
@@ -228,8 +229,9 @@ porte l'ancien niveau et la raison principale.
 **Réfection confirmée** (décision du mainteneur du 2026-09-30, cas de l'arrêt A36862
 « Hérold - Mairie de Courbevoie », classé premier alors que la rue a été refaite en 2018–2021)
 
-- **FR-016**: Une réfection confirmée DOIT pouvoir faire descendre un point dans le
-  classement (changement de méthode). Est « confirmée » seulement une année de réfection
+- **FR-016**: Une réfection confirmée DOIT pouvoir faire descendre un point dans un
+  **classement corrigé par le terrain**, affiché à côté du classement estimé ; le score
+  estimé n'est jamais modifié par un relevé (constitution, principe VI). Est « confirmée » seulement une année de réfection
   portée par un **relevé terrain de 003** dont la source est « constatée » ou « services
   techniques » ; une année « estimée par l'agent », un réaménagement visible sur les photos
   aériennes ou l'âge de l'enrobé estimé par IA restent des indices affichés, sans effet sur

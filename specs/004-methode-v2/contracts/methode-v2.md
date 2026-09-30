@@ -13,6 +13,19 @@ Champs ajoutés au point et au rapport : [data-model.md](../data-model.md). Affi
 - **Méthode** : version 2.0, facteurs et bornes, indicateurs écartés et pourquoi, sources
   (dont la source hors UE déclarée).
 
+### Classement corrigé par le terrain (R9, FR-016 à FR-018)
+
+`GET /rapports/{insee}/{empreinte}` d'un rapport 2.0 : l'API insère, après le bloc `releves`
+et avant le script (LL-012), `<script type="application/json" id="classement-terrain">`
+(champs : [data-model.md](../data-model.md)). Le score estimé n'est pas modifié (principe VI).
+
+- **Fiche** : « Estimé : rang 1, Critique · Corrigé par le terrain : rang 57, À surveiller
+  (réfection de 2020, constatée : ×0,8) » ; ou « réfection sans effet : orniérage constaté
+  après les travaux ».
+- **Liste** : choix « classement estimé / corrigé par le terrain » (estimé par défaut).
+- **Synthèse** : « N points corrigés par une réfection confirmée ».
+- Rapport 1.x ou sans relevé : bloc absent ou vide, rien d'affiché.
+
 ## 2. Outil d'évaluation (mainteneur, hors service)
 
 ```text

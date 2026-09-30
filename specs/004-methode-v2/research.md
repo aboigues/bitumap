@@ -212,3 +212,54 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   (`raison_changement`, R6), ce qui satisfait « tout écart de rang doit être expliqué par un
   changement de méthode ou de source ». Il vérifie aussi la stabilité (même entrée ⇒ même
   sortie) et l'issue #18 (Verdun - Rue Latérale sous le pont).
+
+## R9. Réfection confirmée : classement corrigé par le terrain (FR-016 à FR-018)
+
+Clarification du 2026-09-30 (spec, session du jour) ; cas déclencheur : arrêt A36862
+« Hérold - Mairie de Courbevoie », premier du classement alors que la rue a été refaite en
+2018–2021.
+
+- **Contrainte constitutionnelle** : principe VI, « les relevés … ne modifient jamais le
+  calcul d'origine : ils l'enrichissent ou le **corrigent dans une couche distincte**, et le
+  rapport distingue « estimé » et « constaté » ». Multiplier le score estimé par l'effet de
+  la réfection violerait ce principe.
+- **Décision** : le score **estimé** (méthode 2.0, produit par le job) reste inchangé. Une
+  couche distincte, le **classement corrigé par le terrain**, est calculée **au moment où
+  l'API sert le rapport**, comme le bloc `releves` de 003 :
+  1. l'API lit `points.geojson` du rapport (facteurs et effets de chaque point) et les
+     derniers relevés visibles de la commune ;
+  2. pour chaque point, **réfection confirmée** = la plus récente année de réfection portée
+     par un relevé visible de source `constatee` ou `services_techniques` (FR-016) ;
+  3. **effet** = `0,5 + 0,05 × n`, borné à 1,0, où `n` = année de l'été de référence du
+     rapport − année de réfection (≥ 0) : ×0,5 l'année des travaux, ×1,0 au bout de 10 ans
+     (FR-017). L'été de référence (R8) plutôt que la date du jour : même rapport, mêmes
+     relevés ⇒ même classement corrigé, quel que soit le jour de consultation (principe IV) ;
+  4. **annulation** (FR-018) : si le relevé visible le plus récent du point est daté d'une
+     année ≥ l'année de réfection et constate un niveau `marque` ou `grave`, effet 1,0 avec
+     le motif « réfection sans effet : orniérage constaté après les travaux » ;
+  5. score corrigé = score brut × effet, puis **mêmes règles de rangs et de niveaux** que le
+     score estimé (`score.combinaison`, priorités figées avant l'âge de l'enrobé) : rang et
+     niveau corrigés ;
+  6. un bloc JSON distinct, `<script type="application/json" id="classement-terrain">`, est
+     inséré après le bloc `releves` (avant le script, LL-012) : pour chaque point touché,
+     effet, année, source, motif, rang et niveau corrigés ; plus le nombre de points
+     touchés.
+- **Affichage** (rapports 2.0 seulement ; le script des rapports 1.x l'ignore, LL-011) :
+  - fiche : « Estimé : rang 1, Critique · Corrigé par le terrain : rang 57, À surveiller
+    (réfection de 2020, constatée : ×0,8) », ou le motif d'annulation ;
+  - liste : un choix « classement estimé / corrigé par le terrain » (estimé par défaut tant
+    que la 2.0 n'est pas validée, FR-013) ;
+  - synthèse : « N points corrigés par une réfection confirmée ».
+- **Pourquoi au service et non dans le job** : un relevé déposé aujourd'hui agit tout de
+  suite, sans régénérer le rapport ni changer son empreinte (le rapport en cache reste
+  valable 30 jours) ; le calcul d'origine reste celui du job, intact (principe VI).
+- **Alternatives écartées** :
+  - multiplier le score estimé dans le job : viole le principe VI, et un nouveau relevé
+    n'agirait qu'au rapport suivant (empreinte à étendre aux relevés) ;
+  - recalcul dans le navigateur : dupliquerait en JavaScript les règles de rangs et de
+    niveaux (risque d'écart avec `score.combinaison`) ;
+  - amender le principe VI : inutile, la couche distincte répond à la demande.
+- **Validation (FR-013)** : l'outil d'évaluation (R7) mesure SC-001 sur le classement
+  **estimé** (la méthode) ; le classement corrigé est rapporté à part, pour information.
+- **Données** : aucune table nouvelle ; lecture de `releve` / `releve_version` (003). Aucune
+  donnée personnelle dans le bloc (ni auteur, ni adresse).

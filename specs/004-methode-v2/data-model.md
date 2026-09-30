@@ -39,3 +39,21 @@ sont conservés.
 - **Relevé de référence** : point, commune, niveau constaté (003), orniéré (booléen).
 - **Résultat d'indicateur** : indicateur, mesure avec et sans, écart, décision (retenu ou
   écarté), raison ; consigné dans `docs/methode/CHANGELOG.md` à la mise en service.
+
+## Classement corrigé par le terrain (R9, calculé au service du rapport)
+
+Aucune table nouvelle : lecture des relevés visibles de 003 (`releve`, dernière
+`releve_version`). Bloc JSON `classement-terrain` inséré par l'API dans le rapport servi
+(rapports 2.0 seulement).
+
+| Champ | Règles |
+|---|---|
+| `points.{id}.annee_refection` | plus récente année de réfection d'un relevé visible du point de source `constatee` ou `services_techniques` (FR-016) |
+| `points.{id}.source_refection` | `constatee` ou `services_techniques` |
+| `points.{id}.effet` | `min(1,0 ; 0,5 + 0,05 × n)`, `n = ete_reference − annee_refection` (≥ 0) ; 1,0 si annulé (FR-017, FR-018) |
+| `points.{id}.annule` | vrai si le relevé visible le plus récent, daté d'une année ≥ `annee_refection`, constate `marque` ou `grave` (FR-018) |
+| `points.{id}.rang`, `points.{id}.groupe` | rang et niveau après correction, mêmes règles que l'estimé (`score.combinaison`) |
+| `nb_points_corriges` | points dont l'effet est < 1,0 |
+
+Aucune donnée personnelle (ni auteur, ni adresse, ni photo). Seuls les points ayant une
+réfection confirmée figurent dans `points`.
