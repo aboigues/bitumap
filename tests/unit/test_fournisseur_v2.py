@@ -33,8 +33,9 @@ class _EnLigne:
         if lon > 3:
             return None  # dalle absente
         mns = np.full((4, 4), 45.5, dtype=np.float32)
+        mns[0, 0] = np.nan  # pas de mesure
         mnt = np.full((4, 4), 35.25, dtype=np.float32)
-        return Hauteurs(mns, mnt, (645000.0, 6867200.0), 1.0, "22LHDKE 2025-06-06")
+        return Hauteurs(mns, mnt, (645000.0, 6867200.0), 1.0, "22LHDKE 2023-03-03")
 
     def temperature_surface(self, emprise, ete):
         valeurs = np.array([[32.0, np.nan], [37.4, 35.0]], dtype=np.float32)
@@ -68,7 +69,10 @@ def test_aller_retour_des_donnees_v2(tmp_path):
 
     f = FournisseurFige(tmp_path, "92026")
     h2 = f.hauteurs(2.2606, 48.9008)
-    assert np.array_equal(h2.mns, h.mns) and np.array_equal(h2.mnt, h.mnt)
+    # figées au décimètre (dépôt léger), « pas de mesure » conservé
+    assert np.allclose(h2.mns, h.mns, atol=0.051, equal_nan=True)
+    assert np.allclose(h2.mnt, h.mnt, atol=0.051) and np.isnan(h2.mns[0, 0])
+    assert h2.mns.dtype == np.float32
     assert (h2.origine, h2.resolution, h2.millesime) == (h.origine, h.resolution, h.millesime)
     assert f.hauteurs(3.5, 48.9) is None
     prov, raster = f.temperature_surface((2.23, 48.88, 2.29, 48.91), 2026)

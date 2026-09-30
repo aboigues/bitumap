@@ -33,6 +33,34 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-016 — Ombres fictives du LiDAR malgré des tests verts (2026-09-30) — Close
+
+- **Contexte** : développement de 004 (US1, ensoleillement sur LiDAR HD), première exécution
+  de la méthode 2.0 sur les données figées de Courbevoie, avant la PR.
+- **Symptôme** : tous les tests (grilles synthétiques) passaient, mais sur Courbevoie des
+  carrefours passaient de 10 h à 1,3 h de soleil, « à cause de bâtiments » absents de la
+  BD TOPO ; la cause « arbre » ne sortait que 6 fois sur 154 points.
+- **Causes racines** :
+  1. Pourquoi ? Le MNS contient tout ce que le laser a touché : véhicules présents lors du
+     survol (2 à 3 m au bord des points de mesure), mâts de feux et lampadaires (8 à 16 m à
+     2 m des feux) ; à 2 m, un tel objet cache le soleil jusqu'à 57° de hauteur.
+  2. Pourquoi « arbre » si rare ? L'infrarouge manque les arbres à l'ombre des immeubles
+     (avenue Gambetta) et le bord des toits tombe à 1 m hors de l'emprise BD TOPO.
+  3. Pourquoi non vu par les tests ? Les grilles synthétiques ne contenaient que ce que
+     l'on y mettait : des bâtiments et des arbres idéaux (même famille que LL-003 :
+     vérifier l'effet sur les données réelles, pas seulement la forme).
+- **Correctif** : ouverture morphologique du sursol (objets de moins de 3 m de large
+  effacés), sursol de moins de 4 m ramené au sol, cause « arbre » par la végétation à 1 m
+  près ou la rugosité du sursol (5 × 5 m), emprises BD TOPO élargies d'un mètre pour le
+  classement. Chaque cas vérifié sur l'orthophoto et l'ombrage du MNH.
+- **Mesure préventive** : tests `test_vehicule_du_survol_ignore`, `test_mat_de_feu_ignore`,
+  `test_houppier_rugueux_classe_arbre_sans_infrarouge`,
+  `test_construction_lisse_non_repertoriee_classe_batiment` ;
+  `tests/non_regression/test_courbevoie_v2.py` sur les données figées réelles. Règle : toute
+  nouvelle source mesurée est passée sur une commune réelle et ses plus grands écarts sont
+  examinés sur image avant la PR.
+- **Références** : branche `004-us1-ensoleillement-lidar`.
+
 ### LL-015 — Hook de protection de main inactif hors de /mnt/c (2026-09-30) — Close
 
 - **Contexte** : préparation du déplacement du dépôt de `/mnt/c` (disque Windows, dossier

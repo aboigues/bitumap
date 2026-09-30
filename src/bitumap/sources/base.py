@@ -59,7 +59,7 @@ class Hauteurs:
     mnt: np.ndarray
     origine: tuple[float, float]
     resolution: float
-    millesime: str  # « code_mission date_edition » de l'index des dalles
+    millesime: str  # « code_mission date de fin d'acquisition » (index des dalles)
 
 
 @dataclass

@@ -18,10 +18,13 @@ from typing import Protocol
 
 import geopandas as gpd
 import numpy as np
+from pyproj import Transformer
 
-from bitumap.sources import altimetrie, bdtopo, chaleur, idfm, ortho, osm, panoramax
+from bitumap.sources import altimetrie, bdtopo, chaleur, idfm, lidar, ortho, osm, panoramax
 from bitumap.sources.base import Hauteurs, Provenance, Raster, client_http
 from bitumap.territoire import api_geo
+
+_VERS_L93 = Transformer.from_crs("EPSG:4326", "EPSG:2154", always_xy=True)
 
 
 class Fournisseur(Protocol):
@@ -60,9 +63,14 @@ class FournisseurEnLigne:
         self._osm_regional = osm_regional
         self._osm_date = osm_date
         self._client = client_http(timeout=120)
+        self._millesimes_lidar: dict[str, str] = {}  # une requête d'index par dalle de 1 km
 
     def contour(self) -> dict:
         return api_geo.contour_geojson(self.insee)
+
+    def hauteurs(self, lon, lat):
+        x, y = _VERS_L93.transform(lon, lat)
+        return lidar.hauteurs(x, y, self._client, self._millesimes_lidar)
 
     def offre(self):
         maj = idfm.date_mise_a_jour(self._client)
@@ -252,16 +260,41 @@ class Enregistreur:
             masques=np.array(list(presents.values())) if presents else np.zeros((0, 1, 1), bool),
         )
         if self._haut:
-            h = list(self._haut.values())
-            np.savez_compressed(
-                self._d / "hauteurs.npz",
-                cles=np.array(list(self._haut)),
-                mns=np.array([x.mns for x in h]),
-                mnt=np.array([x.mnt for x in h]),
-                origines=np.array([x.origine for x in h]),
-                resolutions=np.array([x.resolution for x in h]),
-                millesimes=np.array([x.millesime for x in h]),
-            )
+            ecrire_hauteurs(self._d / "hauteurs.npz", self._haut)
+
+
+# Hauteurs figées au décimètre (dépôt léger) : entiers 16 bits au-dessus d'une base par point ;
+# 65535 = pas de mesure. Largement assez précis pour des ombres.
+_HAUTEUR_ABSENTE = np.iinfo(np.uint16).max
+
+
+def _coder(grille: np.ndarray, base: float) -> np.ndarray:
+    dm = np.round((grille - base) * 10)
+    return np.where(np.isfinite(dm), np.clip(dm, 0, _HAUTEUR_ABSENTE - 1), _HAUTEUR_ABSENTE).astype(
+        np.uint16
+    )
+
+
+def _decoder(codes: np.ndarray, base: float) -> np.ndarray:
+    grille = codes.astype(np.float32) / 10 + np.float32(base)
+    grille[codes == _HAUTEUR_ABSENTE] = np.nan
+    return grille
+
+
+def ecrire_hauteurs(chemin: Path, hauteurs: dict[str, Hauteurs]) -> None:
+    """Fige les hauteurs LiDAR (004) ; relues par ``FournisseurFige``."""
+    h = list(hauteurs.values())
+    bases = [float(np.floor(np.nanmin(x.mnt))) - 1 if np.isfinite(x.mnt).any() else 0.0 for x in h]
+    np.savez_compressed(
+        chemin,
+        cles=np.array(list(hauteurs)),
+        mns=np.array([_coder(x.mns, b) for x, b in zip(h, bases, strict=True)]),
+        mnt=np.array([_coder(x.mnt, b) for x, b in zip(h, bases, strict=True)]),
+        bases=np.array(bases),
+        origines=np.array([x.origine for x in h]),
+        resolutions=np.array([x.resolution for x in h]),
+        millesimes=np.array([x.millesime for x in h]),
+    )
 
 
 class FournisseurFige:
@@ -278,9 +311,10 @@ class FournisseurFige:
         if (dossier / "hauteurs.npz").exists():  # absent des dossiers figés avant 004
             h = np.load(dossier / "hauteurs.npz")
             for i, cle in enumerate(h["cles"].tolist()):
+                base = float(h["bases"][i])
                 self._haut[cle] = Hauteurs(
-                    h["mns"][i],
-                    h["mnt"][i],
+                    _decoder(h["mns"][i], base),
+                    _decoder(h["mnt"][i], base),
                     tuple(float(c) for c in h["origines"][i]),
                     float(h["resolutions"][i]),
                     str(h["millesimes"][i]),
