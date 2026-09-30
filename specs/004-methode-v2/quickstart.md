@@ -42,3 +42,15 @@ uv run python -m bitumap.methode.evaluer --releves releves.geojson \
 - SC-002 : 30 points à ensoleillement observé pendant la campagne de relevés : écart moyen
   < 1,5 h.
 - Mise en service : `BITUMAP_METHODE=2.0` (décision du mainteneur).
+
+## 5. Réfection confirmée (R9, FR-016 à FR-018)
+
+| Vérification | Attendu |
+|---|---|
+| Rapport 2.0 servi ; relevé sur A36862 : réfection 2020 « constatée », niveau « absent » ; été de référence 2026 | fiche : estimé inchangé (rang 1) ; corrigé par le terrain : effet ×0,8, rang et niveau plus bas |
+| Même point, réfection « estimée par l'agent » | aucun effet ; réfection affichée comme indice |
+| Nouveau relevé sur ce point, daté de 2026, niveau « marqué » | effet annulé, motif « réfection sans effet : orniérage constaté après les travaux » |
+| Réfection de 2015 (11 ans avant l'été de référence) | effet ×1,0 |
+| Même rapport consulté deux jours différents, mêmes relevés | même classement corrigé |
+| Rapport 1.2 servi | aucun bloc `classement-terrain` |
+| Score estimé, `points.geojson` et empreinte du rapport | inchangés par les relevés (principe VI) |

@@ -158,6 +158,24 @@ implémentation et vérifier qu'ils échouent.
 - [ ] T039 [US4] Créer `src/bitumap/methode/__init__.py` et `src/bitumap/methode/evaluer.py` (sur le modèle de `src/bitumap/ia/evaluer.py`) : `python -m bitumap.methode.evaluer --releves <geojson|csv> --communes … [--sortie evaluation-v2.md]` ; calcul des communes de référence en 1.2 et en 2.0 (avec et sans chaque indicateur candidat) ; Markdown aux sections du contrat 004 § 2 ; recommandation marquée « à confirmer par le mainteneur »
 - [ ] T040 [US4] Adapter la non-régression dans `tests/non_regression/test_courbevoie_v2.py` (R8) : Courbevoie figée en 2.0 ; deux générations identiques au point près (SC-006) ; 100 % des changements de niveau expliqués (SC-004) ; A27418 « Verdun - Rue Latérale » cause « ouvrage », non Critique (issue #18) ; durée < 2 × celle de la 1.2 sur la même machine (SC-005, mesurée et consignée) ; `tests/non_regression/test_courbevoie.py` (1.2) inchangé et toujours vert
 
+### Réfection confirmée : classement corrigé par le terrain (R9, FR-016 à FR-018)
+
+Ajouté après la clarification du 2026-09-30 (cas A36862 « Hérold - Mairie de Courbevoie »).
+**Couche distincte, calculée au service du rapport** : le score estimé, `points.geojson` et
+l'empreinte ne sont jamais modifiés par un relevé (constitution, principe VI).
+
+**Independent Test**: rapport 2.0 de Courbevoie servi avec un relevé « réfection 2020,
+constatée, niveau absent » sur A36862 et l'été de référence 2026 : classement estimé
+inchangé (rang 1) ; classement corrigé par le terrain avec l'effet ×0,8 et un rang plus bas.
+
+- [ ] T046 [P] [US4] Écrire `tests/unit/test_classement_terrain.py` (fonctions pures, sans base) : effet `min(1,0 ; 0,5 + 0,05 × n)` avec `n = ete_reference − annee_refection` borné à ≥ 0 (×0,5 l'année des travaux, ×0,8 à 6 ans, ×1,0 à 10 ans et au-delà) ; seules les sources `constatee` et `services_techniques` comptent, `estimee_agent` sans effet (FR-016) ; plus récente année confirmée parmi les relevés visibles du point ; annulation si le relevé visible **le plus récent** du point est daté d'une année ≥ `annee_refection` et constate `marque` ou `grave`, motif « réfection sans effet : orniérage constaté après les travaux » (FR-018) ; rangs et niveaux corrigés obtenus par les mêmes règles que l'estimé (`score.combinaison`, priorités figées avant l'âge de l'enrobé) ; point sans réfection confirmée absent du bloc ; aucune donnée personnelle dans le résultat (ni auteur, ni adresse, ni photo) ; même entrée ⇒ même sortie
+- [ ] T047 [P] [US4] Écrire `tests/api/test_rapport_classement_terrain.py` : rapport 2.0 servi ⇒ bloc `<script type="application/json" id="classement-terrain">` inséré **après** le bloc `releves` et **avant** le script (LL-012) ; rapport 1.2 ⇒ aucun bloc ; relevé retiré ⇒ plus d'effet ; `rapport.html` et `points.geojson` stockés inchangés ; CSP du document servi inchangée (bloc JSON exclu, LL-011) ; même rapport consulté deux fois ⇒ même bloc
+- [ ] T048 [US4] Créer `src/bitumap/terrain/classement.py` : `refections(commune_insee)` lit **tous** les relevés visibles de la commune (dernière version, via la requête de `src/bitumap/terrain/depot.py`, filtre constant et valeurs en paramètres) et retient par point l'année confirmée et le dernier relevé ; `corriger(points_geojson, refections, ete_reference)` reconstruit les `Point` (facteurs et effets du `points.geojson` du rapport), applique l'effet au score brut, reclasse avec `src/bitumap/score/combinaison.py` et renvoie `{"points": {id: {annee_refection, source_refection, effet, annule, motif, rang, groupe}}, "nb_points_corriges": n}` (data-model, R9)
+- [ ] T049 [US4] Lire, pour un rapport servi, sa version de méthode et son été de référence (`journal.json` et champ `ete_reference` du rapport, T028) dans `src/bitumap/api/demandes.py` ; rapports 1.x ou sans été de référence : pas de classement corrigé
+- [ ] T050 [US4] Insérer le bloc `classement-terrain` dans `rapport()` de `src/bitumap/api/demandes.py`, juste après le bloc `releves` (fonction `_inserer_avant_script` existante) ; rien n'est écrit dans le stockage
+- [ ] T051 [US4] Afficher la couche dans le rapport 2.0 (`src/bitumap/rapport/interactions.js`, `src/bitumap/rapport/gabarits/rapport.html.j2`) : fiche « Estimé : rang R, niveau · Corrigé par le terrain : rang R', niveau' (réfection de AAAA, constatée : ×E) » ou le motif d'annulation ; liste : choix « classement estimé / corrigé par le terrain » (**estimé par défaut**) ; synthèse « N points corrigés par une réfection confirmée » ; bloc absent ⇒ rien d'affiché (rapports en cache, LL-011) ; test de rendu dans `tests/rapport/test_rendu.py`
+- [ ] T052 [US4] Documenter le bloc dans `specs/003-terrain-releves/contracts/http-api.md` (rapport servi) et `specs/002-on-demand-report/contracts/report-bundle.md` (affichage) ; dérouler le quickstart 004 § 5 dans un navigateur (LL-012) et consigner le résultat dans la PR
+
 **Checkpoint**: la 2.0 est complète derrière `BITUMAP_METHODE` ; la mise en service attend la validation (FR-013).
 
 ---
@@ -180,6 +198,7 @@ implémentation et vérifier qu'ils échouent.
 - **US2 (T021–T029)** : dépend de la phase 2 ; indépendante de US1 (fichiers distincts), sauf `calcul.py` (T019 puis T028).
 - **US3 (T030–T034)** : dépend de la phase 2 ; `calcul.py` après T028.
 - **US4 (T035–T040)** : après US1 à US3 (compare la 2.0 complète à la 1.2).
+- **Réfection confirmée (T046–T052)** : dépend de T028 (`ete_reference` dans le rapport) ; indépendante de T035–T040 (fichiers distincts), sauf `rapport.html.j2` et `interactions.js` (T038 puis T051).
 - **Polish (T041–T045)** : après les stories ; T043 peut être fait à tout moment.
 - **Mise en service (hors de ces tâches)** : 003 en service, au moins 100 relevés dans 3 communes, outil d'évaluation (T039), indicateurs retenus inscrits dans `INDICATEURS_CHALEUR_RETENUS`, amendement du principe III fusionné, puis `BITUMAP_METHODE=2.0` par le mainteneur.
 
@@ -191,7 +210,7 @@ T013 T014 T015                       (tests US1)
 T021 T022 T023                       (tests US2)
 T024 T026                            (sources US2)
 T030 T031                            (tests US3)
-T035 T036                            (tests US4)
+T035 T036 T046 T047                  (tests US4, réfection comprise)
 T041 T042 T043                       (Polish)
 ```
 
@@ -204,6 +223,7 @@ T041 T042 T043                       (Polish)
 3. **US2 et US3** : indicateurs calculés et affichés, sans effet sur le score tant que la
    validation n'a pas eu lieu (chaleur) ; poids lourds borné sur mesure.
 4. **US4** : explication des changements et outil de validation, prêts pour la campagne de
-   relevés.
+   relevés ; classement corrigé par le terrain (réfection confirmée, T046–T052), utile dès
+   les premiers relevés.
 5. Une PR par étape livrable (Setup + Foundational + US1, puis US2 + US3, puis US4 +
    Polish), relue et fusionnée par le mainteneur (principe IX).

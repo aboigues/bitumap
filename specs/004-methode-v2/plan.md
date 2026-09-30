@@ -13,7 +13,10 @@ minéralisation, contexte urbain) **évalués un par un** sur les relevés de 00
 et retenus seulement s'ils aident ; effet poids lourds fondé sur les seuls comptages
 publiés. Chaque changement de niveau par rapport à la 1.2 porte sa raison. La 2.0 est
 développée derrière un réglage (`BITUMAP_METHODE`) et mise en service par le mainteneur
-après validation sur au moins 100 relevés dans 3 communes.
+après validation sur au moins 100 relevés dans 3 communes. Une **réfection confirmée** par
+un relevé terrain fait reculer le point dans un **classement corrigé par le terrain**,
+couche distincte calculée au service du rapport, sans toucher au score estimé (R9,
+FR-016 à FR-018, principe VI).
 
 ## Technical Context
 
@@ -54,13 +57,15 @@ une scène composite de température par été et par commune
 | **III. Souveraineté** | Sources ouvertes. **Hors UE déclaré** : température de surface Landsat distribuée par l'USGS (seule une emprise est transmise ; déclarée ici et dans le rapport). **Nouvelles sources** au-delà de la liste « V1 » du principe III (IGN LiDAR HD, USGS, ADEME, Météo-France, départements) : ouvertes, conformes à l'esprit ; **amendement MINEUR proposé** pour compléter la liste (PR humaine, CODEOWNERS) | ⚠️ amendement à proposer |
 | **IV. Méthode reproductible** | Version 2.0, entrée détaillée du journal ; nouvelles sources versionnées dans l'empreinte ; déterminisme testé (SC-006) ; chaque facteur affiché et expliqué | ✅ |
 | **V. IA encadrée** | Inchangée (âge de l'enrobé des P1, bornes, « à confirmer ») | ✅ |
-| **VI. Terrain** | La validation repose sur les relevés de 003 ; le constaté reste distinct | ✅ |
+| **VI. Terrain** | La validation repose sur les relevés de 003 ; le constaté reste distinct. **Réfection confirmée (R9)** : le score estimé n'est jamais modifié par un relevé ; la correction est une couche distincte (« classement corrigé par le terrain »), calculée au service du rapport et affichée à côté de l'estimé | ✅ |
 | **VII. Simplicité et tests** | Pas de nouveau service ; non-régression Courbevoie adaptée : chaque changement de niveau 1.2 → 2.0 expliqué (R8) ; nouvelles sources derrière des adaptateurs testés sur fixtures | ✅ |
 | **VIII. Retour d'expérience** | Leçons 1.2 (issue #18) prises en compte ; test #18 conservé | ✅ |
 | **IX. Agents IA** | Branche dédiée, PR, fusion et **mise en service** humaines | ✅ |
 
 **Re-check après la conception (phase 1)** : conforme, sous réserve de l'amendement du
 principe III (liste des sources), à soumettre par le mainteneur avant la mise en service.
+Re-check après R9 (2026-09-30) : conforme au principe VI grâce à la couche distincte ;
+aucun amendement du principe VI nécessaire.
 
 ## Project Structure
 
@@ -69,7 +74,7 @@ principe III (liste des sources), à soumettre par le mainteneur avant la mise e
 ```text
 specs/004-methode-v2/
 ├── plan.md              # ce fichier
-├── research.md          # phase 0 : R1 à R8
+├── research.md          # phase 0 : R1 à R9
 ├── data-model.md        # phase 1 : champs du rapport, cache des sources
 ├── quickstart.md        # phase 1 : calcul, données manquantes, validation
 ├── contracts/
@@ -94,6 +99,8 @@ src/bitumap/
 │   ├── methode.py          # VERSION_METHODE 2.0, sélection par BITUMAP_METHODE
 │   └── comparaison.py      # niveau 1.2 et raison du changement (R6)
 ├── methode/evaluer.py      # outil d'évaluation sur les relevés de 003 (R7)
+├── terrain/classement.py   # classement corrigé par le terrain : réfection confirmée (R9)
+├── api/demandes.py         # insère le bloc « classement-terrain » au service (R9)
 └── rapport/                # fiche, synthèse et section méthode v2
 
 tests/

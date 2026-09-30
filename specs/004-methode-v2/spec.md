@@ -29,6 +29,24 @@ existants ne sont plus réutilisés, et chaque changement de niveau doit être e
 Hors périmètre : la projection été par été (007, qui réutilisera les données climatiques de
 004), les relevés terrain eux-mêmes (003), le parcours de surveillance (006).
 
+## Clarifications
+
+### Session 2026-09-30
+
+- Q: Quelles sources suffisent pour considérer qu'une réfection est « confirmée » et appliquer
+  l'effet sur le score ? → A: Relevés terrain de 003 seulement, avec une année de réfection de
+  source « constatée » ou « services techniques » (FR-016).
+- Q: Jusqu'à combien d'années après les travaux une réfection confirmée doit-elle faire
+  descendre le point ? → A: Effet dégressif : plein l'année des travaux, s'annulant au bout de
+  10 ans (FR-017).
+- Q: À effet plein (l'année des travaux), de combien la réfection confirmée doit-elle réduire
+  le score du point ? → A: ×0,5, comme la dalle béton, puis retour linéaire à ×1,0 en 10 ans
+  (FR-017).
+- Q: Si le dernier relevé d'un point donne à la fois une réfection récente et un orniérage
+  « marqué » ou « grave », la réfection doit-elle quand même faire descendre le point ? → A:
+  Non : l'effet est annulé si le relevé le plus récent, postérieur aux travaux, constate un
+  orniérage « marqué » ou « grave » (FR-018).
+
 ## User Scenarios & Testing *(mandatory)*
 
 Acteurs :
@@ -145,6 +163,11 @@ porte l'ancien niveau et la raison principale.
 2. **Given** la mise en service envisagée, **When** le mainteneur consulte le bilan de
    validation, **Then** il voit, pour les communes de référence, les changements de niveau
    et les résultats de la validation.
+3. **Given** un point dont un relevé terrain de source « constatée » indique une réfection en
+   2020, sans orniérage constaté depuis, **When** le rapport d'été de référence 2026 est
+   consulté, **Then** son classement estimé est inchangé, il recule dans le classement
+   corrigé par le terrain (effet ×0,8, six ans après les travaux), et sa fiche indique
+   « réfection de 2020 (constatée) : ×0,8 » (FR-016, FR-017).
 
 ---
 
@@ -159,6 +182,10 @@ porte l'ancien niveau et la raison principale.
   non régressée).
 - Commune en limite de région : indicateurs disponibles de part et d'autre, sinon repli
   signalé.
+- Réfection confirmée puis orniérage « marqué » ou « grave » constaté après les travaux :
+  l'effet de la réfection est annulé, la fiche l'indique (FR-018).
+- Réfection seulement estimée (agent, photos aériennes, IA) : affichée comme indice, sans
+  effet sur le score (FR-016).
 - Indicateur de chaleur absent pour un point : effet neutre, marqué « non évalué », sans
   bloquer le rapport.
 
@@ -199,6 +226,25 @@ porte l'ancien niveau et la raison principale.
 - **FR-010**: Un point sans comptage publié DOIT recevoir un effet neutre, marqué « non évalué
   (aucun comptage publié) » ; la synthèse indique la part des points couverts.
 
+**Réfection confirmée** (décision du mainteneur du 2026-09-30, cas de l'arrêt A36862
+« Hérold - Mairie de Courbevoie », classé premier alors que la rue a été refaite en 2018–2021)
+
+- **FR-016**: Une réfection confirmée DOIT pouvoir faire descendre un point dans un
+  **classement corrigé par le terrain**, affiché à côté du classement estimé ; le score
+  estimé n'est jamais modifié par un relevé (constitution, principe VI). Est « confirmée » seulement une année de réfection
+  portée par un **relevé terrain de 003** dont la source est « constatée » ou « services
+  techniques » ; une année « estimée par l'agent », un réaménagement visible sur les photos
+  aériennes ou l'âge de l'enrobé estimé par IA restent des indices affichés, sans effet sur
+  le score.
+- **FR-017**: L'effet d'une réfection confirmée DOIT être **dégressif** : ×0,5 l'année des
+  travaux (comme une chaussée en dalle béton), puis se rapprochant régulièrement de ×1,0,
+  atteint 10 ans après (×0,55 après un an, ×0,75 après cinq ans) ; au-delà,
+  la réfection n'a plus d'effet sur le score (elle reste affichée). La fiche indique l'année,
+  la source et l'effet appliqué.
+- **FR-018**: L'effet d'une réfection confirmée DOIT être annulé si le relevé le plus récent
+  du point, postérieur aux travaux, constate un orniérage « marqué » ou « grave » : la fiche
+  indique « réfection sans effet : orniérage constaté après les travaux ».
+
 **Transparence et validation**
 
 - **FR-011**: La méthode v2 DOIT porter un nouveau numéro de version majeur et une entrée
@@ -229,6 +275,8 @@ porte l'ancien niveau et la raison principale.
 - **Comptage poids lourds** : trafic de poids lourds mesuré sur un tronçon de voie ; source,
   année, valeur ; rattaché aux points proches.
 - **Changement de niveau** : pour un point, niveau v1, niveau v2 et raison principale.
+- **Réfection confirmée** : pour un point, année de réfection issue d'un relevé terrain de 003
+  de source « constatée » ou « services techniques » (FR-016).
 
 ## Success Criteria *(mandatory)*
 
