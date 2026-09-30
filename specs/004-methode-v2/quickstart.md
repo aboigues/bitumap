@@ -7,7 +7,7 @@ Contrats : [contracts/methode-v2.md](contracts/methode-v2.md) ; données :
 
 - Environnement de développement de 002 ; fixtures de Courbevoie complétées par
   `tools/figer_fixtures.py` (dalles LiDAR HD, température de surface de l'été de référence,
-  comptages des Hauts-de-Seine, DPE, données quotidiennes de l'été).
+  comptages des Hauts-de-Seine, données quotidiennes de l'été).
 - Pour la validation (§ 4) : 003 en service et au moins 100 relevés dans 3 communes.
 
 ## 2. Calcul (sans réseau, fixtures)

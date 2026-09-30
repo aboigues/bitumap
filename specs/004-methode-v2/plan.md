@@ -9,7 +9,7 @@
 La méthode 2.0 remplace les approximations de la 1.2 par des mesures : ensoleillement sur
 les hauteurs LiDAR HD de l'IGN (bâti, arbres, ouvrages et relief réels) et la course du
 soleil de juin à août ; indicateurs de chaleur (température de surface de l'été,
-minéralisation, contexte urbain, climatiseurs) **évalués un par un** sur les relevés de 003
+minéralisation, contexte urbain) **évalués un par un** sur les relevés de 003
 et retenus seulement s'ils aident ; effet poids lourds fondé sur les seuls comptages
 publiés. Chaque changement de niveau par rapport à la 1.2 porte sa raison. La 2.0 est
 développée derrière un réglage (`BITUMAP_METHODE`) et mise en service par le mainteneur
@@ -21,11 +21,11 @@ après validation sur au moins 100 relevés dans 3 communes.
 
 **Primary Dependencies**: celles de 002 (rasterio, numpy, geopandas, shapely, pvlib, httpx) ;
 **aucune nouvelle dépendance prévue** (lecture des dalles GeoTIFF et des scènes par
-rasterio ; DPE en CSV ou Parquet par pandas, déjà présent via geopandas) — à confirmer en
-développement
+rasterio) — à confirmer en développement ; climatiseurs (DPE) écartés de la 2.0
+(research R4, décision du mainteneur du 2026-09-30)
 
 **Storage**: bucket de cache de 002 (dalles LiDAR, température de surface par été,
-comptages, DPE, données quotidiennes) ; aucune table nouvelle
+comptages, données quotidiennes) ; aucune table nouvelle
 
 **Testing**: pytest ; fixtures de Courbevoie complétées (`tools/figer_fixtures.py`) ; test de
 stabilité et de non-régression adapté (chaque changement de niveau expliqué) ; outil
@@ -85,11 +85,10 @@ src/bitumap/
 │   ├── lidar.py            # dalles MNS/MNT LiDAR HD (IGN), cache
 │   ├── temperature.py      # température de surface d'un été (USGS), médiane sans nuage
 │   ├── comptages.py        # poids lourds : départements + réseau national
-│   ├── dpe.py              # bâtiments refroidis (ADEME)
 │   └── meteo.py            # données quotidiennes (Météo-France), partagé avec 007
 ├── facteurs/
 │   ├── ensoleillement.py   # v2 : grille LiDAR, période chaude, cause d'ombre (1.2 en repli)
-│   ├── chaleur.py          # candidats v2 (surface, minéralisation, contexte, climatiseurs)
+│   ├── chaleur.py          # candidats v2 (surface, minéralisation, contexte)
 │   └── poids_lourds.py     # effet borné, « non évalué » sans comptage
 ├── score/
 │   ├── methode.py          # VERSION_METHODE 2.0, sélection par BITUMAP_METHODE

@@ -97,7 +97,7 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
 | Minéralisation | part de surfaces non végétales dans 50 m : infrarouge IGN (déjà lu en 1.x) + emprises BD TOPO | évaluer (FR-005) |
 | Contexte urbain | zone climatique locale de l'Institut Paris Region (déjà lue) | évaluer |
 | Aléa actuel | aléa de jour IPR (déjà lu) | référence v1, évaluée comme les autres |
-| Climatiseurs | DPE de l'ADEME : équipement de refroidissement ([logements existants](https://www.data.gouv.fr/datasets/dpe-logements-existants-depuis-juillet-2021), [tertiaire](https://data.ademe.fr/datasets/dpe-tertiaire)), rattachés aux bâtiments ; surface refroidie dans 100 m | évaluer ; **écarter si** la couverture est insuffisante (moins d'un bâtiment sur cinq diagnostiqué dans la zone) — documenté (FR-006) |
+| Climatiseurs | DPE de l'ADEME : équipement de refroidissement ([logements existants](https://www.data.gouv.fr/datasets/dpe-logements-existants-depuis-juillet-2021), [tertiaire](https://data.ademe.fr/datasets/dpe-tertiaire)), rattachés aux bâtiments ; surface refroidie dans 100 m | **écarté de la 2.0** (couverture de 2,3 % à Courbevoie, logements seulement, ci-dessous ; décision du mainteneur du 2026-09-30) ; à réexaminer si un jeu couvrant le tertiaire devient disponible |
 | Canicules de l'été | jours de forte chaleur à la station Météo-France de référence (données quotidiennes, Licence Ouverte, partagées avec 007) | **pas un facteur de classement** : identique pour tous les points d'une commune, il ne change aucun rang (le score est relatif au maximum de la commune) ; il est affiché comme **été de référence** et sert à 007 |
 
 - **Mesuré au développement (T004, T005, 2026-09-30)** :
@@ -107,9 +107,10 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
     24 439 DPE de logements, dont **374 avec une surface climatisée** (1,5 %), soit
     **117 bâtiments** sur environ 5 100 (2,3 %), tous résidentiels ; les bureaux (La
     Défense) sont absents. Couverture très inférieure au seuil de R4 (un bâtiment sur
-    cinq) et biaisée : **recommandation : écarter l'indicateur dès maintenant** (FR-006,
-    raison documentée), ce qui supprime T025 et le candidat `chaleur_climatiseurs` —
-    **décision du mainteneur requise**.
+    cinq) et biaisée : **indicateur écarté de la 2.0** (FR-006, décision du mainteneur du 2026-09-30) :
+    T025 sans objet, pas de candidat `chaleur_climatiseurs`. À réexaminer dans une version
+    ultérieure si les DPE tertiaires ou une autre source ouverte renseignent la climatisation
+    des bureaux.
   - **Météo-France** : jeu « Données climatologiques de base quotidiennes » (Licence
     Ouverte 2.0), fichiers par département sans compte, hébergés en France (OVH) :
     `Q_75_latest-2025-2026_RR-T-Vent.csv.gz`, mis à jour chaque jour. Station de
@@ -175,7 +176,7 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
 
 - **Décision** : `VERSION_METHODE = "2.0"` ; nouvelles sources versionnées dans l'empreinte :
   millésime LiDAR des dalles, été de référence (température de surface), année des
-  comptages, date d'extraction des DPE. Un nouvel été rend les rapports précédents non
+  comptages. Un nouvel été rend les rapports précédents non
   réutilisables (FR-007). Déterminisme : dalles et scènes figées par identifiant, médianes
   et tris stables (SC-006).
 - **Non-régression (constitution, principe VII)** : le cas Courbevoie reste un test de
