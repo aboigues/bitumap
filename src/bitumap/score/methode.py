@@ -47,3 +47,10 @@ LIBELLES_GROUPES = {
     "P2": "À surveiller",
     "P3": "Supportable",
 }
+
+# Poids lourds hors bus, méthode 2.0 (004 US3, R5) : effet linéaire en logarithme des poids
+# lourds par jour du sens le plus chargé, de ×1,0 (50 PL/j, classe T3 du dimensionnement des
+# chaussées) à ×1,25 (2000 PL/j, classe TS). Bornes initiales, recalibrées sur les relevés (R7).
+PL_EFFET_NUL = 50
+PL_EFFET_MAX = 2000
+EFFET_PL_MAX = 1.25

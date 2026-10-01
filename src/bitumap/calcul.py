@@ -15,7 +15,15 @@ import geopandas as gpd
 from shapely.geometry import Point as PointGeo
 from shapely.geometry import mapping
 
-from bitumap.facteurs import chaleur, charge, ensoleillement, site, sollicitation, voirie
+from bitumap.facteurs import (
+    chaleur,
+    charge,
+    ensoleillement,
+    poids_lourds,
+    site,
+    sollicitation,
+    voirie,
+)
 from bitumap.modele import Facteur, Point
 from bitumap.points import construction as c
 from bitumap.points import direction
@@ -152,25 +160,32 @@ def _points_pente(ligne, geo_l93) -> tuple[tuple[float, float], tuple[float, flo
     return (a.x, a.y), (b.x, b.y)
 
 
-def _normaliser_nom(nom) -> str:
-    texte = "" if nom is None or nom != nom else str(nom)
-    return "".join(ch for ch in texte.lower() if ch.isalnum())
-
-
 def _troncon_de_la_voie(troncons_l93, chaussee, voie):
     """Tronçon IGN de la voie empruntée par le bus : parmi les tronçons à moins de 25 m de la
     chaussée, celui qui porte le nom de la voie bus (OSM), sinon le plus proche."""
     distances = troncons_l93.distance(chaussee)
     proches = troncons_l93[distances <= RAYON_TRONCON_M]
-    nom = _normaliser_nom(voie.nom) if voie is not None else ""
+    nom = voirie.normaliser_nom(voie.nom) if voie is not None else ""
     if nom and not proches.empty:
         memes = proches[
-            proches.get("nom_voie_ban_gauche", "").map(_normaliser_nom).eq(nom)
-            | proches.get("nom_voie_ban_droite", "").map(_normaliser_nom).eq(nom)
+            proches.get("nom_voie_ban_gauche", "").map(voirie.normaliser_nom).eq(nom)
+            | proches.get("nom_voie_ban_droite", "").map(voirie.normaliser_nom).eq(nom)
         ]
         if not memes.empty:
             return memes.loc[memes.distance(chaussee).idxmin()]
     return troncons_l93.loc[distances.idxmin()]
+
+
+def _poids_lourds(comptages_l93, chaussee, voie, p: Point) -> Facteur:
+    """Méthode 2.0 : poids lourds comptés sur la voie du point, bus du sens retirés (la
+    charge d'une voie à double sens compte les deux sens)."""
+    section = poids_lourds.rattacher(
+        comptages_l93, chaussee, p.route.numero, voie.nom if voie is not None else p.voie
+    )
+    bus_sens = 0.0
+    if voie is not None:
+        bus_sens = float(voie.charge) / (1 if bool(voie.sens_unique) else 2)
+    return poids_lourds.calculer(section, bus_sens)
 
 
 def calculer_commune(
@@ -260,6 +275,14 @@ def calculer_commune(
 
     v2 = version_appliquee() != VERSION_METHODE
     lidar_lu = False
+    # Comptages de poids lourds publiés (2.0, 004 US3) ; absents ⇒ « non évalué » partout.
+    comptages_l93 = None
+    if v2:
+        try:
+            provenances_pl, comptages_l93 = f.comptages_pl(emprise)
+            provenances += provenances_pl
+        except Exception as erreur:
+            avertissements.append(f"Comptages poids lourds indisponibles : {type(erreur).__name__}")
     for i, (p, g, voie) in enumerate(zip(points, geos_l93, voies_proches, strict=True)):
         p.facteurs.append(charge.calculer(p))
         p.facteurs += sollicitation.calculer(p, distances_feux.get(p.id))
@@ -329,6 +352,8 @@ def calculer_commune(
                 str(voie.ref) if voie is not None and voie.ref else None,
                 nom_commune,
             )
+        if v2:
+            p.facteurs.append(_poids_lourds(comptages_l93, chaussee, voie, p))
         try:
             photo = f.panoramax(round(p.lon, 6), round(p.lat, 6))
             p.panoramax = None if photo is None else photo.__dict__

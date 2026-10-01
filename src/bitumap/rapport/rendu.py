@@ -109,13 +109,19 @@ def _synthese(resultat: ResultatCommune) -> dict:
     points = resultat.points
     priorites = Counter(p.priorite for p in points)
     groupes = Counter(p.groupe for p in points)
-    return {
+    synthese = {
         "priorites": {k: priorites.get(k, 0) for k in ("P1", "P2", "P3")},
         "groupes": {k: groupes.get(k, 0) for k in ("P1a", "P1b", "P1c", "P2", "P3")},
         "types": dict(Counter(p.libelle_type for p in points)),
         "routes": dict(Counter(libelle(p.route.classement) for p in points).most_common()),
         "classements": [(c, libelle(c)) for c in sorted({p.route.classement for p in points})],
     }
+    # Méthode 2.0 (004 FR-010) : part des points couverts par un comptage de poids lourds.
+    pl = [f for p in points if (f := p.facteur("poids_lourds")) is not None]
+    if pl:
+        evalues = sum(f.statut == "evalue" for f in pl)
+        synthese["couverture_poids_lourds"] = round(100 * evalues / len(points))
+    return synthese
 
 
 def rendre(

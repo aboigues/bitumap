@@ -74,3 +74,35 @@ def test_la_1_2_ignore_les_hauteurs():
 def test_point_de_reference_reste_prioritaire(ident):
     p = next(p for p in _calcul("2.0").points if p.id == ident)
     assert p.groupe in ("P1a", "P1b", "P1c")
+
+
+def test_poids_lourds_sur_les_comptages_publies():
+    """004 US3 (test indépendant) : départementale comptée à fort trafic > voie comptée
+    faible ; voie communale ⇒ ×1,0 « non évalué »."""
+    resultat = _calcul("2.0")
+    pl = {p.id: (p, p.facteur("poids_lourds")) for p in resultat.points}
+    assert all(f is not None for _, f in pl.values())
+    quai = pl["A25835"][1]  # quai du Président Paul Doumer, RD7
+    assert quai.details["troncon"].startswith("RD7") and quai.effet > 1.2
+    gaultier = pl["A420570"][1]  # rue Gaultier, RD12 : moins de poids lourds que de bus
+    assert gaultier.statut == "evalue" and gaultier.effet == 1.0
+    communales = [f for p, f in pl.values() if p.route.classement.startswith("communale")]
+    assert communales and all((f.effet, f.statut) == (1.0, "non_evalue") for f in communales)
+    assert any("Hauts-de-Seine" in p.nom for p in resultat.provenances)
+
+
+def test_couverture_poids_lourds_dans_la_synthese():
+    from bitumap.rapport.rendu import _synthese
+
+    resultat = _calcul("2.0")
+    evalues = sum(p.facteur("poids_lourds").statut == "evalue" for p in resultat.points)
+    assert _synthese(resultat)["couverture_poids_lourds"] == round(
+        100 * evalues / len(resultat.points)
+    )
+    assert "couverture_poids_lourds" not in _synthese(_calcul("1.2"))
+
+
+def test_la_1_2_ignore_les_comptages():
+    resultat = _calcul("1.2")
+    assert all(p.facteur("poids_lourds") is None for p in resultat.points)
+    assert not any("poids lourds" in p.nom for p in resultat.provenances)

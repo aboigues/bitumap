@@ -3,6 +3,7 @@ ajoutés sans changer la sortie 1.2 (T008)."""
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
@@ -83,9 +84,13 @@ def test_aller_retour_des_donnees_v2(tmp_path):
     assert f.meteo("75114001", 2026) == m
 
 
-def test_dossier_fige_sans_donnees_v2():
+def test_dossier_fige_sans_donnees_v2(tmp_path):
     # Un dossier figé avant 004 reste lisible : les accès 2.0 répondent « absent ».
-    f = FournisseurFige(FIXTURES, "92026")
+    # Copie de Courbevoie sans ses fichiers 2.0 (hauteurs, comptages).
+    for fichier in FIXTURES.iterdir():
+        if not fichier.name.startswith(("hauteurs", "comptages")):
+            shutil.copy(fichier, tmp_path / fichier.name)
+    f = FournisseurFige(tmp_path, "92026")
     assert f.hauteurs(2.26, 48.9) is None
     assert f.temperature_surface(None, 2026) is None
     assert f.comptages_pl(None) == ([], None)

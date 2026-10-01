@@ -9,7 +9,7 @@ nouvelles sont mises en cache dans le bucket de cache de 002.
 |---|---|
 | `facteurs[ensoleillement]` | `valeur` = heures de soleil moyennes juin–août ; `details` : `cause_ombre` (`batiment`, `arbre`, `ouvrage`, `relief`), `source` (`lidar_hd` ou `repli_1.2`), `millesime_lidar` |
 | `facteurs[chaleur_*]` | un facteur par indicateur **retenu** (FR-006) : `temperature_surface` (°C, été de référence), `mineralisation` (%), `contexte_urbain` (zone climatique) ; les climatiseurs sont écartés de la 2.0 (research R4) ; `statut` `non_evalue` si donnée absente |
-| `facteurs[poids_lourds]` | `valeur` = poids lourds par jour ; `details` : `source`, `annee`, `troncon` ; ×1,0 et `non_evalue` sans comptage |
+| `facteurs[poids_lourds]` | `valeur` = poids lourds par jour hors bus, sens le plus chargé ; `details` : `source`, `annee`, `troncon`, `pl_comptes`, `bus_retires` ; ×1,0 et `non_evalue` sans comptage |
 | `niveau_v1` | groupe du point en méthode 1.2 (`P1a` … `P3`) |
 | `raison_changement` | facteur dont l'effet a le plus varié, si le niveau change ; sinon nul |
 
