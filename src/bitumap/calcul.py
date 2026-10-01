@@ -57,6 +57,8 @@ class ResultatCommune:
     avertissements: list[str] = field(default_factory=list)
     # Méthode 2.0 (004 FR-007) : été de référence, jours de forte chaleur ; ``None`` en 1.2.
     ete_reference: dict | None = None
+    # Méthode 2.0 (004 R6) : nombre de points par couple (niveau v1, niveau v2).
+    bilan_changements: dict[str, dict[str, int]] | None = None
 
 
 def _emprise(commune) -> tuple[float, float, float, float]:
@@ -237,7 +239,12 @@ def calculer_commune(
     f: Fournisseur,
     nom_commune: str,
     analyse_ia: Callable[[list[Point]], None] | None = None,
+    methode: str | None = None,
+    retenus: frozenset[str] | None = None,
 ) -> ResultatCommune:
+    """``methode`` : version à appliquer (défaut : ``BITUMAP_METHODE``) ; ``retenus`` :
+    indicateurs de chaleur 2.0 qui agissent sur le score (défaut : ceux de la méthode ;
+    l'outil d'évaluation les essaie un par un, R7)."""
     avertissements: list[str] = []
     contour = f.contour()
     commune = c.polygone_commune(contour)
@@ -318,7 +325,7 @@ def calculer_commune(
         avertissements.append(f"Altimétrie indisponible : {type(erreur).__name__}")
         altitudes = [None] * len(extremites)
 
-    v2 = version_appliquee() != VERSION_METHODE
+    v2 = (methode or version_appliquee()) != VERSION_METHODE
     lidar_lu = False
     # Comptages de poids lourds publiés (2.0, 004 US3) ; absents ⇒ « non évalué » partout.
     comptages_l93 = None
@@ -399,7 +406,7 @@ def calculer_commune(
                 temperature.au_point(surface_lst, chaussee.x, chaussee.y) if surface_lst else None,
                 chaleur.mineralisation(vegetation),
                 surface_lst.ete if surface_lst else None,
-                INDICATEURS_CHALEUR_RETENUS,
+                INDICATEURS_CHALEUR_RETENUS if retenus is None else retenus,
             )
         else:
             p.facteurs.append(chaleur.calculer(alea, lcz))

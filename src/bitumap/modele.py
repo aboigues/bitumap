@@ -85,4 +85,6 @@ class Point:
         for cle in ("niveau_v1", "raison_changement"):
             if d[cle] is None:
                 del d[cle]
+        if self.niveau_v1 is not None:
+            d["niveau_v1_libelle"] = LIBELLES_GROUPES.get(self.niveau_v1, self.niveau_v1)
         return d

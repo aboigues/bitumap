@@ -135,6 +135,17 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <p class="petit">Relevés saisis sur le terrain ; ils ne modifient ni le score ni le classement.</p>
 </section>
 
+{% if synthese.bilan_changements is defined %}
+<section class="panneau" aria-label="Changements de niveau"><h2>Changements de niveau depuis la méthode 1.2</h2>
+  <p class="petit">Les points sont aussi calculés en méthode 1.2, sur les mêmes données ; un point qui change de niveau
+    indique son niveau 1.2 et le facteur dont l'effet a le plus varié.</p>
+  <table><thead><tr><th>Niveau 1.2 \ 2.0</th>{% for g in synthese.bilan_changements %}<th>{{ libelles_groupes[g] }}</th>{% endfor %}</tr></thead><tbody>
+    {% for g1, ligne in synthese.bilan_changements.items() %}<tr><th>{{ libelles_groupes[g1] }}</th>{% for g2, n in ligne.items() %}<td>{% if g1 == g2 %}<strong>{{ n }}</strong>{% else %}{{ n or "" }}{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody></table>
+</section>
+{% endif %}
+
 <section class="panneau"><h2>Méthode {{ version_methode }}</h2>
   <p>Score = produit de facteurs ; niveaux par rang : les 20 % de points les plus exposés, découpés en
     trois tiers <strong>{{ libelles_groupes.P1a }}</strong>, <strong>{{ libelles_groupes.P1b }}</strong> et
@@ -147,8 +158,11 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Sollicitation : arrêt / carrefour à feux / giratoire ; arrêt à moins de 40 m d'un carrefour à feux ;
       20 bus/h ou plus en pointe</td><td>×1,0 / ×0,8 / ×0,7 ; ×1,2 ; ×1,1</td></tr>
     <tr><td>Site : pente ≥ 3 % (±30 m le long de la voie) ; béton ou pavés</td><td>jusqu'à ×1,32 ; ×0,5</td></tr>
-    <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
-      et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>
+    {% if v2 %}<tr><td>Ensoleillement de la chaussée de juin à août (6 jours, 8 h 30–19 h 30), sur les hauteurs mesurées
+      par le LiDAR HD de l'IGN (bâtiments, arbres, ponts, relief) ; arrêt : moyenne sur les 12 m où le bus s'arrête ;
+      carrefour et giratoire : 5 points sur les voies bus ; cause principale d'ombre indiquée</td><td>×0,8 à ×1,2</td></tr>
+    {% else %}<tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
+      et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>{% endif %}
     {% if synthese.ete_reference is defined %}<tr><td>Chaleur : aléa de jour (0–16), température de surface de l'été (Landsat), surfaces minérales
       à moins de 50 m, contexte urbain ; chaque indicateur n'agit qu'une fois son apport démontré sur les relevés de terrain
       (« non retenu » sinon)</td><td>×0,92 à ×1,08 par indicateur retenu</td></tr>
@@ -157,11 +171,22 @@ a{color:inherit;text-decoration-color:var(--accent)}
       (Hauts-de-Seine, réseau national), bus du sens retirés ; sans comptage : non évalué</td><td>×1,0 (50 PL/j) à ×1,25 (2000 PL/j)</td></tr>{% endif %}
     <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
   </tbody></table>
+  {% if v2 %}<h3>Indicateurs de chaleur</h3>
+  <ul>
+    <li>Non retenus pour l'instant : aléa de jour, température de surface, surfaces minérales, contexte urbain. Ils sont
+      calculés et affichés, sans effet sur le score, jusqu'à ce que leur apport soit démontré sur les relevés de terrain
+      (au moins 100 points dans 3 communes).</li>
+    <li>Écarté : chaleur rejetée par les climatiseurs (diagnostics énergétiques : 2 % des bâtiments renseignés, bureaux
+      absents).</li>
+  </ul>
+  {% endif %}
   <h3>Limites connues</h3>
   <ul>
     <li>Le score classe des points ; il ne mesure pas l'état de la chaussée.</li>
-    <li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
-      (à approfondir).</li>
+{% if v2 %}<li>Ensoleillement : hauteurs LiDAR d'un survol d'hiver (arbres sans feuilles, compensés par l'infrarouge) ;
+      zone d'arrêt en ligne droite.</li>
+    {% else %}<li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
+      (à approfondir).</li>{% endif %}
     {% if synthese.ete_reference is defined %}<li>Chaleur : indicateurs calculés et affichés, sans effet sur le score tant que leur apport
       n'est pas démontré ; température de surface à 30 m près (médiane des images dégagées de juin à août).</li>
     {% else %}<li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>{% endif %}
@@ -187,6 +212,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
 
 <template id="gabarit-fiche">
   <h3 class="f-titre"></h3><div class="petit f-sous"></div>
+  <p class="petit f-changement" hidden></p>
   <h4>Constaté</h4><div class="constate f-constate"></div>
   <h4>Estimé</h4>
   <dl><dt>Classement</dt><dd class="f-rang"></dd><dt>Route</dt><dd class="f-route"></dd>

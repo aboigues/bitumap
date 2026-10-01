@@ -165,15 +165,21 @@ dans `facteurs/voirie.py` (import circulaire évité) ; sources déclarées dans
 
 ### Tests for User Story 4
 
-- [ ] T035 [P] [US4] Écrire `tests/unit/test_comparaison.py` : même point calculé en 1.2 et en 2.0 ; raison = facteur dont l'effet a le plus varié en logarithme (R6) ; niveau inchangé ⇒ raison nulle ; aucun appel d'IA supplémentaire (réponses en cache réutilisées) ; libellé « v1 : Sérieux — raison : chaleur, minéralisation forte »
-- [ ] T036 [P] [US4] Écrire `tests/unit/test_evaluer_methode.py` : relevés synthétiques au format de l'export de 003 (`releves.geojson`) ; refus explicite sous 100 points ou 3 communes ; orniéré = « marqué » ou « grave » ; SC-001 (part des orniérés dans Critique + Sérieux + Important, v1 contre v2) ; apport d'un indicateur (avec et sans ; retenu si ≥ +2 points **et** aucune commune dégradée) ; SC-002 (écart moyen calculé / observé) ; sections du contrat 004 § 2 dans le Markdown produit
+- [X] T035 [P] [US4] Écrire `tests/unit/test_comparaison.py` : même point calculé en 1.2 et en 2.0 ; raison = facteur dont l'effet a le plus varié en logarithme (R6) ; niveau inchangé ⇒ raison nulle ; aucun appel d'IA supplémentaire (réponses en cache réutilisées) ; libellé « v1 : Sérieux — raison : chaleur, minéralisation forte »
+- [X] T036 [P] [US4] Écrire `tests/unit/test_evaluer_methode.py` : relevés synthétiques au format de l'export de 003 (`releves.geojson`) ; refus explicite sous 100 points ou 3 communes ; orniéré = « marqué » ou « grave » ; SC-001 (part des orniérés dans Critique + Sérieux + Important, v1 contre v2) ; apport d'un indicateur (avec et sans ; retenu si ≥ +2 points **et** aucune commune dégradée) ; SC-002 (écart moyen calculé / observé) ; sections du contrat 004 § 2 dans le Markdown produit
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Créer `src/bitumap/score/comparaison.py` : dans le même lot, calcul 1.2 des points (réutilisation des sources et des réponses d'IA déjà en cache), `niveau_v1`, `raison_changement` ; bilan `bilan_changements` (nombre de points par couple niveau v1, niveau v2) ; branché dans `src/bitumap/lot/commune.py` en 2.0 seulement
-- [ ] T038 [US4] Afficher dans le rapport (`rendu.py`, `rapport.html.j2`) : dans la fiche, « v1 : <niveau> — raison : <facteur> » si le niveau change ; dans la synthèse, le tableau niveau v1 × niveau v2 ; dans la section Méthode, version 2.0, facteurs et bornes, indicateurs non retenus et pourquoi, sources dont celle hors UE
-- [ ] T039 [US4] Créer `src/bitumap/methode/__init__.py` et `src/bitumap/methode/evaluer.py` (sur le modèle de `src/bitumap/ia/evaluer.py`) : `python -m bitumap.methode.evaluer --releves <geojson|csv> --communes … [--sortie evaluation-v2.md]` ; calcul des communes de référence en 1.2 et en 2.0 (avec et sans chaque indicateur candidat) ; Markdown aux sections du contrat 004 § 2 ; recommandation marquée « à confirmer par le mainteneur »
-- [ ] T040 [US4] Adapter la non-régression dans `tests/non_regression/test_courbevoie_v2.py` (R8) : Courbevoie figée en 2.0 ; deux générations identiques au point près (SC-006) ; 100 % des changements de niveau expliqués (SC-004) ; A27418 « Verdun - Rue Latérale » cause « ouvrage », non Critique (issue #18) ; durée < 2 × celle de la 1.2 sur la même machine (SC-005, mesurée et consignée) ; `tests/non_regression/test_courbevoie.py` (1.2) inchangé et toujours vert
+- [X] T037 [US4] Créer `src/bitumap/score/comparaison.py` : dans le même lot, calcul 1.2 des points (réutilisation des sources et des réponses d'IA déjà en cache), `niveau_v1`, `raison_changement` ; bilan `bilan_changements` (nombre de points par couple niveau v1, niveau v2) ; branché dans `src/bitumap/lot/commune.py` en 2.0 seulement
+- [X] T038 [US4] Afficher dans le rapport (`rendu.py`, `rapport.html.j2`) : dans la fiche, « v1 : <niveau> — raison : <facteur> » si le niveau change ; dans la synthèse, le tableau niveau v1 × niveau v2 ; dans la section Méthode, version 2.0, facteurs et bornes, indicateurs non retenus et pourquoi, sources dont celle hors UE
+- [X] T039 [US4] Créer `src/bitumap/methode/__init__.py` et `src/bitumap/methode/evaluer.py` (sur le modèle de `src/bitumap/ia/evaluer.py`) : `python -m bitumap.methode.evaluer --releves <geojson|csv> --communes … [--sortie evaluation-v2.md]` ; calcul des communes de référence en 1.2 et en 2.0 (avec et sans chaque indicateur candidat) ; Markdown aux sections du contrat 004 § 2 ; recommandation marquée « à confirmer par le mainteneur »
+- [X] T040 [US4] Adapter la non-régression dans `tests/non_regression/test_courbevoie_v2.py` (R8) : Courbevoie figée en 2.0 ; deux générations identiques au point près (SC-006) ; 100 % des changements de niveau expliqués (SC-004) ; A27418 « Verdun - Rue Latérale » cause « ouvrage », non Critique (issue #18) ; durée < 2 × celle de la 1.2 sur la même machine (SC-005, mesurée et consignée) ; `tests/non_regression/test_courbevoie.py` (1.2) inchangé et toujours vert
+
+*Écarts au développement (2026-10-01, research R6 et R7)* : `calculer_commune` prend
+`methode` et `retenus` en paramètres ; le tableau v1 × v2 est un panneau à part, après la
+synthèse ; raison affichée « facteur (×a en v1, ×b en v2) » plutôt que « chaleur,
+minéralisation forte » ; heures de soleil observées (SC-002) dans un CSV à part ; calibrage
+des bornes non automatisé.
 
 ### Réfection confirmée : classement corrigé par le terrain (R9, FR-016 à FR-018)
 

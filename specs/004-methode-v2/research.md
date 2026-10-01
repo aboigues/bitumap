@@ -242,6 +242,15 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   logarithme). Stocké dans le rapport (`niveau_v1`, `raison_changement`).
 - **Alternative écartée** : relire le dernier rapport 1.x de la commune (souvent absent ou
   expiré).
+- **Mesuré au développement (US4, 2026-10-01)** : les réponses du fournisseur lues pour la
+  2.0 sont gardées en mémoire (`score.comparaison.Memoire`) et resservies au calcul 1.2 ;
+  l'âge de l'enrobé des points analysés en 2.0 est repris, un point P1 en 1.2 seulement reste
+  « non évalué » (aucun appel d'IA ; l'âge ne change jamais la priorité). Les quatre
+  indicateurs de chaleur de la 2.0 sont regroupés face à l'aléa de la 1.2 ; une variation
+  d'effet sous 0,5 % est ignorée et le changement attribué au « déplacement des autres
+  points ». Courbevoie : 45 points sur 154 changent de niveau, tous expliqués (poids lourds
+  16, ensoleillement 16, chaleur 13) ; niveaux v1 identiques à un calcul 1.2 seul ; durée
+  2.0 + comparaison = 1,5 × la 1.2 (SC-005).
 
 ## R7. Validation et choix des indicateurs sur les relevés de 003
 
@@ -258,6 +267,13 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
 - **SC-002** (ensoleillement observé à ±1,5 h) : 30 points observés pendant la campagne de
   relevés (heures d'ombre notées dans l'observation) ou par photos horodatées ; protocole
   dans le quickstart.
+- **Mesuré au développement (US4, 2026-10-01)** : outil `python -m bitumap.methode.evaluer`
+  écrit et testé sur des relevés synthétiques ; exports GeoJSON ou CSV de 003 (plusieurs
+  fichiers, un par commune, dernier relevé de chaque point) ; heures de soleil observées
+  dans un CSV `point;heures` (option `--soleil`), l'export de 003 n'ayant pas de champ
+  dédié ; l'âge de l'enrobé n'est pas évalué (aucun appel d'IA : il ne change pas la
+  priorité, donc pas SC-001). Le calibrage des bornes (point 3) reste manuel : l'outil donne
+  les mesures avec et sans chaque indicateur.
 
 ## R8. Version, empreinte, reproductibilité
 

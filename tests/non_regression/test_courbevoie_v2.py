@@ -161,3 +161,62 @@ def test_sc_003_mesure_par_candidat():
     assert mesures[chaleur.MINERALISATION] == pytest.approx(0.0394, abs=1e-3)
     assert mesures[chaleur.CONTEXTE] == pytest.approx(0.1739, abs=1e-3)
     assert all(m <= chaleur.EFFET_MAX / chaleur.EFFET_MIN - 1 + 1e-9 for m in mesures.values())
+
+
+@cache
+def _avec_v1():
+    """Calcul 2.0 du lot (004 T040) : 2.0 puis 1.2 sur les mêmes sources ; durée mesurée."""
+    import time
+
+    from bitumap.score.comparaison import calculer_avec_v1
+
+    ancienne = reglages().methode
+    reglages().methode = "2.0"
+    try:
+        t0 = time.perf_counter()
+        resultat = calculer_avec_v1(FournisseurFige(FIXTURES, "92026"), "Courbevoie")
+        return resultat, time.perf_counter() - t0
+    finally:
+        reglages().methode = ancienne
+
+
+def test_sc_004_changements_de_niveau_expliques():
+    resultat, _ = _avec_v1()
+    niveaux_1_2 = {p.id: p.groupe for p in _calcul("1.2").points}
+    assert all(p.niveau_v1 == niveaux_1_2[p.id] for p in resultat.points)
+    changes = [p for p in resultat.points if p.niveau_v1 != p.groupe]
+    assert changes and all(p.raison_changement for p in changes)
+    assert all(p.raison_changement is None for p in resultat.points if p.niveau_v1 == p.groupe)
+    bilan = resultat.bilan_changements
+    hors_diagonale = sum(n for g1, ligne in bilan.items() for g2, n in ligne.items() if g1 != g2)
+    assert hors_diagonale == len(changes)
+
+
+def test_sc_006_deux_generations_identiques():
+    from bitumap.score.comparaison import calculer_avec_v1
+
+    premier, _ = _avec_v1()
+    reglages().methode = "2.0"
+    try:
+        second = calculer_avec_v1(FournisseurFige(FIXTURES, "92026"), "Courbevoie")
+    finally:
+        reglages().methode = "1.2"
+
+    def empreinte(r):
+        return [
+            (p.id, p.rang, p.score, p.groupe, p.niveau_v1, p.raison_changement) for p in r.points
+        ]
+
+    assert empreinte(premier) == empreinte(second)
+
+
+def test_sc_005_duree_moins_du_double_de_la_1_2():
+    """Mesure consignée dans la PR : 2.0 avec la comparaison 1.2, contre 1.2 seule."""
+    import time
+
+    _, duree_v2 = _avec_v1()
+    t0 = time.perf_counter()
+    calculer_commune(FournisseurFige(FIXTURES, "92026"), "Courbevoie", methode="1.2")
+    duree_v1 = time.perf_counter() - t0
+    print(f"SC-005 : 1.2 {duree_v1:.1f} s ; 2.0 + comparaison {duree_v2:.1f} s")
+    assert duree_v2 < 2 * duree_v1

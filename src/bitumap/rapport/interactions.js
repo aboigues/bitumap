@@ -109,6 +109,12 @@
     remplirConstat(gabarit.querySelector(".f-constate"), id);
     texte(gabarit.querySelector(".f-sous"), p.type_libelle + " · " + p.identifiant);
     texte(gabarit.querySelector(".f-rang"), "Rang " + p.rang + " · " + p.groupe_libelle + " · score " + p.score);
+    // Méthode 2.0 : niveau en 1.2 et raison principale du changement (004 R6).
+    var changement = gabarit.querySelector(".f-changement");
+    if (changement && p.raison_changement) {
+      texte(changement, "v1 : " + p.niveau_v1_libelle + " — raison : " + p.raison_changement);
+      changement.hidden = false;
+    }
     var route = p.route.libelle + (p.route.numero ? " " + p.route.numero : "") +
       (p.route.gestionnaire ? " — gestionnaire : " + p.route.gestionnaire : "") +
       (p.route.statut === "a_verifier" ? " (à vérifier)" : "");
