@@ -106,3 +106,58 @@ def test_la_1_2_ignore_les_comptages():
     resultat = _calcul("1.2")
     assert all(p.facteur("poids_lourds") is None for p in resultat.points)
     assert not any("poids lourds" in p.nom for p in resultat.provenances)
+
+
+def test_chaleur_candidats_affiches_sans_effet():
+    """004 US2 : quatre indicateurs par point, non retenus (effet 1,0) ; été de référence."""
+    from bitumap.facteurs import chaleur
+
+    resultat = _calcul("2.0")
+    assert resultat.ete_reference == {
+        "annee": 2026,
+        "station": "75114001",
+        "station_nom": "PARIS-MONTSOURIS",
+        "jours_mesures": 92,
+        "jours_forte_chaleur": 39,
+        "jours_tres_forte_chaleur": 20,
+        "maximum_c": 40.6,
+        "temperature_ete": 2026,
+    }
+    for p in resultat.points:
+        assert p.facteur("chaleur") is None
+        facteurs = [p.facteur(nom) for nom in chaleur.CANDIDATS]
+        assert all(f is not None and f.effet == 1.0 for f in facteurs)
+    temperatures = [p.facteur(chaleur.TEMPERATURE).valeur for p in resultat.points]
+    assert None not in temperatures and max(temperatures) - min(temperatures) > 5
+    hors_ue = [p for p in resultat.provenances if p.hors_ue]
+    assert [p.nom.split(",")[0] for p in hors_ue] == ["USGS Landsat Collection 2 niveau 2"]
+    assert _calcul("1.2").ete_reference is None
+
+
+def _ecart_deciles(effets: list[float]) -> float:
+    """SC-003 : écart d'effet entre les 10 % de points les plus exposés et les 10 % les
+    moins exposés."""
+    tries = sorted(effets)
+    k = max(1, round(len(tries) * 0.1))
+    return (sum(tries[-k:]) / k) / (sum(tries[:k]) / k) - 1
+
+
+def test_sc_003_mesure_par_candidat():
+    """T029 : mesure consignée (research R4), pas encore bloquante. Les bornes de chaque
+    indicateur (×0,92 à ×1,08, celles de l'aléa) plafonnent l'écart à 17,4 % : le seuil de
+    SC-003 (trois fois l'écart de la v1) ne peut pas être atteint par un seul indicateur."""
+    from bitumap.facteurs import chaleur
+
+    v1 = _ecart_deciles([p.facteur("chaleur").effet for p in _calcul("1.2").points])
+    mesures = {
+        nom: _ecart_deciles(
+            [p.facteur(nom).details.get("effet_si_retenu", 1.0) for p in _calcul("2.0").points]
+        )
+        for nom in chaleur.CANDIDATS
+    }
+    assert v1 == pytest.approx(0.1254, abs=1e-3)
+    assert mesures[chaleur.ALEA] == pytest.approx(v1)
+    assert mesures[chaleur.TEMPERATURE] == pytest.approx(0.1356, abs=1e-3)
+    assert mesures[chaleur.MINERALISATION] == pytest.approx(0.0394, abs=1e-3)
+    assert mesures[chaleur.CONTEXTE] == pytest.approx(0.1739, abs=1e-3)
+    assert all(m <= chaleur.EFFET_MAX / chaleur.EFFET_MIN - 1 + 1e-9 for m in mesures.values())

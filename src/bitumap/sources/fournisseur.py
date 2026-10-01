@@ -27,9 +27,11 @@ from bitumap.sources import (
     comptages,
     idfm,
     lidar,
+    meteo,
     ortho,
     osm,
     panoramax,
+    temperature,
 )
 from bitumap.sources.base import Hauteurs, Provenance, Raster, client_http
 from bitumap.territoire import api_geo
@@ -84,6 +86,12 @@ class FournisseurEnLigne:
 
     def comptages_pl(self, emprise):
         return comptages.acquerir(emprise, self._client)
+
+    def temperature_surface(self, emprise, ete):
+        return temperature.temperature_surface(emprise, ete, self._client)
+
+    def meteo(self, station, ete):
+        return meteo.meteo(station, ete, self._client)
 
     def offre(self):
         maj = idfm.date_mise_a_jour(self._client)
@@ -239,7 +247,8 @@ class Enregistreur:
             )
             _ecrire_json(
                 self._d / "temperature.json.gz",
-                {"provenance": _prov_dict(p), "crs": raster.crs, "ete": raster.ete},
+                # « demande » : été demandé ; « ete » : été lu (le précédent si repli).
+                {"provenance": _prov_dict(p), "crs": raster.crs, "ete": raster.ete, "demande": ete},
             )
         return r
 
@@ -375,7 +384,7 @@ class FournisseurFige:
         if not meta.exists():
             return None
         m = _lire_json(meta)
-        if m["ete"] != ete:
+        if m.get("demande", m["ete"]) != ete:
             return None
         t = np.load(self._d / "temperature.npz")
         transform = tuple(float(c) for c in t["transform"])

@@ -66,7 +66,6 @@ OpenTofu (planification et `timeout` du job).
 | `bitumap-s3` (clé d'accès de l'application d'exécution) | API, job |
 | `bitumap-tem` (clé d'envoi d'e-mails) | API, job |
 | `bitumap-genai` (clé Generative APIs) | job |
-| `bitumap-usgs-utilisateur`, `bitumap-usgs-jeton` (compte EROS de l'USGS et jeton d'application M2M : `BITUMAP_USGS_UTILISATEUR`, `BITUMAP_USGS_JETON`) | job, méthode 2.0 (température de surface, 004 R3) ; en local, `.env` ; aucun secret GitHub (la CI lit les fixtures) |
 
 Chaque composant tourne avec **sa propre** application IAM limitée à ce dont il a besoin
 (`bitumap-api` : base, lecture des rapports, e-mail ; `bitumap-job` : base, écriture rapports

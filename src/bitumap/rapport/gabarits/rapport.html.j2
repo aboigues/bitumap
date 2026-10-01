@@ -75,6 +75,13 @@ a{color:inherit;text-decoration-color:var(--accent)}
   {% endfor %}
   {% for type, n in synthese.types.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ type }}</span></div>{% endfor %}
 </section>
+{% if synthese.ete_reference is defined %}{% set ete = synthese.ete_reference %}
+<section class="chiffres" aria-label="Été de référence">
+  <div class="chiffre"><b>{{ ete.annee }}</b><span>été de référence</span></div>
+  {% if ete.jours_forte_chaleur is defined %}<div class="chiffre"><b>{{ ete.jours_forte_chaleur }}</b><span>jours à 30 °C ou plus (dont {{ ete.jours_tres_forte_chaleur }} à 35 °C ou plus), station {{ ete.station_nom|title }}</span></div>{% endif %}
+  {% if ete.temperature_ete is defined and ete.temperature_ete != ete.annee %}<div class="chiffre"><b>{{ ete.temperature_ete }}</b><span>été de la température de surface (aucune image exploitable en {{ ete.annee }})</span></div>{% endif %}
+</section>
+{% endif %}
 <section class="chiffres" aria-label="Types de route">
   {% for route, n in synthese.routes.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ route }}</span></div>{% endfor %}
   {% if synthese.couverture_poids_lourds is defined %}<div class="chiffre"><b>{{ synthese.couverture_poids_lourds }} %</b><span>des points couverts par un comptage de poids lourds</span></div>{% endif %}
@@ -142,7 +149,10 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Site : pente ≥ 3 % (±30 m le long de la voie) ; béton ou pavés</td><td>jusqu'à ×1,32 ; ×0,5</td></tr>
     <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
       et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>
-    <tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>
+    {% if synthese.ete_reference is defined %}<tr><td>Chaleur : aléa de jour (0–16), température de surface de l'été (Landsat), surfaces minérales
+      à moins de 50 m, contexte urbain ; chaque indicateur n'agit qu'une fois son apport démontré sur les relevés de terrain
+      (« non retenu » sinon)</td><td>×0,92 à ×1,08 par indicateur retenu</td></tr>
+    {% else %}<tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>{% endif %}
     {% if synthese.couverture_poids_lourds is defined %}<tr><td>Poids lourds hors bus du sens le plus chargé : comptage publié de la voie
       (Hauts-de-Seine, réseau national), bus du sens retirés ; sans comptage : non évalué</td><td>×1,0 (50 PL/j) à ×1,25 (2000 PL/j)</td></tr>{% endif %}
     <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
@@ -152,7 +162,9 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <li>Le score classe des points ; il ne mesure pas l'état de la chaussée.</li>
     <li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
       (à approfondir).</li>
-    <li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>
+    {% if synthese.ete_reference is defined %}<li>Chaleur : indicateurs calculés et affichés, sans effet sur le score tant que leur apport
+      n'est pas démontré ; température de surface à 30 m près (médiane des images dégagées de juin à août).</li>
+    {% else %}<li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>{% endif %}
     {% if synthese.couverture_poids_lourds is defined %}<li>Poids lourds : comptés seulement là où un comptage est publié
       (voirie départementale des Hauts-de-Seine, autoroutes concédées) ; ailleurs, non évalué.</li>
     <li>Lignes sans arrêt dans la commune non comptées.</li>
@@ -165,7 +177,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
 <section class="panneau"><h2>Sources</h2>
   <table><thead><tr><th>Source</th><th>Licence</th><th>Date d'extraction</th></tr></thead><tbody>
   {% for s in sources %}<tr><td><a href="{{ s.url }}" rel="noopener noreferrer">{{ s.nom }}</a></td>
-    <td>{{ s.licence }}</td><td>{{ s.date_extraction }}</td></tr>{% endfor %}
+    <td>{{ s.licence }}{% if s.hors_ue %} · <strong>service hors UE</strong> (seule l'emprise de la commune est transmise){% endif %}</td><td>{{ s.date_extraction }}</td></tr>{% endfor %}
   </tbody></table>
   {% if ia %}<p class="petit">Âge de l'enrobé : modèle {{ ia.modele }} (Scaleway Generative APIs, hébergé en France),
     prompt {{ ia.version_prompt }} ; {{ ia.appels }} analyse(s), {{ ia.succes_cache }} depuis le cache.</p>{% endif %}
