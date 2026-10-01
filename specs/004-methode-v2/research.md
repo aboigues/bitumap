@@ -192,6 +192,12 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
     points couverts à ×1,0 (plus de bus que de poids lourds comptés au-delà de 50) ; 22 points
     sur 154 changent de priorité (7 entrent en P1, 7 en sortent).
   - **Pas de cache** : comme le LiDAR, relu à chaque rapport.
+  - **Catalogue des sources** (revue de la PR #33) : les sources sont déclarées dans
+    `src/bitumap/sources/comptages.toml` (jeu, champs par sens ou total des deux sens,
+    licence), lues par un lecteur générique par plateforme (`opendatasoft`,
+    `datagouv_shapefile`). Un département qui publie sur une de ces plateformes s'ajoute par
+    une entrée du catalogue, sans code ; le fichier fait partie de la méthode (principe IV),
+    toute modification passe par une PR.
 
 ## R6. Explication des changements de niveau
 

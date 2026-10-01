@@ -141,7 +141,8 @@ cache (comme le LiDAR : une requête pour le 92, une archive d'environ 2 Mo pour
 national) ; réseau national limité au **dernier millésime publié** (autoroutes concédées) ;
 **bus du sens retirés** des poids lourds comptés ; effet linéaire en logarithme des PL/jour du
 sens le plus chargé, de ×1,0 (50) à ×1,25 (2000) ; `normaliser_nom` déplacé de `calcul.py`
-dans `facteurs/voirie.py` (import circulaire évité).
+dans `facteurs/voirie.py` (import circulaire évité) ; sources déclarées dans le catalogue
+`sources/comptages.toml` et lues par un lecteur générique par plateforme (revue de la PR #33).
 
 **Checkpoint**: US1 à US3 fonctionnent en 2.0.
 

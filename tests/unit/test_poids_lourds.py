@@ -8,14 +8,13 @@ from shapely.geometry import LineString, Point
 
 from bitumap.facteurs import poids_lourds
 from bitumap.score.methode import EFFET_PL_MAX, PL_EFFET_MAX, PL_EFFET_NUL
-from bitumap.sources import comptages
 
 
 def _comptages(*sections) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(
         [
             {
-                "source": comptages.SOURCE_92,
+                "source": "Hauts-de-Seine",
                 "troncon": f"{numeros}, {libelle}",
                 "numeros": numeros,
                 "libelle": libelle,
@@ -86,7 +85,7 @@ def test_bus_du_sens_retires_et_details():
     assert f.valeur == 188 and f.statut == "evalue"
     assert f.effet == pytest.approx(poids_lourds.effet(188.0))
     assert f.details == {
-        "source": comptages.SOURCE_92,
+        "source": "Hauts-de-Seine",
         "annee": 2021,
         "troncon": "D908, 33 boulevard de Verdun",
         "pl_comptes": 474,

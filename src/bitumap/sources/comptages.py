@@ -1,33 +1,33 @@
 """Comptages de poids lourds publiés en données ouvertes, méthode 2.0 (004 R5, US3).
 
-- **Hauts-de-Seine** : comptages routiers linéaires de la voirie départementale
-  (data.iledefrance.fr, Licence Ouverte) ; trafic moyen journalier et % de poids lourds
-  **par sens** ; comptages de 2009 à 2023, le % de poids lourds seulement depuis 2014.
-- **Réseau routier national** : trafic moyen journalier annuel (data.gouv.fr, Licence
-  Ouverte), **dernier millésime publié seulement**. Depuis 2022, ce millésime ne couvre que
-  les autoroutes concédées ; le % de poids lourds du réseau non concédé d'Île-de-France de
-  2019, dernier publié, est fautif (multiplié par 10) : ce réseau reste « non évalué »
-  (décision du mainteneur, 2026-10-01). Trafic des deux sens confondus : chaque sens en
-  porte la moitié.
+Les sources sont déclarées dans le catalogue versionné ``comptages.toml`` (jeu, champs,
+licence) et lues par un **lecteur générique par plateforme** :
 
-Aucun autre département d'Île-de-France ne publie de comptage exploitable (inventaire T003) :
-ses points restent « non évalués ».
+- ``opendatasoft`` : API Explore v2.1 (portails de la région et des départements), sections
+  qui coupent l'emprise ;
+- ``datagouv_shapefile`` : archive shapefile d'un jeu de data.gouv.fr, **dernier millésime
+  publié** (réseau routier national : depuis 2022, autoroutes concédées seulement ; le
+  réseau non concédé reste « non évalué », LL-018).
 
-Sortie commune, en Lambert 93 : ``source``, ``troncon`` (libellé affiché), ``numeros``
-(numéros de route normalisés séparés par « ; »), ``libelle`` (adresse du compteur, pour le
-rattachement par nom), ``pl_sens`` (poids lourds par jour du sens le plus chargé),
-``annee`` (année du comptage). Garde-fou : un % de poids lourds hors de ]0, 100] écarte la
-section.
+Ajouter un département qui publie sur une de ces plateformes = ajouter une entrée au
+catalogue. Poids lourds par sens : trafic du sens × % de poids lourds du sens, sens le plus
+chargé parmi les sens complets ; quand seul le total des deux sens est publié, chaque sens en
+porte la moitié. Garde-fou : un % de poids lourds hors de ]0, 100] écarte la valeur.
 
-Pas de cache : comme le LiDAR, les comptages sont relus à chaque rapport (une requête pour
-le 92, une archive d'environ 2 Mo pour le réseau national).
+Sortie commune, en Lambert 93 : ``source`` (étiquette), ``troncon`` (libellé affiché),
+``numeros`` (numéros de route normalisés séparés par « ; »), ``libelle`` (adresse du
+compteur, pour le rattachement par nom), ``pl_sens``, ``annee``.
+
+Pas de cache : comme le LiDAR, les comptages sont relus à chaque rapport.
 """
 
 from __future__ import annotations
 
 import re
 import tempfile
+import tomllib
 from datetime import date
+from importlib import resources
 from pathlib import Path
 
 import geopandas as gpd
@@ -39,18 +39,18 @@ from bitumap.facteurs.voirie import normaliser_numero
 from bitumap.sources.base import Extraction, Provenance, SourceIndisponible, obtenir
 
 L93 = "EPSG:2154"
-LICENCE = "Licence Ouverte (Etalab)"
 COLONNES = ["source", "troncon", "numeros", "libelle", "pl_sens", "annee"]
+URL_DATAGOUV = "https://www.data.gouv.fr/api/1/datasets/{jeu}/"
 
-JEU_92 = "comptages-routiers-lineaires-dans-les-hauts-de-seine"
-URL_92 = f"https://data.iledefrance.fr/api/explore/v2.1/catalog/datasets/{JEU_92}/exports/geojson"
-PAGE_92 = f"https://data.iledefrance.fr/explore/dataset/{JEU_92}/"
-SOURCE_92 = "Hauts-de-Seine"
 
-JEU_RRN = "trafic-moyen-journalier-annuel-sur-le-reseau-routier-national"
-URL_RRN = f"https://www.data.gouv.fr/api/1/datasets/{JEU_RRN}/"
-PAGE_RRN = f"https://www.data.gouv.fr/datasets/{JEU_RRN}"
-SOURCE_RRN = "Réseau routier national"
+def catalogue() -> list[dict]:
+    """Sources déclarées dans ``comptages.toml``, dans l'ordre du fichier."""
+    texte = (resources.files("bitumap.sources") / "comptages.toml").read_text("utf-8")
+    sources = tomllib.loads(texte)["source"]
+    for s in sources:
+        if s["type"] not in LECTEURS:
+            raise ValueError(f"comptages.toml : type inconnu pour {s['id']} : {s['type']}")
+    return sources
 
 
 def vide() -> gpd.GeoDataFrame:
@@ -79,22 +79,89 @@ def _nombre(valeur) -> float | None:
         return None
 
 
-def _part_valide(pourcentage: float | None) -> bool:
-    return pourcentage is not None and 0 < pourcentage <= 100
+def _noms(champ) -> list[str]:
+    return [champ] if isinstance(champ, str) else list(champ)
 
 
-def pl_par_sens_92(proprietes: dict) -> float | None:
-    """Poids lourds par jour du sens le plus chargé, parmi les sens où trafic et % de poids
-    lourds sont publiés ; ``None`` si aucun sens n'est complet."""
-    sens = []
-    for s in ("s1", "s2"):
-        tmja, part = (
-            _nombre(proprietes.get(f"tmja_{s}")),
-            _nombre(proprietes.get(f"pourcentage_pl_{s}")),
+def _valeur(proprietes: dict, champ):
+    """Valeur du premier nom de champ présent, sans tenir compte de la casse."""
+    if champ is None:
+        return None
+    par_nom = {k.lower(): v for k, v in proprietes.items()}
+    for nom in _noms(champ):
+        if nom.lower() in par_nom:
+            return par_nom[nom.lower()]
+    return None
+
+
+def _pl(tmja, part, diviseur: int = 1) -> float | None:
+    tmja, part = _nombre(tmja), _nombre(part)
+    if not tmja or tmja <= 0 or part is None or not 0 < part <= 100:
+        return None
+    return tmja * part / 100 / diviseur
+
+
+def pl_par_sens(proprietes: dict, champs: dict) -> float | None:
+    """Poids lourds par jour du sens le plus chargé ; ``None`` si aucun sens n'est complet."""
+    if "sens" in champs:
+        valeurs = [
+            _pl(_valeur(proprietes, s["tmja"]), _valeur(proprietes, s["pct_pl"]))
+            for s in champs["sens"]
+        ]
+    else:
+        valeurs = [
+            _pl(
+                _valeur(proprietes, champs["tmja_deux_sens"]),
+                _valeur(proprietes, champs["pct_pl"]),
+                diviseur=2,
+            )
+        ]
+    valeurs = [v for v in valeurs if v is not None]
+    return max(valeurs) if valeurs else None
+
+
+def _troncon(numero_brut: str, libelle: str) -> str:
+    """« RD7, 23 quai… » ; « A0014 » → « A14 » (zéros de remplissage retirés)."""
+    numero = re.sub(r"\b([A-Z]+)0+(?=\d)", r"\1", numero_brut)
+    return f"{numero}, {libelle}" if libelle and libelle != numero_brut else numero
+
+
+def sections(source: dict, enregistrements, crs: str) -> gpd.GeoDataFrame:
+    """Normalise des enregistrements ``(propriétés, géométrie shapely)`` d'une source."""
+    champs = source["champs"]
+    lignes, geometries = [], []
+    for proprietes, geometrie in enregistrements:
+        pl = pl_par_sens(proprietes, champs)
+        annee = _nombre(_valeur(proprietes, champs["annee"]))
+        if pl is None or annee is None or geometrie is None or geometrie.is_empty:
+            continue
+        brut = str(_valeur(proprietes, champs["numero"]) or "")
+        libelle = str(_valeur(proprietes, champs.get("libelle")) or "")
+        lignes.append(
+            {
+                "source": source["etiquette"],
+                "troncon": _troncon(brut, libelle),
+                "numeros": ";".join(numeros(brut)),
+                "libelle": libelle,
+                "pl_sens": round(pl, 1),
+                "annee": int(annee),
+            }
         )
-        if tmja and tmja > 0 and _part_valide(part):
-            sens.append(tmja * part / 100)
-    return max(sens) if sens else None
+        geometries.append(geometrie)
+    if not lignes:
+        return vide()
+    return gpd.GeoDataFrame(lignes, geometry=geometries, crs=crs).to_crs(L93)
+
+
+def _provenance(source: dict, millesime: int | None = None) -> Provenance:
+    nom = source["nom"].format(millesime=millesime if millesime is not None else "")
+    return Provenance(
+        nom.replace(" ()", ""),
+        source["licence"],
+        source["page"],
+        date.today(),
+        source["portee"],
+    )
 
 
 def _polygone(emprise: tuple[float, float, float, float]) -> str:
@@ -103,131 +170,72 @@ def _polygone(emprise: tuple[float, float, float, float]) -> str:
     return "POLYGON((" + ", ".join(f"{x:.6f} {y:.6f}" for x, y in coins) + "))"
 
 
-def hauts_de_seine(emprise, client: httpx.Client) -> Extraction:
+def url_opendatasoft(source: dict) -> str:
+    return f"{source['portail']}/api/explore/v2.1/catalog/datasets/{source['jeu']}/exports/geojson"
+
+
+def lire_opendatasoft(source: dict, emprise, client: httpx.Client) -> Extraction:
+    """Sections d'un jeu Opendatasoft qui coupent l'emprise (degrés)."""
+    geometrie = source.get("geometrie", "geo_shape")
     reponse = obtenir(
         client,
-        SOURCE_92,
-        URL_92,
-        params={
-            "where": f"intersects(geo_shape, geom'{_polygone(emprise)}')",
-            "select": "nom_voie,adresse_compteur,annee_comptage,tmja_s1,tmja_s2,"
-            "pourcentage_pl_s1,pourcentage_pl_s2,geo_shape",
-        },
+        source["etiquette"],
+        url_opendatasoft(source),
+        params={"where": f"intersects({geometrie}, geom'{_polygone(emprise)}')"},
     )
-    lignes, geometries = [], []
-    for entite in reponse.json().get("features", []):
-        p = entite.get("properties") or {}
-        pl = pl_par_sens_92(p)
-        annee = _nombre(p.get("annee_comptage"))
-        if pl is None or annee is None or not entite.get("geometry"):
-            continue
-        voie, adresse = str(p.get("nom_voie") or ""), str(p.get("adresse_compteur") or "")
-        lignes.append(
-            {
-                "source": SOURCE_92,
-                "troncon": f"{voie}, {adresse}" if adresse and adresse != voie else voie,
-                "numeros": ";".join(numeros(voie)),
-                "libelle": adresse,
-                "pl_sens": round(pl, 1),
-                "annee": int(annee),
-            }
-        )
-        geometries.append(entite["geometry"])
-    donnees = (
-        gpd.GeoDataFrame(
-            lignes,
-            geometry=[shape(g) for g in geometries],
-            crs="EPSG:4326",
-        ).to_crs(L93)
-        if lignes
-        else vide()
-    )
-    return Extraction(
-        Provenance(
-            "Département des Hauts-de-Seine : comptages routiers (poids lourds)",
-            LICENCE,
-            PAGE_92,
-            date.today(),
-            "communale",
-        ),
-        donnees,
-    )
+    enregistrements = [
+        (e.get("properties") or {}, shape(e["geometry"]) if e.get("geometry") else None)
+        for e in reponse.json().get("features", [])
+    ]
+    return Extraction(_provenance(source), sections(source, enregistrements, "EPSG:4326"))
 
 
-def _dernier_shapefile(client: httpx.Client) -> tuple[int, str]:
+def _dernier_shapefile(source: dict, client: httpx.Client) -> tuple[int, str]:
     """Année et URL de l'archive shapefile du dernier millésime publié."""
-    jeu = obtenir(client, SOURCE_RRN, URL_RRN).json()
+    jeu = obtenir(client, source["etiquette"], URL_DATAGOUV.format(jeu=source["jeu"])).json()
     archives = []
     for r in jeu.get("resources", []):
-        annee = re.search(r"(20\d\d)", str(r.get("title", "")))
-        if annee and "shp" in str(r.get("title", "")).lower() + str(r.get("url", "")).lower():
+        titre = str(r.get("title", ""))
+        annee = re.search(r"(20\d\d)", titre)
+        if annee and "shp" in titre.lower() + str(r.get("url", "")).lower():
             archives.append((int(annee.group(1)), str(r["url"])))
     if not archives:
-        raise SourceIndisponible(SOURCE_RRN, "aucune archive shapefile")
+        raise SourceIndisponible(source["etiquette"], "aucune archive shapefile")
     return max(archives)
 
 
-def _colonne(gdf: gpd.GeoDataFrame, *noms: str) -> pd.Series:
-    """Colonne par nom, sans tenir compte de la casse (les millésimes varient)."""
-    par_nom = {c.lower(): c for c in gdf.columns}
-    for nom in noms:
-        if nom in par_nom:
-            return gdf[par_nom[nom]]
-    raise SourceIndisponible(SOURCE_RRN, f"colonne absente : {noms[0]}")
-
-
-def lire_reseau_national(chemin: Path, emprise_l93) -> gpd.GeoDataFrame:
-    """Sections d'une archive shapefile du réseau national, dans l'emprise (Lambert 93)."""
+def lire_archive(source: dict, chemin: Path, emprise_l93) -> gpd.GeoDataFrame:
+    """Sections d'une archive shapefile en Lambert 93, dans l'emprise."""
     gdf = gpd.read_file(chemin, bbox=emprise_l93)
     if gdf.empty:
         return vide()
-    # Lambert 93 (IGNF:LAMB93 dans les fichiers récents, aucune projection en 2019).
+    # Lambert 93 (IGNF:LAMB93 dans les fichiers récents du réseau national, sans projection
+    # en 2019).
     gdf = gdf.set_crs(L93, allow_override=True)
-    tmja = pd.to_numeric(_colonne(gdf, "tmja"), errors="coerce")
-    part = pd.to_numeric(_colonne(gdf, "pctpl", "ratio_pl", "ratiopl"), errors="coerce")
-    annee = pd.to_numeric(_colonne(gdf, "anneemesur", "anneemesuretrafic"), errors="coerce")
-    garde = (tmja > 0) & (part > 0) & (part <= 100) & annee.notna()
-    route = _colonne(gdf, "route")[garde]
-    sortie = gpd.GeoDataFrame(
-        {
-            "source": SOURCE_RRN,
-            "troncon": route.map(lambda r: "".join(numeros(r)) or str(r)),
-            "numeros": route.map(lambda r: ";".join(numeros(r))),
-            "libelle": "",
-            "pl_sens": (tmja[garde] * part[garde] / 100 / 2).round(1),
-            "annee": annee[garde].astype(int),
-        },
-        geometry=gdf.geometry[garde],
-        crs=L93,
-    )
-    return sortie.reset_index(drop=True) if not sortie.empty else vide()
+    proprietes = gdf.drop(columns="geometry").to_dict("records")
+    return sections(source, zip(proprietes, gdf.geometry, strict=True), L93)
 
 
-def reseau_national(emprise, client: httpx.Client) -> Extraction:
-    annee, url = _dernier_shapefile(client)
-    emprise_l93 = tuple(
-        gpd.GeoSeries.from_xy(emprise[::2], emprise[1::2], crs="EPSG:4326").to_crs(L93).total_bounds
-    )
+def lire_datagouv_shapefile(source: dict, emprise, client: httpx.Client) -> Extraction:
+    if source.get("millesime", "dernier") != "dernier":
+        raise ValueError(f"comptages.toml : millésime non pris en charge pour {source['id']}")
+    annee, url = _dernier_shapefile(source, client)
+    coins = gpd.GeoSeries.from_xy(emprise[::2], emprise[1::2], crs="EPSG:4326").to_crs(L93)
     with tempfile.TemporaryDirectory() as dossier:
-        archive = Path(dossier) / "rrn.zip"
-        archive.write_bytes(obtenir(client, SOURCE_RRN, url).content)
-        donnees = lire_reseau_national(archive, emprise_l93)
-    return Extraction(
-        Provenance(
-            f"Ministère chargé des transports : trafic moyen journalier annuel du réseau "
-            f"routier national ({annee})",
-            LICENCE,
-            PAGE_RRN,
-            date.today(),
-            "regionale",
-        ),
-        donnees,
-    )
+        archive = Path(dossier) / "comptages.zip"
+        archive.write_bytes(obtenir(client, source["etiquette"], url).content)
+        donnees = lire_archive(source, archive, tuple(coins.total_bounds))
+    return Extraction(_provenance(source, annee), donnees)
 
 
-def acquerir(emprise, client: httpx.Client) -> tuple[list[Provenance], gpd.GeoDataFrame]:
-    """Comptages de toutes les sources retenues, dans l'emprise (degrés)."""
-    extractions = [hauts_de_seine(emprise, client), reseau_national(emprise, client)]
+LECTEURS = {"opendatasoft": lire_opendatasoft, "datagouv_shapefile": lire_datagouv_shapefile}
+
+
+def acquerir(
+    emprise, client: httpx.Client, sources: list[dict] | None = None
+) -> tuple[list[Provenance], gpd.GeoDataFrame]:
+    """Comptages de toutes les sources du catalogue, dans l'emprise (degrés)."""
+    extractions = [LECTEURS[s["type"]](s, emprise, client) for s in (sources or catalogue())]
     morceaux = [e.donnees for e in extractions if not e.donnees.empty]
     donnees = (
         gpd.GeoDataFrame(pd.concat(morceaux, ignore_index=True), crs=L93) if morceaux else vide()

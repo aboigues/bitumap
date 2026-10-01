@@ -1,0 +1,62 @@
+# Catalogue des comptages de poids lourds publiés en données ouvertes (méthode 2.0, 004 R5).
+#
+# Ajouter une source = ajouter une entrée [[source]], sans code, si sa plateforme a déjà un
+# lecteur (`type`) : « opendatasoft » (API Explore v2.1, portails des départements et de la
+# région) ou « datagouv_shapefile » (archive shapefile d'un jeu de data.gouv.fr). Le fichier
+# fait partie de la méthode (principe IV) : toute modification passe par une PR.
+#
+# Clés communes :
+#   id         identifiant stable de la source
+#   etiquette  nom court affiché dans la fiche d'un point
+#   nom        nom affiché dans la section « Sources » ({millesime} remplacé si connu)
+#   licence, page  licence et page publique du jeu (section « Sources »)
+#   portee     « communale » (extraction par emprise) ou « regionale »
+#   [source.champs]  noms des champs du jeu :
+#     numero   numéro(s) de route (« RD7 », « A14, RN1014 », « N0013 »)
+#     libelle  adresse ou nom du compteur (rattachement par nom de voie), facultatif
+#     annee    année du comptage
+#     sens     liste des sens : { tmja = trafic du sens, pct_pl = % de poids lourds du sens }
+#     tmja_deux_sens, pct_pl  à la place de `sens` quand seul le total est publié : chaque
+#              sens en porte la moitié ; plusieurs noms possibles (les millésimes varient)
+#
+# Sources écartées (inventaire T003, 2026-09-30) : Paris (pas de distinction des poids
+# lourds), 77, 91, 95 (PDF seulement), 78, 93, 94 (aucun jeu). Réseau national non concédé :
+# % de poids lourds de 2019 fautif (LL-018).
+
+[[source]]
+id = "cd92"
+etiquette = "Hauts-de-Seine"
+nom = "Département des Hauts-de-Seine : comptages routiers (poids lourds)"
+type = "opendatasoft"
+portail = "https://data.iledefrance.fr"
+jeu = "comptages-routiers-lineaires-dans-les-hauts-de-seine"
+geometrie = "geo_shape"
+licence = "Licence Ouverte (Etalab)"
+page = "https://data.iledefrance.fr/explore/dataset/comptages-routiers-lineaires-dans-les-hauts-de-seine/"
+portee = "communale"
+
+[source.champs]
+numero = "nom_voie"
+libelle = "adresse_compteur"
+annee = "annee_comptage"
+sens = [
+  { tmja = "tmja_s1", pct_pl = "pourcentage_pl_s1" },
+  { tmja = "tmja_s2", pct_pl = "pourcentage_pl_s2" },
+]
+
+[[source]]
+id = "rrn"
+etiquette = "Réseau routier national"
+nom = "Ministère chargé des transports : trafic moyen journalier annuel du réseau routier national ({millesime})"
+type = "datagouv_shapefile"
+jeu = "trafic-moyen-journalier-annuel-sur-le-reseau-routier-national"
+millesime = "dernier"
+licence = "Licence Ouverte (Etalab)"
+page = "https://www.data.gouv.fr/datasets/trafic-moyen-journalier-annuel-sur-le-reseau-routier-national"
+portee = "regionale"
+
+[source.champs]
+numero = "route"
+annee = ["anneemesur", "anneemesuretrafic"]
+tmja_deux_sens = ["tmja"]
+pct_pl = ["pctpl", "ratio_pl", "ratiopl"]
