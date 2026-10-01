@@ -211,13 +211,18 @@ porte lui-même la réfection l'annule (relevé daté de l'année ≥ travaux).
 
 ## Phase 7: Polish & sujets transverses
 
-- [ ] T041 [P] Rédiger l'entrée **2.0** de `docs/methode/CHANGELOG.md` (FR-011) : facteurs, bornes, sources, repli, limites connues, source hors UE ; section « Indicateurs de chaleur » : climatiseurs **écartés** dès la 2.0 (couverture des DPE, research R4, décision du mainteneur du 2026-09-30, à réexaminer plus tard), les autres à compléter après validation (retenus et écartés, avec la raison)
-- [ ] T042 [P] Mettre à jour `specs/002-on-demand-report/contracts/report-bundle.md` (champs de data-model 004 : `details`, `niveau_v1`, `raison_changement`, `ete_reference`, `couverture_poids_lourds`, `bilan_changements`) et le `README.md` (section « Méthode de score » : la 2.0 en préparation derrière un réglage ; sources ajoutées ; feuille de route 004 en cours)
-- [ ] T043 [P] Préparer pour le mainteneur le texte de l'**amendement MINEUR du principe III** (liste des sources : IGN LiDAR HD, USGS hors UE déclaré, Météo-France, comptages départementaux et nationaux) dans `specs/004-methode-v2/amendement-principe-III.md` ; la modification de `.specify/memory/constitution.md` reste une PR humaine (CODEOWNERS)
-- [ ] T044 Revue de sécurité de la branche (`/security-review`) : appels réseau du job (HTTPS, délais, taille bornée des téléchargements, aucune URL construite depuis une saisie), aucun secret ajouté, données mises en cache dans le bucket privé ; corriger les constats
-- [ ] T045 Exécuter le quickstart § 2 et § 3 sur fixtures ; `uv run pytest` complet ; `ruff check` et `ruff format --check` ; consigner la durée v2 / 1.2 (SC-005) dans la description de la PR
+- [X] T041 [P] Rédiger l'entrée **2.0** de `docs/methode/CHANGELOG.md` (FR-011) : facteurs, bornes, sources, repli, limites connues, source hors UE ; section « Indicateurs de chaleur » : climatiseurs **écartés** dès la 2.0 (couverture des DPE, research R4, décision du mainteneur du 2026-09-30, à réexaminer plus tard), les autres à compléter après validation (retenus et écartés, avec la raison)
+- [X] T042 [P] Mettre à jour `specs/002-on-demand-report/contracts/report-bundle.md` (champs de data-model 004 : `details`, `niveau_v1`, `raison_changement`, `ete_reference`, `couverture_poids_lourds`, `bilan_changements`) et le `README.md` (section « Méthode de score » : la 2.0 en préparation derrière un réglage ; sources ajoutées ; feuille de route 004 en cours)
+- [X] T043 [P] Préparer pour le mainteneur le texte de l'**amendement MINEUR du principe III** (liste des sources : IGN LiDAR HD, USGS hors UE déclaré, Météo-France, comptages départementaux et nationaux) dans `specs/004-methode-v2/amendement-principe-III.md` ; la modification de `.specify/memory/constitution.md` reste une PR humaine (CODEOWNERS)
+- [X] T044 Revue de sécurité de la branche (`/security-review`) : appels réseau du job (HTTPS, délais, taille bornée des téléchargements, aucune URL construite depuis une saisie), aucun secret ajouté, données mises en cache dans le bucket privé ; corriger les constats
+- [X] T045 Exécuter le quickstart § 2 et § 3 sur fixtures ; `uv run pytest` complet ; `ruff check` et `ruff format --check` ; consigner la durée v2 / 1.2 (SC-005) dans la description de la PR
 
 ---
+
+*Écarts au développement (2026-10-01)* : T044 fait par revue manuelle des appels réseau de
+004 (le diff de la branche ne contenait que de la documentation, le code étant déjà
+fusionné) ; trois constats corrigés (LL-019) : adresses tierces vérifiées, téléchargements
+bornés. Quickstart § 3 vérifié sur une copie des fixtures (repli LiDAR, température absente).
 
 ## Dependencies & Execution Order
 

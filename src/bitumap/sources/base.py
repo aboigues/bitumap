@@ -101,3 +101,47 @@ def obtenir(
             derniere = type(erreur).__name__
         time.sleep(min(2**essai, 8))
     raise SourceIndisponible(source, derniere)
+
+
+def verifier_url(source: str, url: str, hotes: tuple[str, ...]) -> str:
+    """URL lue dans la réponse d'un service tiers (lien de fichier, ressource d'un jeu) :
+    HTTPS et hôte attendu, sinon refusée. Évite d'aller chercher une adresse imposée par une
+    réponse altérée (fichier local, service interne)."""
+    try:
+        lue = httpx.URL(url)
+    except (httpx.InvalidURL, TypeError) as erreur:
+        raise SourceIndisponible(source, "URL invalide") from erreur
+    if lue.scheme != "https" or lue.host not in hotes:
+        raise SourceIndisponible(source, f"URL refusée ({lue.scheme}://{lue.host})")
+    return url
+
+
+def telecharger(
+    client: httpx.Client, source: str, url: str, max_octets: int, *, tentatives: int = 3
+) -> bytes:
+    """GET d'un fichier, taille bornée (annoncée et réelle), nouvelles tentatives comme
+    ``obtenir``."""
+    derniere = "inconnue"
+    for essai in range(tentatives):
+        try:
+            with client.stream("GET", url) as reponse:
+                if reponse.status_code >= 500 or reponse.status_code == 429:
+                    derniere = f"HTTP {reponse.status_code}"
+                else:
+                    reponse.raise_for_status()
+                    annonce = int(reponse.headers.get("content-length") or 0)
+                    if annonce > max_octets:
+                        raise SourceIndisponible(source, f"fichier trop lourd ({annonce} octets)")
+                    morceaux, total = [], 0
+                    for morceau in reponse.iter_bytes():
+                        total += len(morceau)
+                        if total > max_octets:
+                            raise SourceIndisponible(source, f"fichier trop lourd (> {max_octets})")
+                        morceaux.append(morceau)
+                    return b"".join(morceaux)
+        except httpx.HTTPStatusError as erreur:
+            raise SourceIndisponible(source, f"HTTP {erreur.response.status_code}") from erreur
+        except httpx.TransportError as erreur:
+            derniere = type(erreur).__name__
+        time.sleep(min(2**essai, 8))
+    raise SourceIndisponible(source, derniere)

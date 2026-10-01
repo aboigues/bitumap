@@ -229,6 +229,14 @@ entrée dans le journal des changements de méthode :
 | **Îlots de chaleur** | aléa de jour de l'Institut Paris Region (0–16) : **à approfondir** | à instruire dans le plan : croiser l'aléa IPR (édition 2022) avec la **température de surface** issue de l'imagerie satellite thermique, **mise à jour chaque été**, avec le contexte urbain (zones climatiques locales), la **minéralisation autour du point** (surface nue, sans végétation, mesurée sur l'orthophoto infrarouge récente) et la **chaleur rejetée par les climatiseurs**, dont le parc évolue vite (indicateur à trouver : diagnostics de performance énergétique de l'ADEME, usage des bâtiments), ainsi que l'**exposition aux canicules de l'année** ; puis mesurer ce que chaque indicateur apporte à la prédiction de l'orniérage avant de l'intégrer |
 | Âge de l'enrobé | lecture manuelle des orthophotos | LLM vision sur les points P1, marqué « à confirmer », coût plafonné |
 
+**Méthode 2.0 (004), en préparation** : développée derrière le réglage `BITUMAP_METHODE=2.0`
+(la 1.2 reste en service). Ensoleillement sur les hauteurs LiDAR HD avec la cause principale
+d'ombre ; indicateurs de chaleur calculés et affichés, sans effet tant que leur apport n'est
+pas démontré ; poids lourds hors bus sur les comptages publiés ; explication de chaque
+changement de niveau par rapport à la 1.2 ; classement corrigé par les réfections confirmées
+sur le terrain. Mise en service après validation sur les relevés de 003
+([journal des changements de méthode](docs/methode/CHANGELOG.md)).
+
 Le score **classe** des points à relever en priorité ; il ne mesure pas l'état de la
 chaussée. Le cas Courbevoie sert de test de non-régression : tout écart de rang doit être
 expliqué par un changement de méthode ou de source.
@@ -266,6 +274,9 @@ les fichiers OpenTofu, en prenant la dernière version stable au moment de l'ajo
 | [Institut Paris Region](https://data-iau-idf.opendata.arcgis.com/) | îlots de chaleur | Licence Ouverte |
 | [Panoramax](https://panoramax.fr/) | photos de rue récentes | Licence Ouverte Etalab 2.0 |
 | [API Géo](https://geo.api.gouv.fr) | code postal → communes | Licence Ouverte |
+| [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2) : USGS Landsat C2 niveau 2 | température de surface l'été (méthode 2.0) ; **service hors UE déclaré** | domaine public |
+| [Météo-France](https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-quotidiennes) : données quotidiennes | été de référence (méthode 2.0, 007) | Licence Ouverte 2.0 |
+| Comptages routiers : [Hauts-de-Seine](https://data.iledefrance.fr/explore/dataset/comptages-routiers-lineaires-dans-les-hauts-de-seine/), [réseau national](https://www.data.gouv.fr/datasets/trafic-moyen-journalier-annuel-sur-le-reseau-routier-national) | poids lourds hors bus (méthode 2.0) | Licence Ouverte |
 
 Chaque rapport liste pour chaque source : licence, URL et date d'extraction.
 
@@ -352,7 +363,7 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 | 001 | Socle de sécurité CI | ✅ livrée |
 | 002 | Formulaire (code postal, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire | 🟡 en cours : US1–US4 fusionnées, infrastructure à venir |
 | 003 | Relevés terrain : annotations et photos par commune et par point | 🟡 en cours : saisie, constaté, corrections et export fusionnés ; modération (RGPD) en revue |
-| 004 | Méthode v2 : ensoleillement LiDAR HD, îlots de chaleur approfondis, type de route intégré au score | ⬜ |
+| 004 | Méthode v2 : ensoleillement LiDAR HD, chaleur, poids lourds, explication des changements, réfections confirmées | 🟡 développée derrière un réglage ; mise en service après validation sur les relevés de 003 |
 | 005 | Échelle du département, export PDF | ⬜ |
 | 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture ou à pied ([#21](https://github.com/aboigues/bitumap/issues/21)) | ⬜ |
 | 007 | Projection opérationnelle : évolution, été après été (2027, 2028…), d'un indice de potentiel d'orniérage par point selon la fréquentation et trois scénarios d'été tirés d'étés observés (moyen, chaud type 2019/2022, très chaud type 2003/2026 ; données quotidiennes Météo-France), pour dire quels points traiter avant quel été ; indice relatif, calibrage en millimètres après les relevés terrain de 003 ([#20](https://github.com/aboigues/bitumap/issues/20)) | ⬜ |

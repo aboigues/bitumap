@@ -21,7 +21,13 @@ from datetime import date
 
 import httpx
 
-from bitumap.sources.base import Provenance, SourceIndisponible, obtenir
+from bitumap.sources.base import (
+    Provenance,
+    SourceIndisponible,
+    obtenir,
+    telecharger,
+    verifier_url,
+)
 
 JEU = "donnees-climatologiques-de-base-quotidiennes"
 URL_JEU = f"https://www.data.gouv.fr/api/1/datasets/{JEU}/"
@@ -30,6 +36,14 @@ LICENCE = "Licence Ouverte 2.0 (Météo-France)"
 SEUIL_FORTE_CHALEUR_C = 30.0
 SEUIL_TRES_FORTE_CHALEUR_C = 35.0
 MOIS_ETE = (6, 7, 8)
+# Fichiers du jeu : hébergement de Météo-France ou de data.gouv.fr seulement ; taille bornée
+# (fichier départemental 1950-2024 : environ 4 Mo compressés).
+HOTES_FICHIERS = (
+    "meteofrance.s3.sbg.io.cloud.ovh.net",
+    "static.data.gouv.fr",
+    "object.files.data.gouv.fr",
+)
+MAX_FICHIER_OCTETS = 50_000_000
 
 
 def provenance(station: str, nom: str, ete: int) -> Provenance:
@@ -87,7 +101,8 @@ def lire_ete(contenu: bytes, station: str, ete: int) -> tuple[str, list[dict]]:
 
 def meteo(station: str, ete: int, client: httpx.Client) -> tuple[Provenance, list[dict]] | None:
     """Jours de l'été à la station ; ``None`` si la station n'a aucun jour cet été-là."""
-    contenu = obtenir(client, "Météo-France", fichier(station, ete, client)).content
+    url = verifier_url("Météo-France", fichier(station, ete, client), HOTES_FICHIERS)
+    contenu = telecharger(client, "Météo-France", url, MAX_FICHIER_OCTETS)
     nom, jours = lire_ete(contenu, station, ete)
     if not jours:
         return None

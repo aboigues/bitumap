@@ -36,11 +36,22 @@ import pandas as pd
 from shapely.geometry import shape
 
 from bitumap.facteurs.voirie import normaliser_numero
-from bitumap.sources.base import Extraction, Provenance, SourceIndisponible, obtenir
+from bitumap.sources.base import (
+    Extraction,
+    Provenance,
+    SourceIndisponible,
+    obtenir,
+    telecharger,
+    verifier_url,
+)
 
 L93 = "EPSG:2154"
 COLONNES = ["source", "troncon", "numeros", "libelle", "pl_sens", "annee"]
 URL_DATAGOUV = "https://www.data.gouv.fr/api/1/datasets/{jeu}/"
+# Fichiers des jeux de data.gouv.fr : hôtes de stockage de la plateforme seulement ; taille
+# bornée (archive du réseau national : environ 2 Mo en 2024).
+HOTES_DATAGOUV = ("static.data.gouv.fr", "object.files.data.gouv.fr")
+MAX_ARCHIVE_OCTETS = 50_000_000
 
 
 def catalogue() -> list[dict]:
@@ -223,7 +234,8 @@ def lire_datagouv_shapefile(source: dict, emprise, client: httpx.Client) -> Extr
     coins = gpd.GeoSeries.from_xy(emprise[::2], emprise[1::2], crs="EPSG:4326").to_crs(L93)
     with tempfile.TemporaryDirectory() as dossier:
         archive = Path(dossier) / "comptages.zip"
-        archive.write_bytes(obtenir(client, source["etiquette"], url).content)
+        verifier_url(source["etiquette"], url, HOTES_DATAGOUV)
+        archive.write_bytes(telecharger(client, source["etiquette"], url, MAX_ARCHIVE_OCTETS))
         donnees = lire_archive(source, archive, tuple(coins.total_bounds))
     return Extraction(_provenance(source, annee), donnees)
 

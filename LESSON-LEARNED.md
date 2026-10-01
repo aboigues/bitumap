@@ -33,6 +33,32 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-019 — Liens de fichiers tiers suivis sans contrôle (2026-10-01) — Close
+
+- **Contexte** : revue de sécurité de 004 (T044), avant toute mise en service de la 2.0 ;
+  défaut latent, aucune exploitation (rien n'est déployé).
+- **Symptôme** : trois sources de la 2.0 (température de surface, comptages du réseau
+  national, Météo-France) téléchargeaient ou ouvraient des fichiers dont l'adresse est lue
+  dans la réponse d'un service tiers, sans vérifier ni le schéma ni l'hôte, et sans borner la
+  taille du téléchargement.
+- **Causes racines** :
+  1. Pourquoi ? Pour ne pas écrire de nom de fichier en dur (revue de la PR #33), les
+     adresses sont découvertes dans les réponses des catalogues (STAC, data.gouv.fr).
+  2. Pourquoi sans contrôle ? Le socle `obtenir` vérifiait les erreurs et les nouvelles
+     tentatives, pas l'origine des adresses ; une adresse découverte a été traitée comme une
+     constante du code.
+  3. Pourquoi non vu plus tôt ? La revue de sécurité de 004 était prévue en fin de
+     fonctionnalité (T044) ; les PR #33 et #34 n'ont pas eu de revue de sécurité propre.
+- **Correctif** : `sources.base.verifier_url` (HTTPS et hôte attendu par source) avant tout
+  téléchargement ou ouverture par GDAL ; `sources.base.telecharger` (taille annoncée et réelle
+  bornée, nouvelles tentatives).
+- **Mesure préventive** : tests `test_telechargement.py`,
+  `test_lien_de_scene_hors_de_la_collection_refuse`, `test_archive_hors_de_data_gouv_refusee`.
+  Règle : toute adresse lue dans une réponse tierce passe par `verifier_url` ; tout fichier
+  téléchargé passe par `telecharger` avec une taille maximale ; toute PR ajoutant un appel
+  réseau a sa revue de sécurité, sans attendre la fin de la fonctionnalité.
+- **Références** : branche `004-finitions` (T044).
+
 ### LL-018 — % de poids lourds publié multiplié par 10 (2026-10-01) — Close
 
 - **Contexte** : développement de 004 (US3, poids lourds), lecture des millésimes du trafic
