@@ -22,7 +22,8 @@ from bitumap.journal import JournalGeneration, evenement
 from bitumap.lot import prise_en_charge as file
 from bitumap.lot import versions
 from bitumap.rapport import rendu
-from bitumap.score.methode import VERSION_METHODE
+from bitumap.score.comparaison import calculer_avec_v1
+from bitumap.score.methode import VERSION_METHODE, version_appliquee
 from bitumap.sources.fournisseur import Fournisseur
 
 journal = logging.getLogger("bitumap.lot")
@@ -129,7 +130,7 @@ def traiter(
         notifier(demande, "terminee", empreinte)
         return Resultat(ident, nom, "terminee")
 
-    jg = JournalGeneration(insee, VERSION_METHODE, lot_id=lot_id)
+    jg = JournalGeneration(insee, version_appliquee(), lot_id=lot_id)
     budget = BudgetRapport()
     kwargs = {} if appel_ia is None else {"appel": appel_ia}
     analyseur = AnalyseurAge(vignettes, budget, jg.ia, **kwargs)
@@ -139,9 +140,12 @@ def traiter(
             fournisseur = _Chronometre(fabrique(insee), jg, "acquisition")
             file.etape(ident, "calcul")
             with jg.chronometrer("calcul"):
-                resultat = calculer_commune(
-                    fournisseur, nom, analyse_ia=_Chronometre(analyseur, jg, "ia")
+                # 2.0 : la commune est aussi calculée en 1.2 pour expliquer les changements
+                # de niveau (004 R6), sur les mêmes sources et réponses d'IA.
+                calcul = (
+                    calculer_commune if jg.version_methode == VERSION_METHODE else calculer_avec_v1
                 )
+                resultat = calcul(fournisseur, nom, analyse_ia=_Chronometre(analyseur, jg, "ia"))
             # Temps propre du calcul : sans l'acquisition des sources ni l'IA.
             jg.durees_s["calcul"] = round(
                 jg.durees_s["calcul"]

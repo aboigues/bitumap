@@ -8,6 +8,7 @@ sont décomptés qu'à la création, dans la même transaction que l'insertion.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from datetime import UTC, datetime, timedelta
@@ -24,7 +25,10 @@ from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.ia.budget import budget_jour_epuise
 from bitumap.lot import versions
-from bitumap.rapport.rendu import CSP_RAPPORT
+from bitumap.rapport.rendu import csp_du_document, json_dans_html
+from bitumap.score.methode import VERSION_METHODE
+from bitumap.terrain import classement
+from bitumap.terrain import depot as releves_terrain
 from bitumap.territoire import ErreurTerritoire, commune_par_insee, communes_du_code_postal
 
 routeur = APIRouter()
@@ -230,14 +234,62 @@ def _fichier_rapport(insee: str, empreinte: str, nom: str) -> bytes:
     return contenu
 
 
+def _inserer_avant_script(html: str, bloc: str) -> str:
+    """Insère ``bloc`` juste après le bloc ``donnees``, donc avant le script du rapport qui le
+    lit au chargement (inséré après, il serait ignoré). Le JSON échappe ``</`` : la première
+    balise ``</script>`` qui suit est bien la fin du bloc."""
+    ouverture = html.find('id="donnees"')
+    fin = html.find("</script>", ouverture) if ouverture != -1 else -1
+    if fin == -1:
+        debut, balise, reste = html.rpartition("</body>")
+        return f"{debut}{bloc}\n{balise}{reste}" if balise else html + bloc
+    fin += len("</script>")
+    return f"{html[:fin]}\n{bloc}{html[fin:]}"
+
+
+def _classement_terrain(insee: str, empreinte: str) -> dict | None:
+    """Classement corrigé d'un rapport 2.0 ; ``None`` pour un rapport 1.x, sans été de
+    référence (produit avant 004 T028) ou incomplet (``journal.json`` ou ``points.geojson``
+    absent) : le rapport est alors servi sans ce bloc, jamais refusé."""
+    prefixe = stockage.prefixe_rapport(insee, empreinte)
+    journal_rapport = stockage.lire(reglages().bucket_rapports, prefixe + "journal.json")
+    if (
+        journal_rapport is None
+        or json.loads(journal_rapport).get("version_methode", VERSION_METHODE) == VERSION_METHODE
+    ):
+        return None
+    contenu = stockage.lire(reglages().bucket_rapports, prefixe + "points.geojson")
+    if contenu is None:
+        return None
+    points = json.loads(contenu)
+    ete = (points.get("ete_reference") or {}).get("annee")
+    if ete is None:
+        return None
+    return classement.corriger(points, classement.refections(insee), int(ete))
+
+
 @routeur.get("/rapports/{insee}/{empreinte}")
 def rapport(insee: str, empreinte: str, session: SessionRequise) -> Response:
-    contenu = _fichier_rapport(insee, empreinte, "rapport.html")
+    html = _fichier_rapport(insee, empreinte, "rapport.html").decode("utf-8")
+    # Constaté (003 US2) : relevés courants insérés à chaque consultation, sans modifier le
+    # rapport stocké ni le score ; données non exécutées, aucune photo (FR-015).
+    constate = releves_terrain.derniers_releves(insee, session.compte_id)
+    bloc = f'<script type="application/json" id="releves">{json_dans_html(constate)}</script>'
+    # Méthode 2.0 : classement corrigé par le terrain (004 R9), juste après « releves » ;
+    # couche distincte, rien n'est écrit dans le stockage (principe VI).
+    corrige = _classement_terrain(insee, empreinte)
+    if corrige is not None:
+        bloc += (
+            '\n<script type="application/json" id="classement-terrain">'
+            f"{json_dans_html(corrige)}</script>"
+        )
+    html = _inserer_avant_script(html, bloc)
     return Response(
-        contenu,
+        html,
         media_type="text/html; charset=utf-8",
         headers={
-            "Content-Security-Policy": CSP_RAPPORT,
+            # Script autorisé : celui du document servi (003 R2, rapports en cache).
+            "Content-Security-Policy": csp_du_document(html),
             "Cache-Control": "private, no-store",
             "Content-Disposition": "inline",
         },

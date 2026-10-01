@@ -15,10 +15,28 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
 4. Liste classée : filtres priorité / type de point / type de route (FR-018).
 5. Fiche point : désignation « nom · direction · voie · lignes » et identifiant IDFM du quai
    (FR-030, aussi dans la liste et l'infobulle de la carte), champs de `points.geojson`, facteurs avec provenance et statut, photo de rue
-   (lien, date, licence), âge de l'enrobé « à confirmer » avec modèle et date.
+   (lien, date, licence), **vue aérienne** (lien de comparaison IGN « Remonter le temps »,
+   aujourd'hui contre 2016-2020 : une réfection ou un réaménagement récent s'y voit ; couches
+   désignées par leur numéro, 10 et 11, vérifié dans un navigateur), âge de l'enrobé « à
+   confirmer » avec modèle et date.
 6. Méthode : version, facteurs et effets, règles de priorité, **limites connues**
    (ensoleillement et îlots de chaleur à approfondir en 004).
 7. Sources : nom, licence, lien, date d'extraction (principe III).
+
+Constaté (003) : le rapport stocké ne contient aucun relevé. S'il trouve le bloc `releves`
+inséré par l'API à la consultation, le script ajoute une synthèse « Constaté », un filtre
+« relevé / non relevé », le dernier relevé dans la fiche point et un lien
+`/terrain/{insee}/{point_id}` (historique et nouveau relevé) ; sans ce bloc (fichier ouvert
+hors du service, rapport sans relevé), la synthèse « Constaté » reste masquée et aucune fiche
+n'affiche de relevé. Aucune photo ni adresse e-mail : seulement
+le pseudonyme de l'auteur.
+
+Classement corrigé par le terrain (004 R9, rapports 2.0) : s'il trouve le bloc
+`classement-terrain` inséré par l'API, le script affiche dans la fiche « Estimé : rang R,
+niveau · Corrigé par le terrain : rang R', niveau' (réfection de AAAA, constatée : ×E) » ou
+le motif d'annulation, une phrase « N point(s) corrigé(s) par une réfection confirmée » dans
+la synthèse « Constaté », et un choix « Classement : estimé / corrigé par le terrain » dans la
+liste (**estimé par défaut**). Sans ce bloc, rien de cela n'est affiché.
 
 ## `points.geojson`
 
@@ -44,6 +62,7 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
      "modele": "…", "date": "2026-10-02"}
   ],
   "panoramax": {"url": "…", "date": "2025-11-07", "licence": "CC-BY-SA-4.0", "distance_m": 9},
+  "photos_aeriennes": "https://remonterletemps.ign.fr/comparer/?lon=…&lat=…&z=19&layer1=10&layer2=11&mode=split-h",
   "score": 100, "rang": 1, "priorite": "P1", "groupe": "P1a",
   "groupe_libelle": "Critique"
 }
@@ -51,6 +70,24 @@ externe ; lisible hors connexion et sur téléphone (FR-020). Sections, dans l'o
 
 `direction` : terminus desservis depuis le quai (research R11), `null` si inconnue (affichée
 « direction non déterminée ») ou pour un carrefour ; descriptive, sans effet sur le score.
+
+Méthode 2.0 (004, [data-model](../../004-methode-v2/data-model.md)) ; tous ces champs sont
+**absents d'un rapport 1.x**, qui reste identique :
+
+- facteur : `details` (omis s'il est vide) : ensoleillement `cause_ombre`, `source`
+  (`lidar_hd` ou `repli_1.2`), `millesime_lidar` ; chaleur `retenu`, `effet_si_retenu`, `ete` ;
+  poids lourds `source`, `annee`, `troncon`, `pl_comptes`, `bus_retires` ;
+- facteurs 2.0 : `chaleur_alea`, `chaleur_temperature_surface`, `chaleur_mineralisation`,
+  `chaleur_contexte_urbain` (à la place de `chaleur`), `poids_lourds` ;
+- point : `niveau_v1` (`P1a` … `P3`), `niveau_v1_libelle`, `raison_changement` (si le niveau a
+  changé) ;
+- membre de premier niveau `ete_reference` (`annee`, station, jours de forte chaleur,
+  `temperature_ete`), lu par l'API pour le classement corrigé par le terrain.
+
+`rapport.html` 2.0 : synthèse « été de référence » et part des points couverts par un
+comptage de poids lourds (`couverture_poids_lourds`) ; panneau « Changements de niveau
+depuis la méthode 1.2 » (`bilan_changements`, tableau v1 × v2) ; section Méthode propre à la
+2.0 ; mention « service hors UE » dans les sources concernées.
 
 ## `sources.json`
 

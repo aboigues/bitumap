@@ -33,6 +33,226 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-019 — Liens de fichiers tiers suivis sans contrôle (2026-10-01) — Close
+
+- **Contexte** : revue de sécurité de 004 (T044), avant toute mise en service de la 2.0 ;
+  défaut latent, aucune exploitation (rien n'est déployé).
+- **Symptôme** : trois sources de la 2.0 (température de surface, comptages du réseau
+  national, Météo-France) téléchargeaient ou ouvraient des fichiers dont l'adresse est lue
+  dans la réponse d'un service tiers, sans vérifier ni le schéma ni l'hôte, et sans borner la
+  taille du téléchargement.
+- **Causes racines** :
+  1. Pourquoi ? Pour ne pas écrire de nom de fichier en dur (revue de la PR #33), les
+     adresses sont découvertes dans les réponses des catalogues (STAC, data.gouv.fr).
+  2. Pourquoi sans contrôle ? Le socle `obtenir` vérifiait les erreurs et les nouvelles
+     tentatives, pas l'origine des adresses ; une adresse découverte a été traitée comme une
+     constante du code.
+  3. Pourquoi non vu plus tôt ? La revue de sécurité de 004 était prévue en fin de
+     fonctionnalité (T044) ; les PR #33 et #34 n'ont pas eu de revue de sécurité propre.
+- **Correctif** : `sources.base.verifier_url` (HTTPS et hôte attendu par source) avant tout
+  téléchargement ou ouverture par GDAL ; `sources.base.telecharger` (taille annoncée et réelle
+  bornée, nouvelles tentatives).
+- **Mesure préventive** : tests `test_telechargement.py`,
+  `test_lien_de_scene_hors_de_la_collection_refuse`, `test_archive_hors_de_data_gouv_refusee`.
+  Règle : toute adresse lue dans une réponse tierce passe par `verifier_url` ; tout fichier
+  téléchargé passe par `telecharger` avec une taille maximale ; toute PR ajoutant un appel
+  réseau a sa revue de sécurité, sans attendre la fin de la fonctionnalité.
+- **Références** : branche `004-finitions` (T044).
+
+### LL-018 — % de poids lourds publié multiplié par 10 (2026-10-01) — Close
+
+- **Contexte** : développement de 004 (US3, poids lourds), lecture des millésimes du trafic
+  moyen journalier du réseau routier national (data.gouv.fr) avant d'écrire l'adaptateur.
+- **Symptôme** : dans le millésime 2019, 76 sections non concédées d'Île-de-France ont un
+  « % de poids lourds » au-dessus de 100 (A86 : 120, N4 : 327) ; la N13 passe de 4,6 % en 2018
+  à « 46 » en 2019. Utilisée telle quelle, la valeur aurait donné l'effet maximal à ces
+  voies.
+- **Causes racines** :
+  1. Pourquoi ? Le producteur a publié pour ces sections une valeur dix fois trop grande
+     (virgule décimale perdue, vraisemblablement) ; les autoroutes concédées du même fichier
+     sont justes.
+  2. Pourquoi aurait-on pu l'utiliser ? L'inventaire T003 notait le champ et la licence, pas
+     la plage des valeurs ; et depuis 2022 seul le réseau concédé est publié, 2019 était donc
+     le « dernier millésime » du réseau non concédé.
+  3. Pourquoi vu à temps ? Les valeurs ont été comparées d'un millésime à l'autre avant
+     d'écrire le code (même famille que LL-016 : vérifier une source sur des données réelles).
+- **Correctif** : dernier millésime publié seulement (réseau non concédé « non évalué »,
+  décision du mainteneur) ; garde-fou : un % de poids lourds hors de ]0, 100] écarte la
+  section.
+- **Mesure préventive** : test `test_reseau_national_dernier_millesime` (section à % fautif
+  écartée). Règle : toute nouvelle source chiffrée est contrôlée sur sa plage de valeurs et
+  comparée à un autre millésime avant d'être utilisée.
+- **Références** : branche `004-us3-poids-lourds`, research R5.
+
+### LL-017 — Feux dessinés hors de la commune sur la carte du rapport (2026-09-30) — Close
+
+- **Contexte** : relecture de la carte du rapport de Courbevoie par le mainteneur.
+- **Symptôme** : des losanges (carrefours à feux) apparaissent hors de la commune et loin
+  des voies de bus ; mesuré dans un navigateur : 58 feux sur 58 déplacés, de 266 px en
+  médiane (418 px au plus). Les données des points étaient justes (un seul point sur la
+  limite communale).
+- **Causes racines** :
+  1. Pourquoi ? Chaque losange était un carré tourné par l'attribut
+     `transform="rotate(45 x y)"`.
+  2. Pourquoi déplacé ? La règle CSS `.pt{transform-box:fill-box}`, ajoutée pour agrandir
+     le point sélectionné autour de son centre, change le repère de cet attribut : le
+     centre de rotation (x, y) est compté depuis le coin du losange, pas depuis l'origine
+     de la carte.
+  3. Pourquoi non vu ? Les tests vérifiaient le contenu du SVG (points présents, formes),
+     jamais la position rendue ; les cercles, sans rotation, étaient bien placés.
+- **Correctif** : losange tracé par ses quatre sommets (`polygon`), sans attribut
+  `transform`.
+- **Mesure préventive** : test `test_feux_a_leur_place_sur_la_carte` (aucun `transform` sur
+  un point de la carte ; centre de chaque losange à la position projetée du feu) ; mesure
+  dans un navigateur des positions rendues (58/58 à 0 px, sélection comprise). Règle : un
+  changement de CSS sur un élément SVG est vérifié sur le rendu, pas sur le code.
+- **Références** : défaut introduit par 33ab279 (PR #17, sélection visible) ; branche
+  `fix/carte-losanges-feux`.
+### LL-016 — Ombres fictives du LiDAR malgré des tests verts (2026-09-30) — Close
+
+- **Contexte** : développement de 004 (US1, ensoleillement sur LiDAR HD), première exécution
+  de la méthode 2.0 sur les données figées de Courbevoie, avant la PR.
+- **Symptôme** : tous les tests (grilles synthétiques) passaient, mais sur Courbevoie des
+  carrefours passaient de 10 h à 1,3 h de soleil, « à cause de bâtiments » absents de la
+  BD TOPO ; la cause « arbre » ne sortait que 6 fois sur 154 points.
+- **Causes racines** :
+  1. Pourquoi ? Le MNS contient tout ce que le laser a touché : véhicules présents lors du
+     survol (2 à 3 m au bord des points de mesure), mâts de feux et lampadaires (8 à 16 m à
+     2 m des feux) ; à 2 m, un tel objet cache le soleil jusqu'à 57° de hauteur.
+  2. Pourquoi « arbre » si rare ? L'infrarouge manque les arbres à l'ombre des immeubles
+     (avenue Gambetta) et le bord des toits tombe à 1 m hors de l'emprise BD TOPO.
+  3. Pourquoi non vu par les tests ? Les grilles synthétiques ne contenaient que ce que
+     l'on y mettait : des bâtiments et des arbres idéaux (même famille que LL-003 :
+     vérifier l'effet sur les données réelles, pas seulement la forme).
+- **Correctif** : ouverture morphologique du sursol (objets de moins de 3 m de large
+  effacés), sursol de moins de 4 m ramené au sol, cause « arbre » par la végétation à 1 m
+  près ou la rugosité du sursol (5 × 5 m), emprises BD TOPO élargies d'un mètre pour le
+  classement. Chaque cas vérifié sur l'orthophoto et l'ombrage du MNH.
+- **Mesure préventive** : tests `test_vehicule_du_survol_ignore`, `test_mat_de_feu_ignore`,
+  `test_houppier_rugueux_classe_arbre_sans_infrarouge`,
+  `test_construction_lisse_non_repertoriee_classe_batiment` ;
+  `tests/non_regression/test_courbevoie_v2.py` sur les données figées réelles. Règle : toute
+  nouvelle source mesurée est passée sur une commune réelle et ses plus grands écarts sont
+  examinés sur image avant la PR.
+- **Références** : branche `004-us1-ensoleillement-lidar`.
+
+### LL-015 — Hook de protection de main inactif hors de /mnt/c (2026-09-30) — Close
+
+- **Contexte** : préparation du déplacement du dépôt de `/mnt/c` (disque Windows, dossier
+  kDrive exclu) vers le disque natif de WSL ; inventaire avant migration.
+- **Symptôme** (prévisible, non observé en usage) : les 21 fichiers versionnés commençant par
+  `#!`, dont `.claude/hooks/guard-main.sh`, étaient en mode `100644`. Rejoué depuis le disque
+  natif, le hook répond `permission denied` (code 126) ; Claude Code traite ce code comme une
+  erreur non bloquante : un `git push origin main` n'aurait plus été refusé par le hook.
+- **Causes racines** :
+  1. Pourquoi ? Le bit d'exécution n'a jamais été enregistré dans git pour ces scripts.
+  2. Pourquoi non vu ? Sous `/mnt/c`, WSL présente tous les fichiers en `rwxrwxrwx` et
+     `core.filemode` vaut `false` : les scripts s'exécutaient et git ne voyait aucun écart.
+  3. Pourquoi aucun contrôle ? Aucun test ne vérifiait le mode des scripts ; les interdictions
+     de `.claude/settings.json` (push sur main, fusion de PR) masquaient en partie l'absence
+     du hook.
+- **Correctif** : `git update-index --chmod=+x` sur les 21 fichiers commençant par `#!`.
+- **Mesure préventive** : test `tests/unit/test_scripts_executables.py` (tout fichier suivi
+  commençant par `#!` est en `100755`, et le hook de protection de main en particulier),
+  exécuté en CI sur un système de fichiers Linux. Règle : un script ajouté sous `/mnt/c`
+  passe par `git update-index --chmod=+x` ; le dépôt de travail est à déplacer sur le disque
+  natif de WSL.
+- **Références** : branche `chore/bits-execution-scripts`.
+
+### LL-014 — Une photo retirée pouvait être renvoyée sous le même identifiant (2026-09-30) — Close
+
+- **Contexte** : revue de sécurité de 003 (T042), branche de la modération (US5) ; défaut
+  présent depuis le MVP (#24), trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après le retrait d'une photo, par son auteur ou
+  par le mainteneur (RGPD), l'auteur pouvait redemander un formulaire d'envoi pour le même
+  identifiant, déposer une autre image et la confirmer : la photo redevenait `visible`,
+  annulant le retrait (FR-016).
+- **Causes racines** :
+  1. Pourquoi ? `formulaire` acceptait un identifiant existant quel que soit son état, et
+     `confirmer` ne distinguait que « visible » (rejeu) du reste, traité comme une
+     quarantaine.
+  2. Pourquoi ? L'idempotence (réenvoi depuis un téléphone hors réseau) a été pensée pour
+     deux états, `quarantaine` et `visible` ; les états de retrait, ajoutés ensuite, n'ont pas
+     été rapprochés des chemins d'envoi.
+  3. Pourquoi non vu ? Les tests de retrait vérifiaient l'effet du retrait, jamais une
+     tentative d'envoi postérieure ; la mise à jour finale n'avait pas de garde sur l'état
+     (course possible entre retrait et confirmation).
+- **Correctif** : `409 photo_retiree` au formulaire et à la confirmation d'une photo
+  retirée (quarantaine effacée) ; mise à jour `… AND etat = 'quarantaine'`, et, si la photo a
+  été retirée entre-temps, suppression de toutes les versions de l'objet écrit. Le rejeu
+  d'une photo `visible` efface aussi la quarantaine redéposée.
+- **Mesure préventive** : tests `test_photo_retiree_ne_peut_etre_renvoyee` (auteur, RGPD),
+  `test_retrait_pendant_l_envoi`, `test_depot_rejoue_apres_succes`. Règle : tout état
+  terminal (retrait, suppression) est testé contre chaque chemin d'écriture qui pourrait le
+  faire revenir en arrière, rejeux idempotents compris.
+- **Références** : branche `003-us5-moderation-finition`.
+
+### LL-013 — Original d'une photo récupérable dans le bucket versionné (2026-09-30) — Close
+
+- **Contexte** : développement de 003 (US5, modération), relecture du retrait RGPD ; défaut
+  latent, trouvé avant toute mise en production (aucune donnée réelle).
+- **Symptôme** : après réencodage d'une photo, l'original déposé en `quarantaine/` (avec ses
+  métadonnées EXIF, dont la position GPS) restait lisible : la clé portait encore une
+  version non courante et un marqueur de suppression (vérifié par une sonde sur le S3
+  simulé).
+- **Causes racines** :
+  1. Pourquoi ? La quarantaine était effacée par un simple `delete_object`, qui, dans un
+     bucket versionné, ajoute un marqueur de suppression sans détruire le contenu.
+  2. Pourquoi ce choix ? Le versionnement du bucket `bitumap-terrain` (décidé pour
+     l'historique) n'a pas été rapproché de l'effacement des données personnelles.
+  3. Pourquoi non vu ? Les tests vérifiaient que la clé n'était plus lisible (`lire` →
+     `None`), pas qu'aucune version n'existait (même famille que LL-003 : l'effet attendu
+     n'était pas mesuré).
+- **Correctif** : `stockage.effacer_definitivement` supprime toutes les versions et tous les
+  marqueurs d'une clé ; utilisé pour la quarantaine et pour le retrait RGPD d'une photo.
+- **Mesure préventive** : tests `test_original_non_conserve_par_le_versionnement` et
+  `test_retrait_rgpd_d_une_photo` (aucune version restante) ; T040 : la règle de cycle de vie
+  de `quarantaine/` expire aussi les versions non courantes. Règle : dans un bucket
+  versionné, tout effacement de donnée personnelle supprime toutes les versions et est
+  testé sur la liste des versions.
+- **Références** : branche `003-us5-moderation-finition`.
+
+### LL-012 — Constaté absent du rapport malgré des tests verts (2026-09-29) — Close
+
+- **Contexte** : développement de 003 (US2), essai du parcours dans un navigateur (émulation
+  mobile) avant la PR.
+- **Symptôme** : un relevé saisi n'apparaît ni dans la synthèse « Constaté » ni dans la fiche
+  du rapport ; aucune erreur en console. Les tests de `test_rapport_releves.py` passaient.
+- **Causes racines** :
+  1. Pourquoi ? Le script du rapport lit le bloc `releves` au chargement et ne le trouvait
+     pas : il valait `{}`.
+  2. Pourquoi ? L'API insérait le bloc juste avant `</body>`, donc **après** le script en
+     ligne, qui s'exécute dès qu'il est analysé.
+  3. Pourquoi non vu ? Les tests vérifiaient la présence et le contenu du bloc dans le HTML,
+     pas qu'il soit lisible par le script (même famille que LL-003 : présent ≠ effectif).
+- **Correctif** : le bloc est inséré juste après le bloc `donnees`, avant le script.
+- **Mesure préventive** : test `test_bloc_avant_le_script_qui_le_lit` (ordre des blocs) ;
+  le parcours navigateur du quickstart reste obligatoire avant chaque PR touchant le rapport
+  ou la saisie.
+- **Références** : branche `003-terrain-releves`.
+
+### LL-011 — CSP d'un rapport en cache liée à la version courante du script (2026-09-29) — Close
+
+- **Contexte** : conception de 003 (relevés terrain), rapport servi par l'API de 002 ;
+  défaut latent, trouvé avant toute mise en production.
+- **Symptôme** (prévisible, non observé) : après toute modification de
+  `rapport/interactions.js` (PR #17, #19), un rapport encore en cache (30 jours), produit
+  avec l'ancien script, serait servi avec une CSP n'autorisant que l'empreinte du **nouveau**
+  script : filtres, fiche et carte inertes.
+- **Causes racines** :
+  1. Pourquoi ? `CSP_RAPPORT` était une constante calculée au démarrage sur le script du code
+     en cours, alors que le script est figé dans chaque `rapport.html` stocké.
+  2. Pourquoi non vu ? Les tests génèrent le rapport et le servent avec le même code ; aucun
+     test ne servait un rapport produit par une version antérieure.
+  3. Pourquoi pas d'incident ? Aucun rapport n'est encore en production.
+- **Correctif** : `rapport.rendu.csp_du_document(html)` calcule, à chaque service,
+  l'empreinte des scripts en ligne **du document servi** (analyseur HTML, blocs de données
+  JSON exclus) ; le document vient du bucket privé, écrit par le job.
+- **Mesure préventive** : `tests/api/test_rapport_csp.py` (ancien script autorisé, bloc JSON
+  exclu, balise en majuscules reconnue, document sans script ⇒ `script-src 'none'`). Règle :
+  tout artefact stocké et servi plus tard est testé avec une version antérieure du code.
+- **Références** : branche `003-terrain-releves` (T006, T007).
+
 ### LL-009 — Coût IA du jour arrondi à chaque opération (2026-09-29) — Close
 
 - **Contexte** : développement US4, test du plafond de coût par rapport

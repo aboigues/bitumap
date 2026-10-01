@@ -18,10 +18,25 @@ from typing import Protocol
 
 import geopandas as gpd
 import numpy as np
+from pyproj import Transformer
 
-from bitumap.sources import altimetrie, bdtopo, chaleur, idfm, ortho, osm, panoramax
-from bitumap.sources.base import Provenance, client_http
+from bitumap.sources import (
+    altimetrie,
+    bdtopo,
+    chaleur,
+    comptages,
+    idfm,
+    lidar,
+    meteo,
+    ortho,
+    osm,
+    panoramax,
+    temperature,
+)
+from bitumap.sources.base import Hauteurs, Provenance, Raster, client_http
 from bitumap.territoire import api_geo
+
+_VERS_L93 = Transformer.from_crs("EPSG:4326", "EPSG:2154", always_xy=True)
 
 
 class Fournisseur(Protocol):
@@ -36,6 +51,12 @@ class Fournisseur(Protocol):
     def vegetation(self, lon: float, lat: float) -> np.ndarray | None: ...
     def panoramax(self, lon: float, lat: float) -> panoramax.Photo | None: ...
     def provenances_ponctuelles(self) -> list[Provenance]: ...
+
+    # Méthode 2.0 (004) : appelés seulement si BITUMAP_METHODE=2.0 ; ``None`` = absent.
+    def hauteurs(self, lon: float, lat: float) -> Hauteurs | None: ...
+    def temperature_surface(self, emprise, ete: int) -> tuple[Provenance, Raster] | None: ...
+    def comptages_pl(self, emprise) -> tuple[list[Provenance], gpd.GeoDataFrame | None]: ...
+    def meteo(self, station: str, ete: int) -> tuple[Provenance, list[dict]] | None: ...
 
 
 # Paramètres fixes des extractions ponctuelles (identiques en ligne et figé).
@@ -54,9 +75,23 @@ class FournisseurEnLigne:
         self._osm_regional = osm_regional
         self._osm_date = osm_date
         self._client = client_http(timeout=120)
+        self._millesimes_lidar: dict[str, str] = {}  # une requête d'index par dalle de 1 km
 
     def contour(self) -> dict:
         return api_geo.contour_geojson(self.insee)
+
+    def hauteurs(self, lon, lat):
+        x, y = _VERS_L93.transform(lon, lat)
+        return lidar.hauteurs(x, y, self._client, self._millesimes_lidar)
+
+    def comptages_pl(self, emprise):
+        return comptages.acquerir(emprise, self._client)
+
+    def temperature_surface(self, emprise, ete):
+        return temperature.temperature_surface(emprise, ete, self._client)
+
+    def meteo(self, station, ete):
+        return meteo.meteo(station, ete, self._client)
 
     def offre(self):
         maj = idfm.date_mise_a_jour(self._client)
@@ -125,7 +160,12 @@ def _prov_dict(p: Provenance) -> dict:
 
 def _prov(d: dict) -> Provenance:
     return Provenance(
-        d["nom"], d["licence"], d["url"], date.fromisoformat(d["date_extraction"]), d["portee"]
+        d["nom"],
+        d["licence"],
+        d["url"],
+        date.fromisoformat(d["date_extraction"]),
+        d["portee"],
+        d.get("hors_ue", False),
     )
 
 
@@ -140,6 +180,7 @@ class Enregistreur:
         self._alt: dict[str, float | None] = {}
         self._veg: dict[str, np.ndarray | None] = {}
         self._pnx: dict[str, dict | None] = {}
+        self._haut: dict[str, Hauteurs] = {}
 
     def contour(self):
         c = self._s.contour()
@@ -189,6 +230,44 @@ class Enregistreur:
     def provenances_ponctuelles(self):
         return self._s.provenances_ponctuelles()
 
+    def hauteurs(self, lon, lat):
+        h = self._s.hauteurs(lon, lat)
+        if h is not None:
+            self._haut[_cle(lon, lat)] = h
+        return h
+
+    def temperature_surface(self, emprise, ete):
+        r = self._s.temperature_surface(emprise, ete)
+        if r is not None:
+            p, raster = r
+            np.savez_compressed(
+                self._d / "temperature.npz",
+                valeurs=raster.valeurs,
+                transform=np.array(raster.transform),
+            )
+            _ecrire_json(
+                self._d / "temperature.json.gz",
+                # « demande » : été demandé ; « ete » : été lu (le précédent si repli).
+                {"provenance": _prov_dict(p), "crs": raster.crs, "ete": raster.ete, "demande": ete},
+            )
+        return r
+
+    def comptages_pl(self, emprise):
+        provs, gdf = self._s.comptages_pl(emprise)
+        if gdf is not None:
+            gdf.to_file(self._d / "comptages.gpkg", layer="comptages", driver="GPKG")
+        _ecrire_json(self._d / "comptages_provenance.json.gz", [_prov_dict(p) for p in provs])
+        return provs, gdf
+
+    def meteo(self, station, ete):
+        r = self._s.meteo(station, ete)
+        if r is not None:
+            _ecrire_json(
+                self._d / "meteo.json.gz",
+                {"station": station, "ete": ete, "provenance": _prov_dict(r[0]), "jours": r[1]},
+            )
+        return r
+
     def terminer(self):
         _ecrire_json(self._d / "altitudes.json.gz", self._alt)
         _ecrire_json(self._d / "panoramax.json.gz", self._pnx)
@@ -202,6 +281,42 @@ class Enregistreur:
             cles=np.array(list(presents)),
             masques=np.array(list(presents.values())) if presents else np.zeros((0, 1, 1), bool),
         )
+        if self._haut:
+            ecrire_hauteurs(self._d / "hauteurs.npz", self._haut)
+
+
+# Hauteurs figées au décimètre (dépôt léger) : entiers 16 bits au-dessus d'une base par point ;
+# 65535 = pas de mesure. Largement assez précis pour des ombres.
+_HAUTEUR_ABSENTE = np.iinfo(np.uint16).max
+
+
+def _coder(grille: np.ndarray, base: float) -> np.ndarray:
+    dm = np.round((grille - base) * 10)
+    return np.where(np.isfinite(dm), np.clip(dm, 0, _HAUTEUR_ABSENTE - 1), _HAUTEUR_ABSENTE).astype(
+        np.uint16
+    )
+
+
+def _decoder(codes: np.ndarray, base: float) -> np.ndarray:
+    grille = codes.astype(np.float32) / 10 + np.float32(base)
+    grille[codes == _HAUTEUR_ABSENTE] = np.nan
+    return grille
+
+
+def ecrire_hauteurs(chemin: Path, hauteurs: dict[str, Hauteurs]) -> None:
+    """Fige les hauteurs LiDAR (004) ; relues par ``FournisseurFige``."""
+    h = list(hauteurs.values())
+    bases = [float(np.floor(np.nanmin(x.mnt))) - 1 if np.isfinite(x.mnt).any() else 0.0 for x in h]
+    np.savez_compressed(
+        chemin,
+        cles=np.array(list(hauteurs)),
+        mns=np.array([_coder(x.mns, b) for x, b in zip(h, bases, strict=True)]),
+        mnt=np.array([_coder(x.mnt, b) for x, b in zip(h, bases, strict=True)]),
+        bases=np.array(bases),
+        origines=np.array([x.origine for x in h]),
+        resolutions=np.array([x.resolution for x in h]),
+        millesimes=np.array([x.millesime for x in h]),
+    )
 
 
 class FournisseurFige:
@@ -214,6 +329,18 @@ class FournisseurFige:
         self._pnx = _lire_json(dossier / "panoramax.json.gz")
         v = np.load(dossier / "vegetation.npz")
         self._veg = dict(zip(v["cles"].tolist(), v["masques"], strict=True))
+        self._haut: dict[str, Hauteurs] = {}
+        if (dossier / "hauteurs.npz").exists():  # absent des dossiers figés avant 004
+            h = np.load(dossier / "hauteurs.npz")
+            for i, cle in enumerate(h["cles"].tolist()):
+                base = float(h["bases"][i])
+                self._haut[cle] = Hauteurs(
+                    _decoder(h["mns"][i], base),
+                    _decoder(h["mnt"][i], base),
+                    tuple(float(c) for c in h["origines"][i]),
+                    float(h["resolutions"][i]),
+                    str(h["millesimes"][i]),
+                )
 
     def contour(self):
         return _lire_json(self._d / "contour.json.gz")
@@ -248,3 +375,34 @@ class FournisseurFige:
 
     def provenances_ponctuelles(self):
         return [_prov(d) for d in _lire_json(self._d / "provenances_ponctuelles.json.gz")]
+
+    def hauteurs(self, lon, lat):
+        return self._haut.get(_cle(lon, lat))
+
+    def temperature_surface(self, emprise, ete):
+        meta = self._d / "temperature.json.gz"
+        if not meta.exists():
+            return None
+        m = _lire_json(meta)
+        if m.get("demande", m["ete"]) != ete:
+            return None
+        t = np.load(self._d / "temperature.npz")
+        transform = tuple(float(c) for c in t["transform"])
+        return _prov(m["provenance"]), Raster(t["valeurs"], transform, m["crs"], m["ete"])
+
+    def comptages_pl(self, emprise):
+        meta = self._d / "comptages_provenance.json.gz"
+        if not meta.exists():
+            return [], None
+        provs = [_prov(d) for d in _lire_json(meta)]
+        f = self._d / "comptages.gpkg"
+        return provs, gpd.read_file(f, layer="comptages") if f.exists() else None
+
+    def meteo(self, station, ete):
+        f = self._d / "meteo.json.gz"
+        if not f.exists():
+            return None
+        m = _lire_json(f)
+        if (m["station"], m["ete"]) != (station, ete):
+            return None
+        return _prov(m["provenance"]), m["jours"]

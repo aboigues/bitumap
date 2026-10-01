@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -60,9 +61,24 @@ class Reglages(BaseSettings):
     cache_rapport_jours: int = 30
     panoramax_rayon_m: int = 30
 
+    # Méthode de score (004, contrat methode-v2 § 3) : la 1.2 reste en service tant que le
+    # mainteneur n'a pas validé la 2.0 sur les relevés de 003 (FR-013).
+    methode: Literal["1.2", "2.0"] = "1.2"
+    ete_reference: int | None = None  # défaut : dernier été complet (score.methode)
+    station_meteo: str = "75114001"  # Paris-Montsouris (research R4)
+
     # Stockage objet
     bucket_rapports: str = "bitumap-rapports"
     bucket_cache: str = "bitumap-cache"
+    bucket_terrain: str = "bitumap-terrain"  # photos des relevés (003), privé et versionné
+
+    # Relevés terrain (003, FR-003, FR-018)
+    quota_releves_compte_jour: int = 200
+    quota_photos_compte_jour: int = 1000
+    photos_par_releve: int = 5
+    photo_max_octets: int = 10 * 1024 * 1024
+    photo_formulaire_validite_s: int = 300
+    photos_max_go: float = 20.0
     s3_endpoint: str = "https://s3.fr-par.scw.cloud"
     s3_region: str = "fr-par"
 
@@ -72,6 +88,8 @@ class Reglages(BaseSettings):
     email_mainteneur: str | None = None  # fourni par OpenTofu, jamais versionné
     url_publique: str = "http://127.0.0.1:8000"
     projet_scaleway: str = ""  # identifiant du projet BITUMAP (fourni par OpenTofu)
+    # security.txt (RFC 9116) : signalement privé, comme SECURITY.md
+    contact_securite: str = "https://github.com/aboigues/bitumap/security/advisories/new"
 
     # Secrets (Secret Manager en production, jamais dans le dépôt)
     db_url: SecretStr

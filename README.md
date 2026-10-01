@@ -145,15 +145,16 @@ flowchart LR
 |---|---|---|
 | API et formulaire | **Serverless Containers** | revient à 0 instance au repos ; démarre à la requête |
 | Génération | **Serverless Jobs** | traitement long (plusieurs minutes pour une commune), facturé à l'exécution |
-| Rapports, cache, relevés | **Object Storage** (compatible S3) | pas de base de données permanente à payer (principe II) |
+| Rapports, cache, photos des relevés | **Object Storage** (compatible S3) | fichiers immuables ou volumineux, facturés au stockage (principe II) |
 | Secrets | **Secret Manager** | clé antibot, clés d'API ; jamais dans le code |
 | LLM vision | **Generative APIs** | hébergé en France, API compatible OpenAI |
 | Observabilité | **Cockpit** | journaux, métriques, alertes de coût |
 | Infrastructure | **OpenTofu** | tout est décrit en code ; amorçage : [`infra/bootstrap/`](infra/bootstrap/README.md) |
 
-Aucune base de données au départ : les métadonnées (état des générations, index des
-relevés) vivent dans le stockage objet sous forme de fichiers JSON. Une base de données
-serverless ne sera ajoutée que si un besoin mesuré l'exige (principe VII).
+Les métadonnées (comptes, demandes et lots de génération, relevés terrain et leurs versions,
+état des photos) sont dans une base **Serverless SQL** qui revient à zéro au repos : les
+fichiers JSON initialement prévus ne permettaient ni quotas atomiques, ni envoi idempotent
+depuis un téléphone (principe VII : besoin mesuré).
 
 ---
 
@@ -185,7 +186,7 @@ src/bitumap/
 │   └── age_enrobe.py  #   LLM vision, points P1 uniquement, « à confirmer »
 ├── score/             # combinaison déterministe, versionnée ; priorités P1/P2/P3
 ├── rapport/           # rendu HTML (carte, liste, fiches, méthode, sources, limites)
-├── terrain/           # relevés : annotations et photos par commune (feature 003)
+├── terrain/           # relevés : saisie, versions, photos, export, modération (feature 003)
 ├── stockage/          # accès objet : cache, rapports, relevés
 ├── api/               # formulaire, antibot, quotas, lancement et suivi des jobs
 └── job/               # point d'entrée de la génération (étapes 1 → 3)
@@ -228,6 +229,14 @@ entrée dans le journal des changements de méthode :
 | **Îlots de chaleur** | aléa de jour de l'Institut Paris Region (0–16) : **à approfondir** | à instruire dans le plan : croiser l'aléa IPR (édition 2022) avec la **température de surface** issue de l'imagerie satellite thermique, **mise à jour chaque été**, avec le contexte urbain (zones climatiques locales), la **minéralisation autour du point** (surface nue, sans végétation, mesurée sur l'orthophoto infrarouge récente) et la **chaleur rejetée par les climatiseurs**, dont le parc évolue vite (indicateur à trouver : diagnostics de performance énergétique de l'ADEME, usage des bâtiments), ainsi que l'**exposition aux canicules de l'année** ; puis mesurer ce que chaque indicateur apporte à la prédiction de l'orniérage avant de l'intégrer |
 | Âge de l'enrobé | lecture manuelle des orthophotos | LLM vision sur les points P1, marqué « à confirmer », coût plafonné |
 
+**Méthode 2.0 (004), en préparation** : développée derrière le réglage `BITUMAP_METHODE=2.0`
+(la 1.2 reste en service). Ensoleillement sur les hauteurs LiDAR HD avec la cause principale
+d'ombre ; indicateurs de chaleur calculés et affichés, sans effet tant que leur apport n'est
+pas démontré ; poids lourds hors bus sur les comptages publiés ; explication de chaque
+changement de niveau par rapport à la 1.2 ; classement corrigé par les réfections confirmées
+sur le terrain. Mise en service après validation sur les relevés de 003
+([journal des changements de méthode](docs/methode/CHANGELOG.md)).
+
 Le score **classe** des points à relever en priorité ; il ne mesure pas l'état de la
 chaussée. Le cas Courbevoie sert de test de non-régression : tout écart de rang doit être
 expliqué par un changement de méthode ou de source.
@@ -265,6 +274,9 @@ les fichiers OpenTofu, en prenant la dernière version stable au moment de l'ajo
 | [Institut Paris Region](https://data-iau-idf.opendata.arcgis.com/) | îlots de chaleur | Licence Ouverte |
 | [Panoramax](https://panoramax.fr/) | photos de rue récentes | Licence Ouverte Etalab 2.0 |
 | [API Géo](https://geo.api.gouv.fr) | code postal → communes | Licence Ouverte |
+| [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2) : USGS Landsat C2 niveau 2 | température de surface l'été (méthode 2.0) ; **service hors UE déclaré** | domaine public |
+| [Météo-France](https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-quotidiennes) : données quotidiennes | été de référence (méthode 2.0, 007) | Licence Ouverte 2.0 |
+| Comptages routiers : [Hauts-de-Seine](https://data.iledefrance.fr/explore/dataset/comptages-routiers-lineaires-dans-les-hauts-de-seine/), [réseau national](https://www.data.gouv.fr/datasets/trafic-moyen-journalier-annuel-sur-le-reseau-routier-national) | poids lourds hors bus (méthode 2.0) | Licence Ouverte |
 
 Chaque rapport liste pour chaque source : licence, URL et date d'extraction.
 
@@ -286,20 +298,21 @@ bitumap-rapports/                    # rapports générés, immuables
   communes/{insee}/{empreinte}/journal.json      # durée, coûts LLM, avertissements
   generations/{id}.json                          # état d'une génération en cours
 
-bitumap-terrain/                     # relevés terrain (feature 003), versionnés
-  communes/{insee}/points/{point_id}/annotations/{horodatage}.json
-  communes/{insee}/points/{point_id}/photos/{horodatage}-{uuid}.jpg
-  communes/{insee}/index.json
+bitumap-terrain/                     # photos des relevés terrain (feature 003), versionné
+  quarantaine/{photo_id}                           # envoi brut, supprimé après contrôle
+  communes/{insee}/points/{point_id}/{releve_id}/{photo_id}.jpg
 ```
 
-- **Relevés terrain** : annotations et photos **classées par commune puis par point**,
-  jamais écrasées (versionnement du bucket) ; le rapport distingue « estimé » et
-  « constaté » (principe VI).
-- **Photos** : métadonnées EXIF de localisation nettoyées après extraction de la position,
-  visages et plaques floutés avant toute diffusion (RGPD). Envoi direct du navigateur vers le
-  stockage par lien signé, taille et type contrôlés.
-- **Cycle de vie** : le cache expire automatiquement ; les rapports et les relevés sont
-  conservés.
+- **Relevés terrain** : en base (tables `releve`, `releve_version`, `photo`), rattachés à un
+  point stable ; chaque correction crée une version, rien n'est écrasé ; le rapport servi
+  distingue « estimé » et « constaté » (principe VI).
+- **Photos** : envoi direct du navigateur vers `quarantaine/` par formulaire signé (taille et
+  type imposés), puis contrôle et réencodage par l'API **sans aucune métadonnée** (EXIF, GPS) ;
+  l'original est effacé, toutes versions comprises (LL-013). Visibles de leur auteur et du
+  mainteneur seulement, sans floutage (RGPD) ; retrait RGPD = suppression de toutes les
+  versions.
+- **Cycle de vie** : le cache expire automatiquement, `quarantaine/` sous un jour ; les
+  rapports, les relevés et les photos sont conservés.
 
 ---
 
@@ -348,9 +361,9 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 | # | Fonctionnalité | État |
 |---|---|---|
 | 001 | Socle de sécurité CI | ✅ livrée |
-| 002 | Formulaire (code postal, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire | 🟡 spécification |
-| 003 | Relevés terrain : annotations et photos par commune et par point | ⬜ |
-| 004 | Méthode v2 : ensoleillement LiDAR HD, îlots de chaleur approfondis, type de route intégré au score | ⬜ |
+| 002 | Formulaire (code postal, antibot) et génération du rapport pour une commune, avec le type de route et son gestionnaire | 🟡 en cours : US1–US4 fusionnées, infrastructure à venir |
+| 003 | Relevés terrain : annotations et photos par commune et par point | 🟡 en cours : saisie, constaté, corrections et export fusionnés ; modération (RGPD) en revue |
+| 004 | Méthode v2 : ensoleillement LiDAR HD, chaleur, poids lourds, explication des changements, réfections confirmées | 🟡 développée derrière un réglage ; mise en service après validation sur les relevés de 003 |
 | 005 | Échelle du département, export PDF | ⬜ |
 | 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture ou à pied ([#21](https://github.com/aboigues/bitumap/issues/21)) | ⬜ |
 | 007 | Projection opérationnelle : évolution, été après été (2027, 2028…), d'un indice de potentiel d'orniérage par point selon la fréquentation et trois scénarios d'été tirés d'étés observés (moyen, chaud type 2019/2022, très chaud type 2003/2026 ; données quotidiennes Météo-France), pour dire quels points traiter avant quel été ; indice relatif, calibrage en millimètres après les relevés terrain de 003 ([#20](https://github.com/aboigues/bitumap/issues/20)) | ⬜ |

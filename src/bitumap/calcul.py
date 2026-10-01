@@ -1,4 +1,5 @@
-"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.1).
+"""Calcul d'une commune : sources → points → facteurs → priorités (méthode 1.2 ; la 2.0 est
+en préparation derrière ``BITUMAP_METHODE``, 004).
 
 Fonction déterministe à sources identiques (principe IV) ; le seul appel non déterministe,
 l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleurs.
@@ -14,12 +15,27 @@ import geopandas as gpd
 from shapely.geometry import Point as PointGeo
 from shapely.geometry import mapping
 
-from bitumap.facteurs import chaleur, charge, ensoleillement, site, sollicitation, voirie
+from bitumap.config import reglages
+from bitumap.facteurs import (
+    chaleur,
+    charge,
+    ensoleillement,
+    poids_lourds,
+    site,
+    sollicitation,
+    voirie,
+)
 from bitumap.modele import Facteur, Point
 from bitumap.points import construction as c
 from bitumap.points import direction
 from bitumap.score import combinaison
-from bitumap.sources import idfm, osm
+from bitumap.score.methode import (
+    INDICATEURS_CHALEUR_RETENUS,
+    VERSION_METHODE,
+    ete_reference,
+    version_appliquee,
+)
+from bitumap.sources import idfm, lidar, meteo, osm, temperature
 from bitumap.sources.base import Provenance
 from bitumap.sources.fournisseur import Fournisseur
 
@@ -39,6 +55,10 @@ class ResultatCommune:
     contour: dict
     provenances: list[Provenance]
     avertissements: list[str] = field(default_factory=list)
+    # Méthode 2.0 (004 FR-007) : été de référence, jours de forte chaleur ; ``None`` en 1.2.
+    ete_reference: dict | None = None
+    # Méthode 2.0 (004 R6) : nombre de points par couple (niveau v1, niveau v2).
+    bilan_changements: dict[str, dict[str, int]] | None = None
 
 
 def _emprise(commune) -> tuple[float, float, float, float]:
@@ -74,6 +94,64 @@ def _zone_de_mesure(p: Point, voie, chaussee) -> list[tuple[float, float]]:
     return [(chaussee.x + d * tx, chaussee.y + d * ty) for d in decalages]
 
 
+RAYON_CARREFOUR_M = 10  # méthode 2.0 : voies bus mesurées autour d'un carrefour (004 R2)
+
+
+def _zone_carrefour(voies: list, centre) -> list[tuple[float, float]]:
+    """Méthode 2.0, carrefour ou giratoire : 5 points de mesure sur les voies bus à moins
+    de ``RAYON_CARREFOUR_M`` du centre : le centre et ±5 m sur les deux voies les plus
+    proches, ou ±5 et ±10 m sur une seule voie (004 R2)."""
+    if not voies:
+        return [(centre.x, centre.y)]
+    proches = sorted(voies, key=lambda v: v.distance(centre))[:2]
+    pas = RAYON_CARREFOUR_M / 2
+    decalages = (-pas, pas) if len(proches) == 2 else (-2 * pas, -pas, pas, 2 * pas)
+    points = [(centre.x, centre.y)]
+    for ligne in proches:
+        s = ligne.project(centre)
+        for d in decalages:
+            q = ligne.interpolate(min(max(0.0, s + d), ligne.length))
+            points.append((q.x, q.y))
+    return points
+
+
+def _ensoleillement_v2(
+    f,
+    p: Point,
+    g,
+    voie,
+    chaussee,
+    echantillons: list[tuple[float, float]],
+    reseau: c.Reseau,
+    vegetation,
+    batiments_l93,
+    tabliers_l93,
+    avertissements: list[str],
+) -> Facteur:
+    """Méthode 2.0 (004 US1) : hauteurs LiDAR autour du point ; zone d'arrêt (1.2) pour un
+    arrêt, 5 points sur les voies bus proches pour un carrefour ou un giratoire."""
+    try:
+        hauteurs = f.hauteurs(round(p.lon, 6), round(p.lat, 6))
+    except Exception as erreur:
+        avertissements.append(f"LiDAR HD indisponible pour {p.id} : {type(erreur).__name__}")
+        hauteurs = None
+    points_mesure = list(echantillons)
+    if p.type != "arret" and voie is not None and chaussee is not g:
+        proches = reseau.voies[reseau.voies.distance(chaussee) <= RAYON_CARREFOUR_M]
+        points_mesure = _zone_carrefour(list(proches.geometry), chaussee)
+    return ensoleillement.calculer_v2(
+        p.lon,
+        p.lat,
+        points_mesure,
+        hauteurs,
+        batiments_l93,
+        _tabliers_au_dessus(tabliers_l93, voie, chaussee),
+        vegetation,
+        sur_un_pont=voie is not None and bool(voie.pont),
+        centre=(g.x, g.y),
+    )
+
+
 def _tabliers_au_dessus(tabliers_l93: gpd.GeoDataFrame, voie, chaussee) -> gpd.GeoDataFrame:
     """Tabliers pouvant ombrer la chaussée : sans la voie du bus elle-même, ni, quand le bus
     roule sur un pont, le tablier qui le porte."""
@@ -92,32 +170,81 @@ def _points_pente(ligne, geo_l93) -> tuple[tuple[float, float], tuple[float, flo
     return (a.x, a.y), (b.x, b.y)
 
 
-def _normaliser_nom(nom) -> str:
-    texte = "" if nom is None or nom != nom else str(nom)
-    return "".join(ch for ch in texte.lower() if ch.isalnum())
-
-
 def _troncon_de_la_voie(troncons_l93, chaussee, voie):
     """Tronçon IGN de la voie empruntée par le bus : parmi les tronçons à moins de 25 m de la
     chaussée, celui qui porte le nom de la voie bus (OSM), sinon le plus proche."""
     distances = troncons_l93.distance(chaussee)
     proches = troncons_l93[distances <= RAYON_TRONCON_M]
-    nom = _normaliser_nom(voie.nom) if voie is not None else ""
+    nom = voirie.normaliser_nom(voie.nom) if voie is not None else ""
     if nom and not proches.empty:
         memes = proches[
-            proches.get("nom_voie_ban_gauche", "").map(_normaliser_nom).eq(nom)
-            | proches.get("nom_voie_ban_droite", "").map(_normaliser_nom).eq(nom)
+            proches.get("nom_voie_ban_gauche", "").map(voirie.normaliser_nom).eq(nom)
+            | proches.get("nom_voie_ban_droite", "").map(voirie.normaliser_nom).eq(nom)
         ]
         if not memes.empty:
             return memes.loc[memes.distance(chaussee).idxmin()]
     return troncons_l93.loc[distances.idxmin()]
 
 
+def _ete_reference(f, emprise, provenances, avertissements) -> dict:
+    """Été de référence (FR-007) et ses jours de forte chaleur à la station de référence ;
+    affiché, jamais un facteur de classement (R4)."""
+    annee = ete_reference()
+    ete = {"annee": annee}
+    try:
+        lu = f.meteo(reglages().station_meteo, annee)
+    except Exception as erreur:
+        avertissements.append(f"Météo-France indisponible : {type(erreur).__name__}")
+        lu = None
+    if lu is not None:
+        provenances.append(lu[0])
+        ete |= {
+            "station": reglages().station_meteo,
+            "station_nom": meteo.nom_station(lu[0]) or reglages().station_meteo,
+            **meteo.bilan(lu[1]),
+        }
+    return ete
+
+
+def _temperature_surface(f, emprise, annee, provenances, avertissements):
+    try:
+        lu = f.temperature_surface(emprise, annee)
+    except Exception as erreur:
+        avertissements.append(f"Température de surface indisponible : {type(erreur).__name__}")
+        return None
+    if lu is None:
+        return None
+    provenances.append(lu[0])
+    if lu[1].ete != annee:
+        avertissements.append(
+            f"Température de surface : aucune scène exploitable l'été {annee}, "
+            f"été {lu[1].ete} utilisé"
+        )
+    return lu[1]
+
+
+def _poids_lourds(comptages_l93, chaussee, voie, p: Point) -> Facteur:
+    """Méthode 2.0 : poids lourds comptés sur la voie du point, bus du sens retirés (la
+    charge d'une voie à double sens compte les deux sens)."""
+    section = poids_lourds.rattacher(
+        comptages_l93, chaussee, p.route.numero, voie.nom if voie is not None else p.voie
+    )
+    bus_sens = 0.0
+    if voie is not None:
+        bus_sens = float(voie.charge) / (1 if bool(voie.sens_unique) else 2)
+    return poids_lourds.calculer(section, bus_sens)
+
+
 def calculer_commune(
     f: Fournisseur,
     nom_commune: str,
     analyse_ia: Callable[[list[Point]], None] | None = None,
+    methode: str | None = None,
+    retenus: frozenset[str] | None = None,
 ) -> ResultatCommune:
+    """``methode`` : version à appliquer (défaut : ``BITUMAP_METHODE``) ; ``retenus`` :
+    indicateurs de chaleur 2.0 qui agissent sur le score (défaut : ceux de la méthode ;
+    l'outil d'évaluation les essaie un par un, R7)."""
     avertissements: list[str] = []
     contour = f.contour()
     commune = c.polygone_commune(contour)
@@ -198,6 +325,22 @@ def calculer_commune(
         avertissements.append(f"Altimétrie indisponible : {type(erreur).__name__}")
         altitudes = [None] * len(extremites)
 
+    v2 = (methode or version_appliquee()) != VERSION_METHODE
+    lidar_lu = False
+    # Comptages de poids lourds publiés (2.0, 004 US3) ; absents ⇒ « non évalué » partout.
+    comptages_l93 = None
+    # Chaleur 2.0 (004 US2) : température de surface et été de référence, une fois par commune.
+    surface_lst = ete = None
+    if v2:
+        ete = _ete_reference(f, emprise, provenances, avertissements)
+        surface_lst = _temperature_surface(f, emprise, ete["annee"], provenances, avertissements)
+        if surface_lst is not None:
+            ete["temperature_ete"] = surface_lst.ete
+        try:
+            provenances_pl, comptages_l93 = f.comptages_pl(emprise)
+            provenances += provenances_pl
+        except Exception as erreur:
+            avertissements.append(f"Comptages poids lourds indisponibles : {type(erreur).__name__}")
     for i, (p, g, voie) in enumerate(zip(points, geos_l93, voies_proches, strict=True)):
         p.facteurs.append(charge.calculer(p))
         p.facteurs += sollicitation.calculer(p, distances_feux.get(p.id))
@@ -222,8 +365,23 @@ def calculer_commune(
         if voie is not None and voie.geometry.distance(g) <= DISTANCE_CHAUSSEE_M:
             chaussee = voie.geometry.interpolate(voie.geometry.project(g))
             echantillons = _zone_de_mesure(p, voie, chaussee)
-        p.facteurs.append(
-            ensoleillement.calculer(
+        if v2:
+            soleil = _ensoleillement_v2(
+                f,
+                p,
+                g,
+                voie,
+                chaussee,
+                echantillons,
+                reseau,
+                vegetation,
+                batiments_l93,
+                tabliers_l93,
+                avertissements,
+            )
+            lidar_lu |= soleil.details.get("source") == "lidar_hd"
+        else:
+            soleil = ensoleillement.calculer(
                 p.lon,
                 p.lat,
                 [
@@ -233,15 +391,25 @@ def calculer_commune(
                 batiments_l93,
                 _tabliers_au_dessus(tabliers_l93, voie, chaussee),
             )
-        )
+        p.facteurs.append(soleil)
 
+        alea = lcz = None
         if jointure is not None:
             ligne = jointure.loc[i]
             alea = ligne.get("aleaj_note")
             alea = None if alea is None or alea != alea else float(alea)  # NaN → None
-            p.facteurs.append(chaleur.calculer(alea, ligne.get("type_lcz")))
+            lcz = ligne.get("type_lcz")
+        if v2:
+            p.facteurs += chaleur.candidats(
+                alea,
+                lcz,
+                temperature.au_point(surface_lst, chaussee.x, chaussee.y) if surface_lst else None,
+                chaleur.mineralisation(vegetation),
+                surface_lst.ete if surface_lst else None,
+                INDICATEURS_CHALEUR_RETENUS if retenus is None else retenus,
+            )
         else:
-            p.facteurs.append(chaleur.calculer(None, None))
+            p.facteurs.append(chaleur.calculer(alea, lcz))
 
         if troncons_l93 is not None and not troncons_l93.empty:
             t = _troncon_de_la_voie(troncons_l93, chaussee, voie)
@@ -252,6 +420,8 @@ def calculer_commune(
                 str(voie.ref) if voie is not None and voie.ref else None,
                 nom_commune,
             )
+        if v2:
+            p.facteurs.append(_poids_lourds(comptages_l93, chaussee, voie, p))
         try:
             photo = f.panoramax(round(p.lon, 6), round(p.lat, 6))
             p.panoramax = None if photo is None else photo.__dict__
@@ -283,6 +453,8 @@ def calculer_commune(
         if ch > 0
     ]
     provenances += f.provenances_ponctuelles()
+    if lidar_lu:
+        provenances.append(lidar.provenance())
     return ResultatCommune(
-        f.insee, nom_commune, points, voies, contour, provenances, avertissements
+        f.insee, nom_commune, points, voies, contour, provenances, avertissements, ete
     )

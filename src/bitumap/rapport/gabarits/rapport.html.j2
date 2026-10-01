@@ -45,6 +45,8 @@ ol.liste li.sel{background:var(--puce);box-shadow:inset 5px 0 0 var(--sel),0 0 0
 .pastille{background:var(--c);color:var(--sur-pastille)}
 .fiche h3{margin:.2rem 0}.fiche dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:.5rem 0}
 .fiche dt{color:var(--discret)}.fiche dd{margin:0}
+.fiche h4{margin:.8rem 0 .2rem;font-size:.95rem}.constate{border-left:4px solid var(--sel);padding-left:8px}
+.releve-marque{font-size:.75rem;font-weight:600;color:var(--sel);margin-left:6px}
 table{border-collapse:collapse;width:100%;font-size:.9rem;overflow-wrap:anywhere}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ligne)}
 .legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--discret);margin-top:6px}
 a{color:inherit;text-decoration-color:var(--accent)}
@@ -73,8 +75,16 @@ a{color:inherit;text-decoration-color:var(--accent)}
   {% endfor %}
   {% for type, n in synthese.types.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ type }}</span></div>{% endfor %}
 </section>
+{% if synthese.ete_reference is defined %}{% set ete = synthese.ete_reference %}
+<section class="chiffres" aria-label="Été de référence">
+  <div class="chiffre"><b>{{ ete.annee }}</b><span>été de référence</span></div>
+  {% if ete.jours_forte_chaleur is defined %}<div class="chiffre"><b>{{ ete.jours_forte_chaleur }}</b><span>jours à 30 °C ou plus (dont {{ ete.jours_tres_forte_chaleur }} à 35 °C ou plus), station {{ ete.station_nom|title }}</span></div>{% endif %}
+  {% if ete.temperature_ete is defined and ete.temperature_ete != ete.annee %}<div class="chiffre"><b>{{ ete.temperature_ete }}</b><span>été de la température de surface (aucune image exploitable en {{ ete.annee }})</span></div>{% endif %}
+</section>
+{% endif %}
 <section class="chiffres" aria-label="Types de route">
   {% for route, n in synthese.routes.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ route }}</span></div>{% endfor %}
+  {% if synthese.couverture_poids_lourds is defined %}<div class="chiffre"><b>{{ synthese.couverture_poids_lourds }} %</b><span>des points couverts par un comptage de poids lourds</span></div>{% endif %}
 </section>
 
 <section class="grille">
@@ -96,6 +106,13 @@ a{color:inherit;text-decoration-color:var(--accent)}
       <label>Route <select data-filtre="route"><option value="tous">toutes</option>
         {% for c, l in synthese.classements %}<option value="{{ c }}">{{ l }}</option>{% endfor %}
       </select></label>
+      <label>Constaté <select data-filtre="constate"><option value="tous">tous</option>
+        <option value="releves">relevés</option><option value="non_releves">non relevés</option>
+        <option value="marque_grave">marqué ou grave</option><option value="absent">absent</option>
+        <option value="leger">léger</option><option value="marque">marqué</option>
+        <option value="grave">grave</option></select></label>
+      {% if v2 %}<label id="choix-classement" hidden>Classement <select data-classement>
+        <option value="estime">estimé</option><option value="corrige">corrigé par le terrain</option></select></label>{% endif %}
       <span id="compte" class="petit"></span>
     </div>
     <ol class="liste">
@@ -112,6 +129,26 @@ a{color:inherit;text-decoration-color:var(--accent)}
   </div>
 </section>
 
+<section class="panneau" id="synthese-constate" hidden aria-label="Constaté sur le terrain">
+  <h2>Constaté sur le terrain</h2>
+  <p class="petit" id="constate-resume"></p>
+  <table><thead><tr><th>Niveau estimé</th><th>absent</th><th>léger</th><th>marqué</th><th>grave</th></tr></thead>
+    <tbody id="constate-tableau"></tbody></table>
+  <p class="petit">Relevés saisis sur le terrain ; ils ne modifient ni le score ni le classement.</p>
+  {% if v2 %}<p class="petit" id="synthese-terrain" hidden></p>{% endif %}
+</section>
+
+{% if synthese.bilan_changements is defined %}
+<section class="panneau" aria-label="Changements de niveau"><h2>Changements de niveau depuis la méthode 1.2</h2>
+  <p class="petit">Les points sont aussi calculés en méthode 1.2, sur les mêmes données ; un point qui change de niveau
+    indique son niveau 1.2 et le facteur dont l'effet a le plus varié.</p>
+  <table><thead><tr><th>Niveau 1.2 \ 2.0</th>{% for g in synthese.bilan_changements %}<th>{{ libelles_groupes[g] }}</th>{% endfor %}</tr></thead><tbody>
+    {% for g1, ligne in synthese.bilan_changements.items() %}<tr><th>{{ libelles_groupes[g1] }}</th>{% for g2, n in ligne.items() %}<td>{% if g1 == g2 %}<strong>{{ n }}</strong>{% else %}{{ n or "" }}{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody></table>
+</section>
+{% endif %}
+
 <section class="panneau"><h2>Méthode {{ version_methode }}</h2>
   <p>Score = produit de facteurs ; niveaux par rang : les 20 % de points les plus exposés, découpés en
     trois tiers <strong>{{ libelles_groupes.P1a }}</strong>, <strong>{{ libelles_groupes.P1b }}</strong> et
@@ -124,18 +161,42 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Sollicitation : arrêt / carrefour à feux / giratoire ; arrêt à moins de 40 m d'un carrefour à feux ;
       20 bus/h ou plus en pointe</td><td>×1,0 / ×0,8 / ×0,7 ; ×1,2 ; ×1,1</td></tr>
     <tr><td>Site : pente ≥ 3 % (±30 m le long de la voie) ; béton ou pavés</td><td>jusqu'à ×1,32 ; ×0,5</td></tr>
-    <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
-      et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>
-    <tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>
+    {% if v2 %}<tr><td>Ensoleillement de la chaussée de juin à août (6 jours, 8 h 30–19 h 30), sur les hauteurs mesurées
+      par le LiDAR HD de l'IGN (bâtiments, arbres, ponts, relief) ; arrêt : moyenne sur les 12 m où le bus s'arrête ;
+      carrefour et giratoire : 5 points sur les voies bus ; cause principale d'ombre indiquée</td><td>×0,8 à ×1,2</td></tr>
+    {% else %}<tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
+      et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>{% endif %}
+    {% if synthese.ete_reference is defined %}<tr><td>Chaleur : aléa de jour (0–16), température de surface de l'été (Landsat), surfaces minérales
+      à moins de 50 m, contexte urbain ; chaque indicateur n'agit qu'une fois son apport démontré sur les relevés de terrain
+      (« non retenu » sinon)</td><td>×0,92 à ×1,08 par indicateur retenu</td></tr>
+    {% else %}<tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>{% endif %}
+    {% if synthese.couverture_poids_lourds is defined %}<tr><td>Poids lourds hors bus du sens le plus chargé : comptage publié de la voie
+      (Hauts-de-Seine, réseau national), bus du sens retirés ; sans comptage : non évalué</td><td>×1,0 (50 PL/j) à ×1,25 (2000 PL/j)</td></tr>{% endif %}
     <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
   </tbody></table>
+  {% if v2 %}<h3>Indicateurs de chaleur</h3>
+  <ul>
+    <li>Non retenus pour l'instant : aléa de jour, température de surface, surfaces minérales, contexte urbain. Ils sont
+      calculés et affichés, sans effet sur le score, jusqu'à ce que leur apport soit démontré sur les relevés de terrain
+      (au moins 100 points dans 3 communes).</li>
+    <li>Écarté : chaleur rejetée par les climatiseurs (diagnostics énergétiques : 2 % des bâtiments renseignés, bureaux
+      absents).</li>
+  </ul>
+  {% endif %}
   <h3>Limites connues</h3>
   <ul>
     <li>Le score classe des points ; il ne mesure pas l'état de la chaussée.</li>
-    <li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
-      (à approfondir).</li>
-    <li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>
-    <li>Trafic poids lourds hors bus non compté ; lignes sans arrêt dans la commune non comptées.</li>
+{% if v2 %}<li>Ensoleillement : hauteurs LiDAR d'un survol d'hiver (arbres sans feuilles, compensés par l'infrarouge) ;
+      zone d'arrêt en ligne droite.</li>
+    {% else %}<li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
+      (à approfondir).</li>{% endif %}
+    {% if synthese.ete_reference is defined %}<li>Chaleur : indicateurs calculés et affichés, sans effet sur le score tant que leur apport
+      n'est pas démontré ; température de surface à 30 m près (médiane des images dégagées de juin à août).</li>
+    {% else %}<li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>{% endif %}
+    {% if synthese.couverture_poids_lourds is defined %}<li>Poids lourds : comptés seulement là où un comptage est publié
+      (voirie départementale des Hauts-de-Seine, autoroutes concédées) ; ailleurs, non évalué.</li>
+    <li>Lignes sans arrêt dans la commune non comptées.</li>
+    {% else %}<li>Trafic poids lourds hors bus non compté ; lignes sans arrêt dans la commune non comptées.</li>{% endif %}
     <li>Type de route : classement IGN recoupé avec OpenStreetMap ; « à vérifier » en cas de divergence.</li>
     <li>Âge de l'enrobé estimé par IA sur orthophotos : à confirmer sur le terrain.</li>
   </ul>
@@ -144,7 +205,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
 <section class="panneau"><h2>Sources</h2>
   <table><thead><tr><th>Source</th><th>Licence</th><th>Date d'extraction</th></tr></thead><tbody>
   {% for s in sources %}<tr><td><a href="{{ s.url }}" rel="noopener noreferrer">{{ s.nom }}</a></td>
-    <td>{{ s.licence }}</td><td>{{ s.date_extraction }}</td></tr>{% endfor %}
+    <td>{{ s.licence }}{% if s.hors_ue %} · <strong>service hors UE</strong> (seule l'emprise de la commune est transmise){% endif %}</td><td>{{ s.date_extraction }}</td></tr>{% endfor %}
   </tbody></table>
   {% if ia %}<p class="petit">Âge de l'enrobé : modèle {{ ia.modele }} (Scaleway Generative APIs, hébergé en France),
     prompt {{ ia.version_prompt }} ; {{ ia.appels }} analyse(s), {{ ia.succes_cache }} depuis le cache.</p>{% endif %}
@@ -154,9 +215,14 @@ a{color:inherit;text-decoration-color:var(--accent)}
 
 <template id="gabarit-fiche">
   <h3 class="f-titre"></h3><div class="petit f-sous"></div>
+  <p class="petit f-changement" hidden></p>
+  <p class="petit f-corrige" hidden></p>
+  <h4>Constaté</h4><div class="constate f-constate"></div>
+  <h4>Estimé</h4>
   <dl><dt>Classement</dt><dd class="f-rang"></dd><dt>Route</dt><dd class="f-route"></dd>
     <dt>Bus</dt><dd class="f-bus"></dd><dt>Lignes</dt><dd class="f-lignes"></dd>
-    <dt>Photo</dt><dd class="f-photo"></dd></dl>
+    <dt>Photo</dt><dd class="f-photo"></dd>
+    <dt>Vue aérienne</dt><dd class="f-aerien"></dd></dl>
   <strong>Facteurs</strong><ul class="f-facteurs"></ul>
 </template>
 <script type="application/json" id="donnees">{{ donnees_json|safe }}</script>

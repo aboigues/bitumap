@@ -4,6 +4,13 @@ Usage : uv run python tools/figer_fixtures.py 92026 Courbevoie tests/fixtures/co
         uv run python tools/figer_fixtures.py --couches tests/fixtures/courbevoie quais ouvrages
           (ajoute seulement ces couches OSM à des fixtures existantes : quais T093,
           ouvrages issue #18)
+        uv run python tools/figer_fixtures.py --hauteurs tests/fixtures/courbevoie 92026 Courbevoie
+          (ajoute seulement les hauteurs LiDAR HD des points, méthode 2.0 : 004 T016)
+        uv run python tools/figer_fixtures.py --comptages tests/fixtures/courbevoie
+          (ajoute seulement les comptages poids lourds de l'emprise, méthode 2.0 : 004 T032)
+        uv run python tools/figer_fixtures.py --chaleur tests/fixtures/courbevoie 92026 2026
+          (ajoute seulement la température de surface de l'emprise et la météo de la station de
+          référence pour un été, méthode 2.0 : 004 T024, T026)
 Prérequis : extrait OSM régional (var/cache/osm-idf-AAMMJJ-vN.gpkg).
 """
 
@@ -63,6 +70,86 @@ def ajouter_couches(dossier: str, couches: list[str]) -> None:
         print(f"{len(gdf)} {couche} -> {dossier}/osm.gpkg")
 
 
+def ajouter_hauteurs(dossier: str, insee: str, nom: str) -> None:
+    """Fige les hauteurs LiDAR HD (004 T016) des points d'une commune déjà figée, sans
+    toucher aux autres sources : la non-régression 1.2 reste comparable."""
+    from bitumap.sources import lidar
+    from bitumap.sources.base import client_http
+    from bitumap.sources.fournisseur import _VERS_L93, FournisseurFige, _cle, ecrire_hauteurs
+
+    t0 = time.perf_counter()
+    points = calculer_commune(FournisseurFige(Path(dossier), insee), nom).points
+    memo: dict[str, str] = {}
+    hauteurs = {}
+    with client_http(timeout=120) as client:
+        for p in points:
+            lon, lat = round(p.lon, 6), round(p.lat, 6)
+            h = lidar.hauteurs(*_VERS_L93.transform(lon, lat), client, memo)
+            if h is not None:
+                hauteurs[_cle(lon, lat)] = h
+    ecrire_hauteurs(Path(dossier) / "hauteurs.npz", hauteurs)
+    taille = (Path(dossier) / "hauteurs.npz").stat().st_size / 1e6
+    print(
+        f"{len(hauteurs)}/{len(points)} points, {len(memo)} dalles, {taille:.1f} Mo, "
+        f"{time.perf_counter() - t0:.0f} s -> {dossier}/hauteurs.npz"
+    )
+
+
+def ajouter_comptages(dossier: str) -> None:
+    """Fige les comptages poids lourds (004 T032) de l'emprise d'une commune déjà figée,
+    sans toucher aux autres sources."""
+    import gzip
+    import json
+
+    from shapely.geometry import shape
+
+    from bitumap.calcul import _emprise
+    from bitumap.sources import comptages
+    from bitumap.sources.base import client_http
+
+    d = Path(dossier)
+    with gzip.open(d / "contour.json.gz") as fichier:
+        contour = json.loads(fichier.read())
+    geom = contour["geometry"] if contour.get("type") == "Feature" else contour
+    with client_http(timeout=120) as client:
+        provenances, gdf = comptages.acquerir(_emprise(shape(geom)), client)
+    gdf.to_file(d / "comptages.gpkg", layer="comptages", driver="GPKG")
+    with gzip.open(d / "comptages_provenance.json.gz", "wt", encoding="utf-8") as fichier:
+        json.dump([p.en_dict() for p in provenances], fichier, ensure_ascii=False)
+    taille = (d / "comptages.gpkg").stat().st_size / 1e3
+    print(f"{len(gdf)} sections, {taille:.0f} ko -> {d}/comptages.gpkg")
+
+
+def ajouter_chaleur(dossier: str, insee: str, ete: str) -> None:
+    """Fige la température de surface (emprise) et la météo de la station de référence
+    (004 T024, T026) d'une commune déjà figée, au format de ``Enregistreur``."""
+    import gzip
+    import json
+    from datetime import date
+
+    from shapely.geometry import shape
+
+    from bitumap.calcul import _emprise
+    from bitumap.config import reglages
+
+    d = Path(dossier)
+    with gzip.open(d / "contour.json.gz") as fichier:
+        contour = json.loads(fichier.read())
+    geom = contour["geometry"] if contour.get("type") == "Feature" else contour
+    en_ligne = FournisseurEnLigne(insee, Path(), date.today())  # extrait OSM inutile ici
+    enregistreur = Enregistreur(en_ligne, d)
+    t0 = time.perf_counter()
+    surface = enregistreur.temperature_surface(_emprise(shape(geom)), int(ete))
+    lu = enregistreur.meteo(reglages().station_meteo, int(ete))
+    en_ligne.fermer()
+    taille = (d / "temperature.npz").stat().st_size / 1e3 if surface else 0
+    print(
+        f"température : {'été ' + str(surface[1].ete) if surface else 'absente'} "
+        f"({taille:.0f} ko) ; météo : {len(lu[1]) if lu else 0} jours ; "
+        f"{time.perf_counter() - t0:.0f} s -> {d}"
+    )
+
+
 def main(insee: str, nom: str, dossier: str) -> None:
     regional = _regional()
     date_osm = datetime.strptime(regional.stem.split("-")[2], "%y%m%d").date()
@@ -81,5 +168,11 @@ def main(insee: str, nom: str, dossier: str) -> None:
 if __name__ == "__main__":
     if sys.argv[1] == "--couches":
         ajouter_couches(sys.argv[2], sys.argv[3:])
+    elif sys.argv[1] == "--chaleur":
+        ajouter_chaleur(*sys.argv[2:5])
+    elif sys.argv[1] == "--comptages":
+        ajouter_comptages(sys.argv[2])
+    elif sys.argv[1] == "--hauteurs":
+        ajouter_hauteurs(*sys.argv[2:5])
     else:
         main(*sys.argv[1:4])

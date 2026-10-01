@@ -12,6 +12,7 @@ from datetime import date
 from typing import Any
 
 import httpx
+import numpy as np
 
 USER_AGENT = "bitumap (+https://github.com/aboigues/bitumap)"
 
@@ -33,15 +34,42 @@ class Provenance:
     url: str
     date_extraction: date
     portee: str  # « regionale » ou « communale »
+    # Service hors de l'UE, déclaré dans le rapport (constitution, principe III ; 004 R3)
+    hors_ue: bool = False
 
-    def en_dict(self) -> dict[str, str]:
-        return {
+    def en_dict(self) -> dict[str, str | bool]:
+        d: dict[str, str | bool] = {
             "nom": self.nom,
             "licence": self.licence,
             "url": self.url,
             "date_extraction": self.date_extraction.isoformat(),
             "portee": self.portee,
         }
+        if self.hors_ue:
+            d["hors_ue"] = True
+        return d
+
+
+@dataclass
+class Hauteurs:
+    """Modèles LiDAR HD autour d'un point (004 R1) : altitudes en mètres (IGN69), grilles
+    nord en haut ; ``origine`` = coin nord-ouest en Lambert 93 ; nodata = NaN."""
+
+    mns: np.ndarray
+    mnt: np.ndarray
+    origine: tuple[float, float]
+    resolution: float
+    millesime: str  # « code_mission date de fin d'acquisition » (index des dalles)
+
+
+@dataclass
+class Raster:
+    """Grille géoréférencée (température de surface, 004 R3) ; NaN = pas de mesure."""
+
+    valeurs: np.ndarray
+    transform: tuple[float, float, float, float, float, float]  # ordre GDAL
+    crs: str
+    ete: int
 
 
 @dataclass
@@ -67,6 +95,50 @@ def obtenir(
                 reponse.raise_for_status()
                 return reponse
             derniere = f"HTTP {reponse.status_code}"
+        except httpx.HTTPStatusError as erreur:
+            raise SourceIndisponible(source, f"HTTP {erreur.response.status_code}") from erreur
+        except httpx.TransportError as erreur:
+            derniere = type(erreur).__name__
+        time.sleep(min(2**essai, 8))
+    raise SourceIndisponible(source, derniere)
+
+
+def verifier_url(source: str, url: str, hotes: tuple[str, ...]) -> str:
+    """URL lue dans la réponse d'un service tiers (lien de fichier, ressource d'un jeu) :
+    HTTPS et hôte attendu, sinon refusée. Évite d'aller chercher une adresse imposée par une
+    réponse altérée (fichier local, service interne)."""
+    try:
+        lue = httpx.URL(url)
+    except (httpx.InvalidURL, TypeError) as erreur:
+        raise SourceIndisponible(source, "URL invalide") from erreur
+    if lue.scheme != "https" or lue.host not in hotes:
+        raise SourceIndisponible(source, f"URL refusée ({lue.scheme}://{lue.host})")
+    return url
+
+
+def telecharger(
+    client: httpx.Client, source: str, url: str, max_octets: int, *, tentatives: int = 3
+) -> bytes:
+    """GET d'un fichier, taille bornée (annoncée et réelle), nouvelles tentatives comme
+    ``obtenir``."""
+    derniere = "inconnue"
+    for essai in range(tentatives):
+        try:
+            with client.stream("GET", url) as reponse:
+                if reponse.status_code >= 500 or reponse.status_code == 429:
+                    derniere = f"HTTP {reponse.status_code}"
+                else:
+                    reponse.raise_for_status()
+                    annonce = int(reponse.headers.get("content-length") or 0)
+                    if annonce > max_octets:
+                        raise SourceIndisponible(source, f"fichier trop lourd ({annonce} octets)")
+                    morceaux, total = [], 0
+                    for morceau in reponse.iter_bytes():
+                        total += len(morceau)
+                        if total > max_octets:
+                            raise SourceIndisponible(source, f"fichier trop lourd (> {max_octets})")
+                        morceaux.append(morceau)
+                    return b"".join(morceaux)
         except httpx.HTTPStatusError as erreur:
             raise SourceIndisponible(source, f"HTTP {erreur.response.status_code}") from erreur
         except httpx.TransportError as erreur:

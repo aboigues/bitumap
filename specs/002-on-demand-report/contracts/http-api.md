@@ -3,8 +3,12 @@
 Pages HTML rendues par le serveur (pas d'application JavaScript lourde) ; seul script
 client : le widget ALTCHA, servi par l'API elle-même. Toutes les réponses portent :
 `Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'
-'unsafe-inline'; frame-ancestors 'none'`, `Strict-Transport-Security`,
-`X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`.
+'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action
+'self'`, `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, `Permissions-Policy`. Aucun en-tête
+`Server` (image lancée avec `--no-server-header`). Exceptions : le rapport (CSP propre,
+ci-dessous) et les pages de terrain de 003 (géolocalisation, envoi présigné vers le bucket
+`bitumap-terrain`).
 
 Session : cookie `__Host-session` ; `POST` exige le champ `csrf` égal au jeton de session.
 Erreurs : page ou JSON `{ "erreur": "<code>", "message": "<texte pour l'utilisateur>" }`,
@@ -45,14 +49,25 @@ Heure estimée = prochain déclenchement + ⌈position / 10⌉ × durée moyenne
 
 | Méthode, chemin | Réponse | Erreurs |
 |---|---|---|
-| `GET /rapports/{insee}/{empreinte}` | `rapport.html` lu dans le stockage privé et renvoyé par l'API ; `Content-Disposition: inline` ; `Cache-Control: private, no-store` | `401`, `404` |
+| `GET /rapports/{insee}/{empreinte}` | `rapport.html` lu dans le stockage privé et renvoyé par l'API ; `Content-Disposition: inline` ; `Cache-Control: private, no-store` ; bloc `releves` inséré à la consultation (ci-dessous) | `401`, `404` |
 | `GET /rapports/{insee}/{empreinte}/points.geojson` | données des points | `401`, `404` |
+
+Rapport servi (003) : le document stocké est figé ; à chaque consultation, l'API y insère,
+juste après le bloc `donnees` et avant le script qui le lit (LL-012), un bloc
+`<script type="application/json" id="releves">` : dernier relevé visible de chaque point
+(contrat de 003, `specs/003-terrain-releves/contracts/http-api.md`). CSP du rapport :
+`default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'sha256-…';
+base-uri 'none'; form-action 'none'; frame-ancestors 'none'`, où l'empreinte est calculée
+**sur les scripts en ligne du document servi** (blocs JSON exclus ; aucun script ⇒
+`script-src 'none'`) et non sur le script du code en cours : un rapport en cache produit par
+une version antérieure reste fonctionnel (LL-011).
 
 ## Exploitation
 
 | Méthode, chemin | Réponse |
 |---|---|
 | `GET /sante` | `200 {"etat":"ok"}` sans accès base (sonde du conteneur) |
+| `GET /.well-known/security.txt` | RFC 9116 : `Contact` (signalement privé GitHub, réglage `BITUMAP_CONTACT_SECURITE`), `Expires` glissant à 180 jours, `Preferred-Languages`, `Canonical` |
 
 ## Limites
 
