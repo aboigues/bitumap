@@ -106,7 +106,7 @@ def creer_application() -> FastAPI:
             f"Canonical: {r.url_publique.rstrip('/')}/.well-known/security.txt\n"
         )
 
-    from bitumap.api import antibot, auth, compte, demandes, pages, terrain
+    from bitumap.api import antibot, auth, compte, demandes, pages, parcours, terrain
 
     app.include_router(antibot.routeur)
     app.include_router(auth.routeur)
@@ -114,5 +114,6 @@ def creer_application() -> FastAPI:
     app.include_router(pages.routeur)
     app.include_router(demandes.routeur)
     app.include_router(terrain.routeur)
+    app.include_router(parcours.routeur)
     app.mount("/statique", StaticFiles(directory=str(DOSSIER / "statique")), name="statique")
     return app

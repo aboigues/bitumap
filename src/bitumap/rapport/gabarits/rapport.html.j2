@@ -59,6 +59,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <h1>Risque d'orniérage sur le réseau bus — {{ commune }}</h1>
   <p class="chapeau">Rapport généré le {{ date }} · méthode {{ version_methode }} · {{ points|length }} points
     (arrêts de bus, carrefours à feux et giratoires traversés par des lignes).</p>
+  <p class="petit"><a href="/parcours/{{ insee }}">Préparer un parcours de surveillance</a>
+    (boucle depuis une adresse, fichier GPX ; connexion requise).</p>
 </header>
 
 <p class="avertissement" role="note">Ce rapport <strong>classe des points à relever en priorité sur le

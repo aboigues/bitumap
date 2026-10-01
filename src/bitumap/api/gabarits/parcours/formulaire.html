@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titre %}Parcours de surveillance · {{ commune }} · bitumap{% endblock %}
+{% block contenu %}
+<h1>Parcours de surveillance · {{ commune }}</h1>
+<p>Boucle depuis une adresse vers les points des niveaux choisis, <strong>dans l'ordre du rang</strong>
+  (les plus critiques d'abord), tant que la tournée tient dans la durée maximale, retour compris.</p>
+{% if erreur %}<p class="erreur" role="alert">{{ erreur }}</p>{% endif %}
+<form method="post" action="/parcours/{{ insee }}" class="carte">
+  <input type="hidden" name="csrf" value="{{ session.csrf }}">
+  <label for="adresse">Adresse de départ</label>
+  <input id="adresse" name="adresse" maxlength="300" required autocomplete="street-address"
+    value="{{ valeurs.adresse or '' }}" placeholder="2 place de l'Hôtel de Ville, Courbevoie">
+  {% if propositions %}
+  <fieldset>
+    <legend>Adresses possibles</legend>
+    {% for a in propositions %}
+    <label><input type="radio" name="choix" value="{{ loop.index0 }}" required> {{ a.libelle }}</label><br>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+  <fieldset>
+    <legend>Niveaux à visiter</legend>
+    {% for code, n in effectifs.items() %}
+    <label><input type="checkbox" name="niveaux" value="{{ code }}" {% if code in valeurs.niveaux %}checked{% endif %}
+      {% if not n %}disabled{% endif %}> {{ libelles_groupes[code] }} ({{ n }} point{{ 's' if n > 1 }})</label><br>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>Mode</legend>
+    {% for code, libelle in modes.items() %}
+    <label><input type="radio" name="mode" value="{{ code }}" {% if valeurs.mode == code %}checked{% endif %}> {{ libelle }}</label>
+    {% endfor %}
+  </fieldset>
+  <label for="duree">Durée maximale de la tournée (minutes, retour compris)</label>
+  <input id="duree" name="duree_max_min" type="number" min="30" max="480" step="15" value="{{ valeurs.duree_max_min }}" required>
+  <label for="arret">Temps d'arrêt par point (minutes)</label>
+  <input id="arret" name="arret_min" type="number" min="0" max="30" value="{{ valeurs.arret_min }}" required>
+  <button type="submit">Calculer le parcours</button>
+</form>
+<p class="petit">L'adresse de départ est envoyée au service de géocodage de l'IGN et conservée 24 heures au plus ;
+  elle n'apparaît pas dans le fichier GPX autrement que comme point de départ.</p>
+{% endblock %}
