@@ -17,7 +17,7 @@ from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
 from bitumap.points import direction
 from bitumap.rapport import carte_svg
-from bitumap.score.methode import LIBELLES_GROUPES
+from bitumap.score.methode import LIBELLES_GROUPES, VERSION_METHODE
 
 SCRIPT = (resources.files("bitumap.rapport") / "interactions.js").read_text("utf-8")
 # Empreinte du seul script autorisé dans les rapports (CSP servie par l'API).
@@ -120,6 +120,8 @@ def _synthese(resultat: ResultatCommune) -> dict:
     # Méthode 2.0 (004 FR-007) : été de référence et jours de forte chaleur.
     if resultat.ete_reference is not None:
         synthese["ete_reference"] = resultat.ete_reference
+    if resultat.bilan_changements is not None:
+        synthese["bilan_changements"] = resultat.bilan_changements
     pl = [f for p in points if (f := p.facteur("poids_lourds")) is not None]
     if pl:
         evalues = sum(f.statut == "evalue" for f in pl)
@@ -140,6 +142,7 @@ def rendre(
         commune=resultat.nom,
         date=date.today().isoformat(),
         version_methode=journal.version_methode,
+        v2=journal.version_methode != VERSION_METHODE,
         points=resultat.points,
         synthese=_synthese(resultat),
         carte=carte_svg.dessiner(resultat.contour, resultat.voies_bus, resultat.points),

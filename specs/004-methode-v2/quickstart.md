@@ -32,9 +32,12 @@ Contrats : [contracts/methode-v2.md](contracts/methode-v2.md) ; données :
 ## 4. Validation avant mise en service (mainteneur)
 
 ```bash
-uv run python -m bitumap.methode.evaluer --releves releves.geojson \
-    --communes 92026 … --sortie evaluation-v2.md
+uv run python -m bitumap.methode.evaluer --releves releves-92026.geojson … \
+    --communes 92026 … [--soleil soleil.csv] --sortie evaluation-v2.md
 ```
+
+Un export par commune (`/terrain/{insee}/releves.geojson`) ; `soleil.csv` : une ligne
+`point;heures` par point à ensoleillement observé (SC-002).
 
 - SC-001 : écart v2 − v1 ≥ +10 points sur la part des orniérés dans les trois niveaux
   prioritaires.
