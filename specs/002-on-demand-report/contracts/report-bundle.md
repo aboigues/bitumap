@@ -71,9 +71,23 @@ liste (**estimé par défaut**). Sans ce bloc, rien de cela n'est affiché.
 `direction` : terminus desservis depuis le quai (research R11), `null` si inconnue (affichée
 « direction non déterminée ») ou pour un carrefour ; descriptive, sans effet sur le score.
 
-Méthode 2.0 (004) : membre de premier niveau `ete_reference` (`annee`, station, jours de forte
-chaleur ; data-model 004), lu par l'API pour le classement corrigé par le terrain ; absent
-d'un rapport 1.x.
+Méthode 2.0 (004, [data-model](../../004-methode-v2/data-model.md)) ; tous ces champs sont
+**absents d'un rapport 1.x**, qui reste identique :
+
+- facteur : `details` (omis s'il est vide) : ensoleillement `cause_ombre`, `source`
+  (`lidar_hd` ou `repli_1.2`), `millesime_lidar` ; chaleur `retenu`, `effet_si_retenu`, `ete` ;
+  poids lourds `source`, `annee`, `troncon`, `pl_comptes`, `bus_retires` ;
+- facteurs 2.0 : `chaleur_alea`, `chaleur_temperature_surface`, `chaleur_mineralisation`,
+  `chaleur_contexte_urbain` (à la place de `chaleur`), `poids_lourds` ;
+- point : `niveau_v1` (`P1a` … `P3`), `niveau_v1_libelle`, `raison_changement` (si le niveau a
+  changé) ;
+- membre de premier niveau `ete_reference` (`annee`, station, jours de forte chaleur,
+  `temperature_ete`), lu par l'API pour le classement corrigé par le terrain.
+
+`rapport.html` 2.0 : synthèse « été de référence » et part des points couverts par un
+comptage de poids lourds (`couverture_poids_lourds`) ; panneau « Changements de niveau
+depuis la méthode 1.2 » (`bilan_changements`, tableau v1 × v2) ; section Méthode propre à la
+2.0 ; mention « service hors UE » dans les sources concernées.
 
 ## `sources.json`
 

@@ -61,7 +61,7 @@ def test_bilan_jours_de_forte_chaleur():
 
 
 def _jeu():
-    base = "https://meteo.exemple.test/BASE/QUOT"
+    base = "https://meteofrance.s3.sbg.io.cloud.ovh.net/data/synchro_ftp/BASE/QUOT"
     return {
         "resources": [
             {"url": f"{base}/Q_75_previous-1950-2024_RR-T-Vent.csv.gz"},

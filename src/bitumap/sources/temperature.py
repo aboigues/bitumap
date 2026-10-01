@@ -29,7 +29,7 @@ from rasterio.enums import Resampling
 from rasterio.transform import from_origin
 from rasterio.vrt import WarpedVRT
 
-from bitumap.sources.base import Provenance, Raster, SourceIndisponible, obtenir
+from bitumap.sources.base import Provenance, Raster, SourceIndisponible, obtenir, verifier_url
 
 URL_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
 URL_JETON = "https://planetarycomputer.microsoft.com/api/sas/v1/token/landsateuwest/landsat-c2"
@@ -45,6 +45,9 @@ ECHELLE, DECALAGE = 0.00341802, 149.0
 BITS_MASQUES = (0, 1, 2, 3, 4, 5, 7)
 PART_DEGAGEE_MIN = 0.5
 MOIS_ETE = ("06-01", "08-31")
+# Seul hôte des fichiers de la collection (Azure West Europe) : un lien de la réponse STAC
+# pointant ailleurs est refusé avant d'être ouvert par GDAL.
+HOTES_FICHIERS = ("landsateuwest.blob.core.windows.net",)
 
 _VERS_L93 = Transformer.from_crs("EPSG:4326", L93, always_xy=True)
 
@@ -144,8 +147,14 @@ def _ete(emprise, ete: int, client: httpx.Client, jeton: str) -> Raster | None:
     couches = []
     for item in scenes(emprise, ete, client):
         try:
-            st = _lire(f"{item['assets']['lwir11']['href']}?{jeton}", transform, largeur, hauteur)
-            qa = _lire(f"{item['assets']['qa_pixel']['href']}?{jeton}", transform, largeur, hauteur)
+            liens = {
+                bande: verifier_url(
+                    "Planetary Computer", item["assets"][bande]["href"], HOTES_FICHIERS
+                )
+                for bande in ("lwir11", "qa_pixel")
+            }
+            st = _lire(f"{liens['lwir11']}?{jeton}", transform, largeur, hauteur)
+            qa = _lire(f"{liens['qa_pixel']}?{jeton}", transform, largeur, hauteur)
         except rasterio.errors.RasterioIOError as erreur:
             raise SourceIndisponible("Planetary Computer", type(erreur).__name__) from erreur
         couches.append((st, qa))

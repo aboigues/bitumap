@@ -11,7 +11,7 @@ import pytest
 import respx
 
 from bitumap.sources import temperature
-from bitumap.sources.base import Raster
+from bitumap.sources.base import Raster, SourceIndisponible
 from bitumap.sources.fournisseur import FournisseurFige
 
 COURBEVOIE = (2.233, 48.886, 2.277, 48.914)
@@ -71,11 +71,17 @@ def test_repli_sur_l_ete_precedent(monkeypatch):
 
     def scenes(emprise, ete, client):
         demandes.append(ete)
-        return [{"id": f"S{ete}", "assets": {"lwir11": {"href": "st"}, "qa_pixel": {"href": "qa"}}}]
+        base = "https://landsateuwest.blob.core.windows.net/landsat-c2/"
+        return [
+            {
+                "id": f"S{ete}",
+                "assets": {"lwir11": {"href": base + "st"}, "qa_pixel": {"href": base + "qa"}},
+            }
+        ]
 
     def lire(href, transform, largeur, hauteur):
         nuageux = "2026" in str(demandes[-1])
-        if href.startswith("st"):
+        if "/st?" in href:
             return np.full((hauteur, largeur), _st(33.0), np.uint16)
         return np.full((hauteur, largeur), NUAGE if nuageux else DEGAGE, np.uint16)
 
@@ -110,3 +116,26 @@ def test_courbevoie_figee():
     assert np.isfinite(raster.valeurs).mean() > 0.95
     assert 25 < np.nanmedian(raster.valeurs) < 40
     assert FournisseurFige(FIXTURES, "92026").temperature_surface(None, 2025) is None
+
+
+@pytest.mark.parametrize(
+    "href",
+    ["/etc/passwd", "http://landsateuwest.blob.core.windows.net/x", "https://169.254.42.42/x"],
+)
+@respx.mock
+def test_lien_de_scene_hors_de_la_collection_refuse(monkeypatch, href):
+    """Lien lu dans la réponse STAC : jamais ouvert par GDAL s'il n'est pas sur l'hôte de la
+    collection, en HTTPS."""
+    respx.get(temperature.URL_JETON).mock(return_value=httpx.Response(200, json={"token": "t"}))
+    monkeypatch.setattr(
+        temperature,
+        "scenes",
+        lambda e, ete, c: [
+            {"id": "S", "assets": {"lwir11": {"href": href}, "qa_pixel": {"href": href}}}
+        ],
+    )
+    ouverts = []
+    monkeypatch.setattr(temperature, "_lire", lambda *a: ouverts.append(a))
+    with httpx.Client() as client, pytest.raises(SourceIndisponible, match="URL refusée"):
+        temperature.temperature_surface(COURBEVOIE, 2026, client)
+    assert ouverts == []

@@ -15,6 +15,7 @@ import respx
 from shapely.geometry import LineString
 
 from bitumap.sources import comptages
+from bitumap.sources.base import SourceIndisponible
 from bitumap.sources.fournisseur import FournisseurFige
 
 COURBEVOIE = (2.233, 48.886, 2.277, 48.914)
@@ -188,9 +189,18 @@ def test_datagouv_dernier_millesime(tmp_path):
             200,
             json={
                 "resources": [
-                    {"title": "TMJA_RRNc_2024_shp", "url": "https://exemple.test/2024.zip"},
-                    {"title": "TMJA_RRNc_2024", "url": "https://exemple.test/2024.csv"},
-                    {"title": "TMJA_2019_shp", "url": "https://exemple.test/2019.zip"},
+                    {
+                        "title": "TMJA_RRNc_2024_shp",
+                        "url": "https://static.data.gouv.fr/resources/tmja/2024.zip",
+                    },
+                    {
+                        "title": "TMJA_RRNc_2024",
+                        "url": "https://static.data.gouv.fr/resources/tmja/2024.csv",
+                    },
+                    {
+                        "title": "TMJA_2019_shp",
+                        "url": "https://static.data.gouv.fr/resources/tmja/2019.zip",
+                    },
                 ]
             },
         )
@@ -205,7 +215,7 @@ def test_datagouv_dernier_millesime(tmp_path):
             _section_rrn("A0001", 96596, 17.2, x=700000.0),  # hors de l'emprise
         ],
     )
-    telechargement = respx.get("https://exemple.test/2024.zip").mock(
+    telechargement = respx.get("https://static.data.gouv.fr/resources/tmja/2024.zip").mock(
         return_value=httpx.Response(200, content=archive)
     )
     with httpx.Client() as client:
@@ -244,3 +254,16 @@ def test_courbevoie_figee():
     ]
     assert len(g) >= 40 and set(g.source) == {"Hauts-de-Seine"}
     assert g.pl_sens.between(0, 5000).all() and g.annee.between(2014, 2026).all()
+
+
+@respx.mock
+def test_archive_hors_de_data_gouv_refusee():
+    """Lien de ressource imposé par une réponse altérée : refusé avant tout téléchargement."""
+    source = _source("rrn")
+    respx.get(comptages.URL_DATAGOUV.format(jeu=source["jeu"])).mock(
+        return_value=httpx.Response(
+            200, json={"resources": [{"title": "TMJA_2025_shp", "url": "http://10.0.0.1/x.zip"}]}
+        )
+    )
+    with httpx.Client() as client, pytest.raises(SourceIndisponible, match="URL refusée"):
+        comptages.lire_datagouv_shapefile(source, COURBEVOIE, client)
