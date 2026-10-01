@@ -17,6 +17,8 @@ from bitumap.sources.base import Hauteurs, Provenance, Raster
 from bitumap.sources.fournisseur import Enregistreur, FournisseurFige
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "courbevoie"
+# Fichiers figés propres à la méthode 2.0 (004 T011).
+FICHIERS_V2 = ("hauteurs", "temperature", "comptages", "meteo")
 PROV = Provenance(
     "Source de test", "Licence Ouverte", "https://exemple.fr", date(2026, 9, 30), "communale"
 )
@@ -86,9 +88,9 @@ def test_aller_retour_des_donnees_v2(tmp_path):
 
 def test_dossier_fige_sans_donnees_v2(tmp_path):
     # Un dossier figé avant 004 reste lisible : les accès 2.0 répondent « absent ».
-    # Copie de Courbevoie sans ses fichiers 2.0 (hauteurs, comptages).
+    # Copie de Courbevoie sans ses fichiers 2.0.
     for fichier in FIXTURES.iterdir():
-        if not fichier.name.startswith(("hauteurs", "comptages")):
+        if not fichier.name.startswith(FICHIERS_V2):
             shutil.copy(fichier, tmp_path / fichier.name)
     f = FournisseurFige(tmp_path, "92026")
     assert f.hauteurs(2.26, 48.9) is None

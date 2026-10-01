@@ -112,6 +112,19 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
     à stocker dans Secret Manager), ou (b) Planetary Computer sans compte, sans secret. Dans
     les deux cas, service **hors UE déclaré** (principe III : seule une emprise transmise).
 
+- **Décision du mainteneur (2026-10-01)** : **(b) Microsoft Planetary Computer**. Le compte
+  EROS a été créé le 2026-09-30, mais l'USGS n'a pas accordé l'accès MACHINE (permissions
+  `user` seulement, `download-options` en 403, toujours le cas le 2026-10-01). Planetary
+  Computer distribue les mêmes produits, sans compte ni secret ; identifiants USGS retirés
+  (`.env.example`, `config.py`, secrets prévus dans `configuration.md`).
+- **Mesuré au développement (US2, 2026-10-01)** : 10 scènes Landsat 8-9 sur Courbevoie l'été
+  2026, **6 retenues** (au moins 50 % de l'emprise dégagée selon `QA_PIXEL` : nuage, cirrus,
+  ombre, neige, eau masqués), lues en 4 s environ. Médiane par pixel : 29,6 °C (10 % les
+  plus frais) à 35,5 °C (10 % les plus chauds) ; plus basse que la première mesure (3 scènes
+  très dégagées) parce que des journées plus fraîches (23 juillet) entrent dans la médiane,
+  l'écart entre zones restant de l'ordre de 6 °C. Aux points : 27,3 à 38,0 °C (fenêtre de
+  30 m sur la chaussée). Grille Lambert 93 de 30 m : 40 ko figés.
+
 ## R4. Autres candidats chaleur
 
 | Candidat | Donnée | Décision |
@@ -139,6 +152,28 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
     référence proposée : **Paris-Montsouris (`75114001`)**. Été 2026 : 92 jours complets,
     **39 jours à 30 °C ou plus, 20 à 35 °C ou plus, maximum 40,6 °C**. 007 prévoit le même
     module `sources/meteo.py` : écrit une seule fois.
+
+- **Mesuré au développement (US2, 2026-10-01)** :
+  - **Indicateurs aux points de Courbevoie** : aléa 0 à 15/16 (150 points sur 154) ;
+    température de surface 27,3 à 38,0 °C (154) ; surfaces minérales à 50 m 62 à 100 %
+    (médiane 95 %, 154) ; contexte urbain (153) surtout bâti ouvert de hauteur moyenne (5),
+    bâti compact (2, 3), bâti ouvert de grande hauteur (4), arbres épars (B).
+  - **Bornes fixées d'avance** (même amplitude que l'aléa de la 1.2, ×0,92 à ×1,08) :
+    température 28 °C → 38 °C ; minéralisation 0 → 100 % ; contexte : bâti compact (1, 2,
+    3), grands bâtiments bas (8), industrie lourde (10), sol imperméable (E) ×1,08 ; arbres,
+    végétation basse, sol nu, eau (A à D, F, G) ×0,92 ; autres ×1,0. Recalibrées sur les
+    relevés (R7).
+  - **SC-003 mesuré (T029, consigné)** : écart d'effet entre les 10 % de points les plus et
+    les moins exposés (effet qu'aurait l'indicateur s'il était retenu) : aléa v1 12,5 % ;
+    température de surface 13,6 % (×1,08 la v1) ; minéralisation 3,9 % (×0,31) ; contexte
+    urbain 17,4 % (×1,39). **Le seuil de SC-003 (trois fois la v1) est inatteignable par un
+    indicateur seul** avec les bornes de la v1 : l'écart est plafonné à 1,08 / 0,92 − 1 =
+    17,4 %. À trancher par le mainteneur : élargir les bornes d'un indicateur retenu, mesurer
+    SC-003 sur la combinaison des indicateurs retenus, ou reformuler SC-003.
+  - Exemple : « Paix - Verdun » (A23742, orniérage présent mais non critique selon le
+    mainteneur, 2026-10-01) a un aléa faible (3/16) mais une température de surface de
+    37,1 °C, parmi les 10 % les plus chaudes : signal encourageant pour la température de
+    surface, à confirmer sur les relevés (R7).
 
 ## R5. Poids lourds : comptages publiés (décision du mainteneur)
 

@@ -117,6 +117,9 @@ def _synthese(resultat: ResultatCommune) -> dict:
         "classements": [(c, libelle(c)) for c in sorted({p.route.classement for p in points})],
     }
     # Méthode 2.0 (004 FR-010) : part des points couverts par un comptage de poids lourds.
+    # Méthode 2.0 (004 FR-007) : été de référence et jours de forte chaleur.
+    if resultat.ete_reference is not None:
+        synthese["ete_reference"] = resultat.ete_reference
     pl = [f for p in points if (f := p.facteur("poids_lourds")) is not None]
     if pl:
         evalues = sum(f.statut == "evalue" for f in pl)

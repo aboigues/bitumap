@@ -99,9 +99,6 @@ class Reglages(BaseSettings):
     s3_cle_secrete: SecretStr | None = None
     tem_cle: SecretStr | None = None
     genai_cle: SecretStr | None = None
-    # Température de surface (004 R3) : compte EROS de l'USGS, jeton d'application M2M
-    usgs_utilisateur: SecretStr | None = None
-    usgs_jeton: SecretStr | None = None
 
     # Cookies : « Secure » obligatoire hors développement local
     cookies_securises: bool = True

@@ -54,3 +54,8 @@ LIBELLES_GROUPES = {
 PL_EFFET_NUL = 50
 PL_EFFET_MAX = 2000
 EFFET_PL_MAX = 1.25
+
+# Indicateurs de chaleur de la 2.0 (004 FR-006) qui agissent sur le score : **aucun** tant
+# que leur apport n'est pas démontré sur les relevés de 003 (outil d'évaluation, R7). Les
+# candidats sont calculés et affichés « non retenu » avec un effet 1,0.
+INDICATEURS_CHALEUR_RETENUS: frozenset[str] = frozenset()

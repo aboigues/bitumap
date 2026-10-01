@@ -15,6 +15,7 @@ import geopandas as gpd
 from shapely.geometry import Point as PointGeo
 from shapely.geometry import mapping
 
+from bitumap.config import reglages
 from bitumap.facteurs import (
     chaleur,
     charge,
@@ -28,8 +29,13 @@ from bitumap.modele import Facteur, Point
 from bitumap.points import construction as c
 from bitumap.points import direction
 from bitumap.score import combinaison
-from bitumap.score.methode import VERSION_METHODE, version_appliquee
-from bitumap.sources import idfm, lidar, osm
+from bitumap.score.methode import (
+    INDICATEURS_CHALEUR_RETENUS,
+    VERSION_METHODE,
+    ete_reference,
+    version_appliquee,
+)
+from bitumap.sources import idfm, lidar, meteo, osm, temperature
 from bitumap.sources.base import Provenance
 from bitumap.sources.fournisseur import Fournisseur
 
@@ -49,6 +55,8 @@ class ResultatCommune:
     contour: dict
     provenances: list[Provenance]
     avertissements: list[str] = field(default_factory=list)
+    # Méthode 2.0 (004 FR-007) : été de référence, jours de forte chaleur ; ``None`` en 1.2.
+    ete_reference: dict | None = None
 
 
 def _emprise(commune) -> tuple[float, float, float, float]:
@@ -176,6 +184,43 @@ def _troncon_de_la_voie(troncons_l93, chaussee, voie):
     return troncons_l93.loc[distances.idxmin()]
 
 
+def _ete_reference(f, emprise, provenances, avertissements) -> dict:
+    """Été de référence (FR-007) et ses jours de forte chaleur à la station de référence ;
+    affiché, jamais un facteur de classement (R4)."""
+    annee = ete_reference()
+    ete = {"annee": annee}
+    try:
+        lu = f.meteo(reglages().station_meteo, annee)
+    except Exception as erreur:
+        avertissements.append(f"Météo-France indisponible : {type(erreur).__name__}")
+        lu = None
+    if lu is not None:
+        provenances.append(lu[0])
+        ete |= {
+            "station": reglages().station_meteo,
+            "station_nom": meteo.nom_station(lu[0]) or reglages().station_meteo,
+            **meteo.bilan(lu[1]),
+        }
+    return ete
+
+
+def _temperature_surface(f, emprise, annee, provenances, avertissements):
+    try:
+        lu = f.temperature_surface(emprise, annee)
+    except Exception as erreur:
+        avertissements.append(f"Température de surface indisponible : {type(erreur).__name__}")
+        return None
+    if lu is None:
+        return None
+    provenances.append(lu[0])
+    if lu[1].ete != annee:
+        avertissements.append(
+            f"Température de surface : aucune scène exploitable l'été {annee}, "
+            f"été {lu[1].ete} utilisé"
+        )
+    return lu[1]
+
+
 def _poids_lourds(comptages_l93, chaussee, voie, p: Point) -> Facteur:
     """Méthode 2.0 : poids lourds comptés sur la voie du point, bus du sens retirés (la
     charge d'une voie à double sens compte les deux sens)."""
@@ -277,7 +322,13 @@ def calculer_commune(
     lidar_lu = False
     # Comptages de poids lourds publiés (2.0, 004 US3) ; absents ⇒ « non évalué » partout.
     comptages_l93 = None
+    # Chaleur 2.0 (004 US2) : température de surface et été de référence, une fois par commune.
+    surface_lst = ete = None
     if v2:
+        ete = _ete_reference(f, emprise, provenances, avertissements)
+        surface_lst = _temperature_surface(f, emprise, ete["annee"], provenances, avertissements)
+        if surface_lst is not None:
+            ete["temperature_ete"] = surface_lst.ete
         try:
             provenances_pl, comptages_l93 = f.comptages_pl(emprise)
             provenances += provenances_pl
@@ -335,13 +386,23 @@ def calculer_commune(
             )
         p.facteurs.append(soleil)
 
+        alea = lcz = None
         if jointure is not None:
             ligne = jointure.loc[i]
             alea = ligne.get("aleaj_note")
             alea = None if alea is None or alea != alea else float(alea)  # NaN → None
-            p.facteurs.append(chaleur.calculer(alea, ligne.get("type_lcz")))
+            lcz = ligne.get("type_lcz")
+        if v2:
+            p.facteurs += chaleur.candidats(
+                alea,
+                lcz,
+                temperature.au_point(surface_lst, chaussee.x, chaussee.y) if surface_lst else None,
+                chaleur.mineralisation(vegetation),
+                surface_lst.ete if surface_lst else None,
+                INDICATEURS_CHALEUR_RETENUS,
+            )
         else:
-            p.facteurs.append(chaleur.calculer(None, None))
+            p.facteurs.append(chaleur.calculer(alea, lcz))
 
         if troncons_l93 is not None and not troncons_l93.empty:
             t = _troncon_de_la_voie(troncons_l93, chaussee, voie)
@@ -388,5 +449,5 @@ def calculer_commune(
     if lidar_lu:
         provenances.append(lidar.provenance())
     return ResultatCommune(
-        f.insee, nom_commune, points, voies, contour, provenances, avertissements
+        f.insee, nom_commune, points, voies, contour, provenances, avertissements, ete
     )
