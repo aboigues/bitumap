@@ -77,6 +77,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
 </section>
 <section class="chiffres" aria-label="Types de route">
   {% for route, n in synthese.routes.items() %}<div class="chiffre"><b>{{ n }}</b><span>{{ route }}</span></div>{% endfor %}
+  {% if synthese.couverture_poids_lourds is defined %}<div class="chiffre"><b>{{ synthese.couverture_poids_lourds }} %</b><span>des points couverts par un comptage de poids lourds</span></div>{% endif %}
 </section>
 
 <section class="grille">
@@ -142,6 +143,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <tr><td>Ensoleillement de la chaussée, 8 h–20 h mi-juillet (ombres des bâtiments, des arbres, des ponts
       et passerelles) ; arrêt : moyenne sur les 12 m où le bus s'arrête</td><td>×0,8 à ×1,2</td></tr>
     <tr><td>Îlot de chaleur, aléa de jour (0–16)</td><td>×0,92 à ×1,08</td></tr>
+    {% if synthese.couverture_poids_lourds is defined %}<tr><td>Poids lourds hors bus du sens le plus chargé : comptage publié de la voie
+      (Hauts-de-Seine, réseau national), bus du sens retirés ; sans comptage : non évalué</td><td>×1,0 (50 PL/j) à ×1,25 (2000 PL/j)</td></tr>{% endif %}
     <tr><td>Âge de l'enrobé (IA, 20 % les plus exposés seulement, à confirmer) : refait il y a 5–12 ans ; plus de 12 ans</td><td>×0,85 ; ×1,05</td></tr>
   </tbody></table>
   <h3>Limites connues</h3>
@@ -150,7 +153,10 @@ a{color:inherit;text-decoration-color:var(--accent)}
     <li>Ensoleillement : arbres et tabliers de hauteur forfaitaire, sans relief, zone d'arrêt en ligne droite
       (à approfondir).</li>
     <li>Îlots de chaleur : indicateur de jour de 2022 (à approfondir).</li>
-    <li>Trafic poids lourds hors bus non compté ; lignes sans arrêt dans la commune non comptées.</li>
+    {% if synthese.couverture_poids_lourds is defined %}<li>Poids lourds : comptés seulement là où un comptage est publié
+      (voirie départementale des Hauts-de-Seine, autoroutes concédées) ; ailleurs, non évalué.</li>
+    <li>Lignes sans arrêt dans la commune non comptées.</li>
+    {% else %}<li>Trafic poids lourds hors bus non compté ; lignes sans arrêt dans la commune non comptées.</li>{% endif %}
     <li>Type de route : classement IGN recoupé avec OpenStreetMap ; « à vérifier » en cas de divergence.</li>
     <li>Âge de l'enrobé estimé par IA sur orthophotos : à confirmer sur le terrain.</li>
   </ul>

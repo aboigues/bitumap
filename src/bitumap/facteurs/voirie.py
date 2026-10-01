@@ -36,6 +36,12 @@ def normaliser_numero(numero: str | None) -> str:
     return re.sub(r"^R(?=[DN]\d)", "", texte)
 
 
+def normaliser_nom(nom) -> str:
+    """Nom de voie comparable : minuscules, lettres et chiffres seulement."""
+    texte = "" if nom is None or nom != nom else str(nom)
+    return "".join(ch for ch in texte.lower() if ch.isalnum())
+
+
 LIBELLES = {
     "autoroute": "autoroute",
     "nationale": "nationale",

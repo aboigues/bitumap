@@ -6,6 +6,8 @@ Usage : uv run python tools/figer_fixtures.py 92026 Courbevoie tests/fixtures/co
           ouvrages issue #18)
         uv run python tools/figer_fixtures.py --hauteurs tests/fixtures/courbevoie 92026 Courbevoie
           (ajoute seulement les hauteurs LiDAR HD des points, méthode 2.0 : 004 T016)
+        uv run python tools/figer_fixtures.py --comptages tests/fixtures/courbevoie
+          (ajoute seulement les comptages poids lourds de l'emprise, méthode 2.0 : 004 T032)
 Prérequis : extrait OSM régional (var/cache/osm-idf-AAMMJJ-vN.gpkg).
 """
 
@@ -90,6 +92,31 @@ def ajouter_hauteurs(dossier: str, insee: str, nom: str) -> None:
     )
 
 
+def ajouter_comptages(dossier: str) -> None:
+    """Fige les comptages poids lourds (004 T032) de l'emprise d'une commune déjà figée,
+    sans toucher aux autres sources."""
+    import gzip
+    import json
+
+    from shapely.geometry import shape
+
+    from bitumap.calcul import _emprise
+    from bitumap.sources import comptages
+    from bitumap.sources.base import client_http
+
+    d = Path(dossier)
+    with gzip.open(d / "contour.json.gz") as fichier:
+        contour = json.loads(fichier.read())
+    geom = contour["geometry"] if contour.get("type") == "Feature" else contour
+    with client_http(timeout=120) as client:
+        provenances, gdf = comptages.acquerir(_emprise(shape(geom)), client)
+    gdf.to_file(d / "comptages.gpkg", layer="comptages", driver="GPKG")
+    with gzip.open(d / "comptages_provenance.json.gz", "wt", encoding="utf-8") as fichier:
+        json.dump([p.en_dict() for p in provenances], fichier, ensure_ascii=False)
+    taille = (d / "comptages.gpkg").stat().st_size / 1e3
+    print(f"{len(gdf)} sections, {taille:.0f} ko -> {d}/comptages.gpkg")
+
+
 def main(insee: str, nom: str, dossier: str) -> None:
     regional = _regional()
     date_osm = datetime.strptime(regional.stem.split("-")[2], "%y%m%d").date()
@@ -108,6 +135,8 @@ def main(insee: str, nom: str, dossier: str) -> None:
 if __name__ == "__main__":
     if sys.argv[1] == "--couches":
         ajouter_couches(sys.argv[2], sys.argv[3:])
+    elif sys.argv[1] == "--comptages":
+        ajouter_comptages(sys.argv[2])
     elif sys.argv[1] == "--hauteurs":
         ajouter_hauteurs(*sys.argv[2:5])
     else:

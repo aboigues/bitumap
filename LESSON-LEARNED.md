@@ -33,6 +33,31 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-018 — % de poids lourds publié multiplié par 10 (2026-10-01) — Close
+
+- **Contexte** : développement de 004 (US3, poids lourds), lecture des millésimes du trafic
+  moyen journalier du réseau routier national (data.gouv.fr) avant d'écrire l'adaptateur.
+- **Symptôme** : dans le millésime 2019, 76 sections non concédées d'Île-de-France ont un
+  « % de poids lourds » au-dessus de 100 (A86 : 120, N4 : 327) ; la N13 passe de 4,6 % en 2018
+  à « 46 » en 2019. Utilisée telle quelle, la valeur aurait donné l'effet maximal à ces
+  voies.
+- **Causes racines** :
+  1. Pourquoi ? Le producteur a publié pour ces sections une valeur dix fois trop grande
+     (virgule décimale perdue, vraisemblablement) ; les autoroutes concédées du même fichier
+     sont justes.
+  2. Pourquoi aurait-on pu l'utiliser ? L'inventaire T003 notait le champ et la licence, pas
+     la plage des valeurs ; et depuis 2022 seul le réseau concédé est publié, 2019 était donc
+     le « dernier millésime » du réseau non concédé.
+  3. Pourquoi vu à temps ? Les valeurs ont été comparées d'un millésime à l'autre avant
+     d'écrire le code (même famille que LL-016 : vérifier une source sur des données réelles).
+- **Correctif** : dernier millésime publié seulement (réseau non concédé « non évalué »,
+  décision du mainteneur) ; garde-fou : un % de poids lourds hors de ]0, 100] écarte la
+  section.
+- **Mesure préventive** : test `test_reseau_national_dernier_millesime` (section à % fautif
+  écartée). Règle : toute nouvelle source chiffrée est contrôlée sur sa plage de valeurs et
+  comparée à un autre millésime avant d'être utilisée.
+- **Références** : branche `004-us3-poids-lourds`, research R5.
+
 ### LL-017 — Feux dessinés hors de la commune sur la carte du rapport (2026-09-30) — Close
 
 - **Contexte** : relecture de la carte du rapport de Courbevoie par le mainteneur.

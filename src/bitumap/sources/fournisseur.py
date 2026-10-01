@@ -20,7 +20,17 @@ import geopandas as gpd
 import numpy as np
 from pyproj import Transformer
 
-from bitumap.sources import altimetrie, bdtopo, chaleur, idfm, lidar, ortho, osm, panoramax
+from bitumap.sources import (
+    altimetrie,
+    bdtopo,
+    chaleur,
+    comptages,
+    idfm,
+    lidar,
+    ortho,
+    osm,
+    panoramax,
+)
 from bitumap.sources.base import Hauteurs, Provenance, Raster, client_http
 from bitumap.territoire import api_geo
 
@@ -71,6 +81,9 @@ class FournisseurEnLigne:
     def hauteurs(self, lon, lat):
         x, y = _VERS_L93.transform(lon, lat)
         return lidar.hauteurs(x, y, self._client, self._millesimes_lidar)
+
+    def comptages_pl(self, emprise):
+        return comptages.acquerir(emprise, self._client)
 
     def offre(self):
         maj = idfm.date_mise_a_jour(self._client)

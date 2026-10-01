@@ -127,14 +127,21 @@ implémentation et vérifier qu'ils échouent.
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Écrire `tests/adaptateurs/test_comptages.py` : comptages figés des Hauts-de-Seine et du réseau national ; normalisation (tronçon, poids lourds par jour, année, source) ; département sans comptage publié (inventaire T003) ⇒ liste vide
-- [ ] T031 [P] [US3] Écrire `tests/unit/test_poids_lourds.py` : rattachement à la **même voie** (même numéro de route ou même nom normalisé, à moins de 30 m) ; tronçon d'une autre voie à 10 m ⇒ non rattaché ; effet croissant borné de ×1,0 à ×1,25 ; sans comptage ⇒ ×1,0, `statut = "non_evalue"`, explication « non évalué (aucun comptage publié) », **quel que soit le type de route** ; `details` : `source`, `annee`, `troncon`
+- [X] T030 [P] [US3] Écrire `tests/adaptateurs/test_comptages.py` : comptages figés des Hauts-de-Seine et du réseau national ; normalisation (tronçon, poids lourds par jour, année, source) ; département sans comptage publié (inventaire T003) ⇒ liste vide
+- [X] T031 [P] [US3] Écrire `tests/unit/test_poids_lourds.py` : rattachement à la **même voie** (même numéro de route ou même nom normalisé, à moins de 30 m) ; tronçon d'une autre voie à 10 m ⇒ non rattaché ; effet croissant borné de ×1,0 à ×1,25 ; sans comptage ⇒ ×1,0, `statut = "non_evalue"`, explication « non évalué (aucun comptage publié) », **quel que soit le type de route** ; `details` : `source`, `annee`, `troncon`
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Créer `src/bitumap/sources/comptages.py` : un lecteur par source retenue en T003 (Hauts-de-Seine, réseau national, autres départements publiés), sortie commune (géométrie Lambert 93, poids lourds par jour, année, source) ; cache `comptages/{source}/{annee}.json` ; méthode `comptages_pl` de `FournisseurEnLigne` ; capture sur Courbevoie (T011)
-- [ ] T033 [US3] Créer `src/bitumap/facteurs/poids_lourds.py` : rattachement (réutiliser `normaliser_numero` de `src/bitumap/facteurs/voirie.py` et `_normaliser_nom` de `src/bitumap/calcul.py`), effet borné (forme et bornes dans `src/bitumap/score/methode.py`, calibrées plus tard sur les relevés, R7)
-- [ ] T034 [US3] Brancher le facteur dans `src/bitumap/calcul.py` en 2.0 ; ajouter au rapport `couverture_poids_lourds` et l'afficher dans la synthèse ; fiche : valeur, source et année, ou « non évalué (aucun comptage publié) » (`rendu.py`, `rapport.html.j2`)
+- [X] T032 [US3] Créer `src/bitumap/sources/comptages.py` : un lecteur par source retenue en T003 (Hauts-de-Seine, réseau national, autres départements publiés), sortie commune (géométrie Lambert 93, poids lourds par jour, année, source) ; cache `comptages/{source}/{annee}.json` ; méthode `comptages_pl` de `FournisseurEnLigne` ; capture sur Courbevoie (T011)
+- [X] T033 [US3] Créer `src/bitumap/facteurs/poids_lourds.py` : rattachement (réutiliser `normaliser_numero` de `src/bitumap/facteurs/voirie.py` et `_normaliser_nom` de `src/bitumap/calcul.py`), effet borné (forme et bornes dans `src/bitumap/score/methode.py`, calibrées plus tard sur les relevés, R7)
+- [X] T034 [US3] Brancher le facteur dans `src/bitumap/calcul.py` en 2.0 ; ajouter au rapport `couverture_poids_lourds` et l'afficher dans la synthèse ; fiche : valeur, source et année, ou « non évalué (aucun comptage publié) » (`rendu.py`, `rapport.html.j2`)
+
+*Écarts au développement (2026-10-01, research R5 « Mesuré au développement, US3 »)* : pas de
+cache (comme le LiDAR : une requête pour le 92, une archive d'environ 2 Mo pour le réseau
+national) ; réseau national limité au **dernier millésime publié** (autoroutes concédées) ;
+**bus du sens retirés** des poids lourds comptés ; effet linéaire en logarithme des PL/jour du
+sens le plus chargé, de ×1,0 (50) à ×1,25 (2000) ; `normaliser_nom` déplacé de `calcul.py`
+dans `facteurs/voirie.py` (import circulaire évité).
 
 **Checkpoint**: US1 à US3 fonctionnent en 2.0.
 

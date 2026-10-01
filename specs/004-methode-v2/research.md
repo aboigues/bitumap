@@ -169,6 +169,30 @@ Sources vérifiées en ligne le 2026-09-29. Chaque décision résout une inconnu
   rares arrêts sur le réseau national. L'inventaire est à refaire à chaque été de
   référence (un département peut publier).
 
+- **Mesuré au développement (US3, 2026-10-01)** :
+  - **Réseau national** : depuis 2022, seul le réseau **concédé** est publié (2024 : 1 100
+    sections en France, aucune nationale d'Île-de-France). Le dernier millésime du réseau non
+    concédé (2019) a un % de poids lourds **fautif en Île-de-France** : valeurs multipliées par
+    10 (N13 : 4,6 % en 2018, « 46 » en 2019 ; 76 sections au-dessus de 100 %). **Décision du
+    mainteneur** : dernier millésime publié seulement ; le réseau non concédé reste « non
+    évalué ». Garde-fou : tout % de poids lourds hors de ]0, 100] écarte la section. Le jeu du
+    92 couvre déjà la RN13 et l'A14 à Courbevoie.
+  - **Hauts-de-Seine** : poids lourds par sens = trafic du sens × % du sens ; valeur retenue =
+    sens le plus chargé parmi les sens complets ; les comptages sans % de poids lourds (avant
+    2014) sont écartés.
+  - **Bus retirés** (décision du mainteneur) : les poids lourds comptés comprennent les bus,
+    déjà comptés par la charge ; on retire les bus du sens (charge IDFM de la voie, divisée par
+    deux sur une voie à double sens), avec un minimum de 0.
+  - **Effet initial** (décision du mainteneur) : linéaire en logarithme des poids lourds hors
+    bus du sens le plus chargé, ×1,0 à 50 PL/j (classe T3 du dimensionnement des chaussées) et
+    ×1,25 à partir de 2000 PL/j (classe TS) ; recalibré sur les relevés (R7).
+  - **Courbevoie** : 47 sections dans l'emprise (toutes du 92) ; 90 points sur 154 couverts
+    (58 %), tous sur des départementales ; 30 points de départementales restent non évalués
+    (RD9 boulevard Saint-Denis, RD6 rue de Bezons : comptages sans % de poids lourds) ; 18
+    points couverts à ×1,0 (plus de bus que de poids lourds comptés au-delà de 50) ; 22 points
+    sur 154 changent de priorité (7 entrent en P1, 7 en sortent).
+  - **Pas de cache** : comme le LiDAR, relu à chaque rapport.
+
 ## R6. Explication des changements de niveau
 
 - **Décision** : au cours du même lot, le point est aussi calculé en **méthode 1.2**
