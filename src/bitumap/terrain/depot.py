@@ -365,6 +365,11 @@ def releves_visibles(commune_insee: str, lecteur_id: str | None) -> list[dict]:
     return vues
 
 
+def releves_de_la_commune(conn, commune_insee: str) -> list[dict]:
+    """Relevés visibles de la commune (dernière version), sans les données du lecteur."""
+    return _releves(conn, "r.commune_insee = %s", (commune_insee,))
+
+
 def derniers_releves(commune_insee: str, lecteur_id: str | None) -> dict[str, dict]:
     """Dernier relevé visible de chaque point relevé de la commune, avec le nombre de relevés
     (US2, FR-006) ; aucune information de photo autre que leur nombre (FR-015)."""

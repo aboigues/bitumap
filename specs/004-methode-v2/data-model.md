@@ -54,6 +54,10 @@ Aucune table nouvelle : lecture des relevés visibles de 003 (`releve`, dernièr
 | `points.{id}.annule` | vrai si le relevé visible le plus récent, daté d'une année ≥ `annee_refection`, constate `marque` ou `grave` (FR-018) |
 | `points.{id}.rang`, `points.{id}.groupe` | rang et niveau après correction, mêmes règles que l'estimé (`score.combinaison`) |
 | `nb_points_corriges` | points dont l'effet est < 1,0 |
+| `classement` | tous les points du rapport, dans l'ordre corrigé : `id`, `rang`, `groupe` (pour le choix « classement corrigé » de la liste ; ajouté au développement) |
 
 Aucune donnée personnelle (ni auteur, ni adresse, ni photo). Seuls les points ayant une
 réfection confirmée figurent dans `points`.
+
+L'été de référence du rapport est lu dans `points.geojson` (membre `ete_reference`, écrit par
+le job en 2.0).

@@ -111,6 +111,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
         <option value="marque_grave">marqué ou grave</option><option value="absent">absent</option>
         <option value="leger">léger</option><option value="marque">marqué</option>
         <option value="grave">grave</option></select></label>
+      {% if v2 %}<label id="choix-classement" hidden>Classement <select data-classement>
+        <option value="estime">estimé</option><option value="corrige">corrigé par le terrain</option></select></label>{% endif %}
       <span id="compte" class="petit"></span>
     </div>
     <ol class="liste">
@@ -133,6 +135,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <table><thead><tr><th>Niveau estimé</th><th>absent</th><th>léger</th><th>marqué</th><th>grave</th></tr></thead>
     <tbody id="constate-tableau"></tbody></table>
   <p class="petit">Relevés saisis sur le terrain ; ils ne modifient ni le score ni le classement.</p>
+  {% if v2 %}<p class="petit" id="synthese-terrain" hidden></p>{% endif %}
 </section>
 
 {% if synthese.bilan_changements is defined %}
@@ -213,6 +216,7 @@ a{color:inherit;text-decoration-color:var(--accent)}
 <template id="gabarit-fiche">
   <h3 class="f-titre"></h3><div class="petit f-sous"></div>
   <p class="petit f-changement" hidden></p>
+  <p class="petit f-corrige" hidden></p>
   <h4>Constaté</h4><div class="constate f-constate"></div>
   <h4>Estimé</h4>
   <dl><dt>Classement</dt><dd class="f-rang"></dd><dt>Route</dt><dd class="f-route"></dd>

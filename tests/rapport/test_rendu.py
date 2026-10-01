@@ -294,3 +294,22 @@ def test_ensoleillement_v2_dans_la_fiche():
     assert soleil["details"]["cause_ombre"] == "arbre"
     assert "LiDAR HD de mars 2023" in soleil["explication"]
     assert "Méthode 2.0" in html
+
+
+def test_classement_corrige_prevu_en_2_0_seulement(rapport):
+    """004 T051 : choix « estimé / corrigé », ligne de fiche et synthèse cachés tant que l'API
+    n'a pas inséré le bloc ``classement-terrain`` ; été de référence dans ``points.geojson``
+    (lu par l'API) ; rien de tout cela en 1.2."""
+    resultat = copy.deepcopy(_resultat())
+    resultat.ete_reference = {"annee": 2026}
+    fichiers = rendu.rendre(resultat, JournalGeneration("92026", "2.0"))
+    html = fichiers["rapport.html"][0].decode()
+    assert '<label id="choix-classement" hidden>' in html
+    assert '<p class="petit" id="synthese-terrain" hidden></p>' in html
+    assert 'class="petit f-corrige" hidden' in html
+    assert json.loads(fichiers["points.geojson"][0])["ete_reference"] == {"annee": 2026}
+    v1 = rendu.rendre(_resultat(), JournalGeneration("92026", VERSION_METHODE))
+    html_v1 = v1["rapport.html"][0].decode()
+    assert '<label id="choix-classement"' not in html_v1
+    assert 'id="synthese-terrain"' not in html_v1.split("<script")[0]
+    assert "ete_reference" not in json.loads(v1["points.geojson"][0])

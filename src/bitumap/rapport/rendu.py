@@ -163,6 +163,10 @@ def rendre(
             for p, d in zip(resultat.points, points_dict, strict=True)
         ],
     }
+    if resultat.ete_reference is not None:
+        # Méthode 2.0 : été de référence, lu par l'API pour le classement corrigé par le
+        # terrain (004 R9) ; membre absent d'un rapport 1.x.
+        geojson["ete_reference"] = resultat.ete_reference
     fichiers = {
         "points.geojson": (
             json.dumps(geojson, ensure_ascii=False, default=str).encode(),
