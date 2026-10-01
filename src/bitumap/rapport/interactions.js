@@ -6,6 +6,10 @@
   // Constaté (003) : relevés insérés par l'API à la consultation ; absent d'un rapport ancien.
   var blocReleves = document.getElementById("releves");
   var R = blocReleves ? JSON.parse(blocReleves.textContent) : {};
+  // Méthode 2.0 : classement corrigé par le terrain (004 R9), inséré par l'API ; absent
+  // d'un rapport 1.x ou d'une page sans relevé de réfection confirmée.
+  var blocCorrige = document.getElementById("classement-terrain");
+  var C = blocCorrige ? JSON.parse(blocCorrige.textContent) : null;
   var NIVEAUX = { absent: "absent", leger: "léger", marque: "marqué", grave: "grave" };
   var SOURCES = { constatee: "constatée", services_techniques: "services techniques", estimee_agent: "estimée par l'agent" };
   var INSEE = location.pathname.split("/")[2] || "";
@@ -85,6 +89,51 @@
     });
   }
 
+  var LIBELLES = {};
+  D.points.forEach(function (p) { LIBELLES[p.groupe] = p.groupe_libelle; });
+  var corrigeParId = {};
+  if (C) { C.classement.forEach(function (c) { corrigeParId[c.id] = c; }); }
+
+  function effetTexte(e) { return "×" + e.toFixed(2).replace(".", ","); }
+
+  function remplirCorrige(zone, p) {
+    var c = C && C.points[p.id];
+    if (!zone || !c) { return; }
+    var detail = c.annule ? c.motif :
+      "réfection de " + c.annee_refection + ", " + (SOURCES[c.source_refection] || c.source_refection) + " : " + effetTexte(c.effet);
+    texte(zone, "Estimé : rang " + p.rang + ", " + p.groupe_libelle + " · Corrigé par le terrain : rang " +
+      c.rang + ", " + (LIBELLES[c.groupe] || c.groupe) + " (" + detail + ")");
+    zone.hidden = false;
+  }
+
+  function syntheseCorrige() {
+    var zone = document.getElementById("synthese-terrain");
+    var choix = document.getElementById("choix-classement");
+    if (!C || !Object.keys(C.points).length) { return; }
+    if (zone) {
+      texte(zone, C.nb_points_corriges + " point(s) corrigé(s) par une réfection confirmée.");
+      zone.hidden = false;
+      document.getElementById("synthese-constate").hidden = false;
+    }
+    if (choix) { choix.hidden = false; }
+  }
+
+  function classer(mode) {
+    var ol = document.querySelector("ol.liste");
+    var lis = Array.prototype.slice.call(ol.querySelectorAll("li[data-point]"));
+    lis.forEach(function (li) {
+      var p = parId[li.getAttribute("data-point")];
+      var c = mode === "corrige" ? corrigeParId[p.id] || p : p;
+      li.querySelector(".rang").textContent = c.rang;
+      var pastille = li.querySelector(".pastille");
+      pastille.className = "pastille " + c.groupe;
+      pastille.textContent = LIBELLES[c.groupe] || c.groupe;
+      li.setAttribute("data-rang", c.rang);
+    });
+    lis.sort(function (a, b) { return a.getAttribute("data-rang") - b.getAttribute("data-rang"); });
+    lis.forEach(function (li) { ol.appendChild(li); });
+  }
+
   function appliquer() {
     var n = 0;
     document.querySelectorAll("[data-point]").forEach(function (el) {
@@ -115,6 +164,7 @@
       texte(changement, "v1 : " + p.niveau_v1_libelle + " — raison : " + p.raison_changement);
       changement.hidden = false;
     }
+    remplirCorrige(gabarit.querySelector(".f-corrige"), p);
     var route = p.route.libelle + (p.route.numero ? " " + p.route.numero : "") +
       (p.route.gestionnaire ? " — gestionnaire : " + p.route.gestionnaire : "") +
       (p.route.statut === "a_verifier" ? " (à vérifier)" : "");
@@ -158,7 +208,12 @@
     var cible = e.target.closest && e.target.closest("[data-point]");
     if (cible && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); montrer(cible.getAttribute("data-point")); }
   });
+  var choixClassement = document.querySelector("[data-classement]");
+  if (choixClassement) {
+    choixClassement.addEventListener("change", function () { classer(choixClassement.value); });
+  }
   syntheseConstat();
+  syntheseCorrige();
   appliquer();
   if (D.points.length) { montrer(D.points[0].id); }
 })();

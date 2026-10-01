@@ -59,6 +59,15 @@ date, pseudonyme d'auteur, nombre de photos, marqueur « position éloignée »)
 relevés. La CSP autorise l'empreinte du script en ligne **du document servi** (R2). Les
 photos n'y figurent jamais.
 
+**Rapport 2.0 (004 R9)** : juste après `releves`, un second bloc
+`<script type="application/json" id="classement-terrain">`, calculé à chaque consultation
+depuis `points.geojson` (facteurs, membre `ete_reference`) et les relevés visibles de la
+commune : `points` (points à réfection confirmée : `annee_refection`, `source_refection`,
+`effet`, `annule`, `motif`, `rang`, `groupe` corrigés), `nb_points_corriges` (effet < 1,0),
+`classement` (tous les points : `id`, `rang`, `groupe` corrigés). Absent d'un rapport 1.x ou
+sans `ete_reference`. Rien n'est écrit dans le stockage ; aucune donnée personnelle ; bloc
+JSON exclu du calcul de la CSP (LL-011).
+
 ## Limites
 
 200 relevés et 1 000 photos par compte et par jour ; 5 photos par relevé ; 10 Mo par photo ;

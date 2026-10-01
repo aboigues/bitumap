@@ -31,6 +31,13 @@ hors du service, rapport sans relevé), la synthèse « Constaté » reste masqu
 n'affiche de relevé. Aucune photo ni adresse e-mail : seulement
 le pseudonyme de l'auteur.
 
+Classement corrigé par le terrain (004 R9, rapports 2.0) : s'il trouve le bloc
+`classement-terrain` inséré par l'API, le script affiche dans la fiche « Estimé : rang R,
+niveau · Corrigé par le terrain : rang R', niveau' (réfection de AAAA, constatée : ×E) » ou
+le motif d'annulation, une phrase « N point(s) corrigé(s) par une réfection confirmée » dans
+la synthèse « Constaté », et un choix « Classement : estimé / corrigé par le terrain » dans la
+liste (**estimé par défaut**). Sans ce bloc, rien de cela n'est affiché.
+
 ## `points.geojson`
 
 `FeatureCollection` en WGS 84 ; une `Feature` par point ; `properties` :
@@ -63,6 +70,10 @@ le pseudonyme de l'auteur.
 
 `direction` : terminus desservis depuis le quai (research R11), `null` si inconnue (affichée
 « direction non déterminée ») ou pour un carrefour ; descriptive, sans effet sur le score.
+
+Méthode 2.0 (004) : membre de premier niveau `ete_reference` (`annee`, station, jours de forte
+chaleur ; data-model 004), lu par l'API pour le classement corrigé par le terrain ; absent
+d'un rapport 1.x.
 
 ## `sources.json`
 
