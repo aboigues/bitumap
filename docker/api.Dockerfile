@@ -5,7 +5,7 @@
 # L'image d'exécution n'a ni shell ni gestionnaire de paquets et tourne en non-root (65532).
 
 # --- Construction : environnement virtuel complet ---
-FROM cgr.dev/chainguard/python:latest-dev@sha256:87729167739190d9309588120a8ac0ffbf2eb95dd895abb9bada6bb9ecbf5a04 AS construction
+FROM cgr.dev/chainguard/python:latest-dev@sha256:261ceae8cf0ee5055341cd5c417984a70eb0e1406f2ddf83a4c93002bb10c26c AS construction
 USER root
 COPY --from=ghcr.io/astral-sh/uv:0.12.19@sha256:04d046b13e60d6bcec73cbc5e1cad25d680dea90c8573340950a0ac2d1aef424 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
@@ -19,7 +19,7 @@ COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable --no-cache
 
 # --- Exécution : Python seul + environnement virtuel ---
-FROM cgr.dev/chainguard/python:latest@sha256:be59f7abb600892c78e6ff0fe1a8f39549da13302dc003c8a5eb1c14b03d995c
+FROM cgr.dev/chainguard/python:latest@sha256:89281daac77a3d91ef298d70ce3b7a6ccb2ebf268c084fa9a9bda1c92e71c64d
 WORKDIR /app
 # Propriété root : le code est en lecture seule pour l'utilisateur d'exécution.
 COPY --from=construction /app/.venv /app/.venv
