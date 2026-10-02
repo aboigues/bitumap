@@ -53,3 +53,25 @@ def points_du_rapport(insee: str, empreinte: str) -> dict[str, PointRapport]:
 def points_en_vigueur(insee: str) -> tuple[str | None, dict[str, PointRapport]]:
     empreinte = rapport_en_vigueur(insee)
     return empreinte, (points_du_rapport(insee, empreinte) if empreinte else {})
+
+
+@dataclass(frozen=True)
+class RapportEnVigueur:
+    """Rapport en vigueur d'une commune pour un parcours (006) : points au rang estimé."""
+
+    empreinte: str
+    produit_le: object  # datetime de production (stockage)
+    points: dict[str, PointRapport]
+
+
+def rapport_pour_parcours(insee: str) -> RapportEnVigueur | None:
+    """Points du rapport en vigueur et date de production ; ``None`` sans rapport (006 FR-007).
+    Le rang est celui **estimé** du rapport, jamais le classement corrigé par le terrain."""
+    empreinte = rapport_en_vigueur(insee)
+    if empreinte is None:
+        return None
+    produit_le = stockage.date_rapport(insee, empreinte)
+    points = points_du_rapport(insee, empreinte)
+    if produit_le is None or not points:
+        return None
+    return RapportEnVigueur(empreinte, produit_le, points)

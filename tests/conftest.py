@@ -48,7 +48,7 @@ os.environ.setdefault("AWS_ACCESS_KEY_ID", "test")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "test")
 
 TABLES = (
-    "photo, releve_version, releve,"
+    "parcours, photo, releve_version, releve,"
     " demandeur_demande, demande, lot, session, lien_connexion, compte, preuve_antibot,"
     " compteur_quota, cout_ia_jour, source_version, alerte_envoyee, ia_cache_point"
 )

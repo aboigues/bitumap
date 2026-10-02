@@ -313,3 +313,8 @@ def test_classement_corrige_prevu_en_2_0_seulement(rapport):
     assert '<label id="choix-classement"' not in html_v1
     assert 'id="synthese-terrain"' not in html_v1.split("<script")[0]
     assert "ete_reference" not in json.loads(v1["points.geojson"][0])
+
+
+def test_lien_vers_le_parcours(rapport):
+    """006 T015 : le rapport mène au formulaire du parcours de surveillance."""
+    assert '<a href="/parcours/92026">Préparer un parcours de surveillance</a>' in rapport["html"]

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titre %}Parcours · {{ commune }} · bitumap{% endblock %}
+{% block contenu %}
+{% set resume = r.resume %}
+<h1>Parcours de surveillance · {{ commune }}</h1>
+<p>Départ : {{ parcours.depart_libelle }} · {{ modes[parcours.mode] }} ·
+  rapport du {{ resume.rapport_date }}
+  (<a href="/rapports/{{ parcours.commune_insee }}/{{ parcours.empreinte }}">ouvrir</a>)</p>
+<section class="carte" aria-label="Résumé">
+  <p><strong>{{ resume.nb_visites }} point{{ 's' if resume.nb_visites > 1 }}</strong> dans l'ordre du rang ·
+    {{ resume.distance_m|km }} · {{ resume.duree_s|duree }}
+    (dont {{ resume.duree_arrets_s|duree }} d'arrêts et {{ resume.duree_retour_s|duree }} de retour) ·
+    reste {{ resume.duree_restante_s|duree }} sur {{ (parcours.duree_max_min * 60)|duree }}</p>
+  <p><a href="/parcours/resultat/{{ parcours.id }}.gpx" download>Télécharger le GPX</a></p>
+</section>
+
+<h2>Ordre de visite</h2>
+<ol class="liste-points">
+{% for v in r.visites %}
+  <li><strong>{{ v.ordre }} · {{ libelles_groupes[v.niveau] }} · {{ v.designation }}</strong>
+    <span class="petit">rang {{ v.rang }} · {{ v.point_id }} · {{ v.distance_cumulee_m|km }} ·
+      {{ v.duree_cumulee_s|duree }} depuis le départ</span></li>
+{% endfor %}
+</ol>
+
+{% if r.non_visites %}
+<h2>Non visités, pour une prochaine tournée</h2>
+<ul>
+{% for n in r.non_visites %}
+  <li>Rang {{ n.rang }} · {{ libelles_groupes[n.niveau] }} · {{ n.point_id }}
+    <span class="petit">({% if n.raison == 'duree' %}durée{% elif n.raison == 'inaccessible' %}inaccessible {{ modes[parcours.mode] }}{% elif n.raison == 'releve_recent' %}relevé récemment{% else %}au-delà des 60 premiers candidats{% endif %})</span></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<h2>Sources</h2>
+<ul class="petit">
+{% for s in resume.sources %}<li><a href="{{ s.url }}" rel="noopener noreferrer">{{ s.nom }}</a> · {{ s.licence }}</li>{% endfor %}
+</ul>
+<p class="petit">Parcours conservé 24 heures. <a href="/parcours/{{ parcours.commune_insee }}">Nouveau parcours</a></p>
+{% endblock %}

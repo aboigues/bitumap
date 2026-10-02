@@ -140,6 +140,7 @@ def rendre(
     ]
     html = _env.get_template("rapport.html.j2").render(
         commune=resultat.nom,
+        insee=resultat.insee,
         date=date.today().isoformat(),
         version_methode=journal.version_methode,
         v2=journal.version_methode != VERSION_METHODE,
