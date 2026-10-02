@@ -33,6 +33,29 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-020 — Tests en échec sur la première PR Dependabot : secret absent (2026-10-02) — Close
+
+- **Contexte** : CI, PR #39 (Dependabot, digests `chainguard/python`), première PR
+  Dependabot à déclencher le workflow `tests`.
+- **Symptôme** : le job `tests` échoue avant toute étape : `Database is uninitialized and
+  superuser password is not specified` (conteneur de service Postgres).
+- **Causes racines** :
+  1. Pourquoi ? `POSTGRES_PASSWORD` était vide : `secrets.CI_POSTGRES_PASSWORD` ne renvoyait
+     rien.
+  2. Pourquoi vide ? GitHub ne transmet aux exécutions déclenchées par Dependabot ni les
+     secrets Actions ni ceux d'environnement (`ci-tests`) : seuls les secrets **Dependabot**
+     sont lus.
+  3. Pourquoi non vu plus tôt ? Le secret a été rangé dans `ci-tests` (revue de la PR #14)
+     sans prévoir les PR Dependabot ; aucune n'avait encore lancé `tests`. Le message, au
+     fond des journaux du conteneur, ne nommait pas le secret.
+- **Correctif** : secret `CI_POSTGRES_PASSWORD` (valeur aléatoire distincte) déclaré dans les
+  secrets Dependabot du dépôt par le mainteneur.
+- **Mesure préventive** : job préalable `secret-base-de-test` dans `tests.yml`, qui échoue
+  avec un message explicite si le secret est vide (les conteneurs de service démarrent avant
+  toute étape du job `tests`). Règle : tout secret lu par un workflow déclenché sur
+  `pull_request` est déclaré aussi dans les secrets Dependabot.
+- **Références** : PR #39, branche `fix/ci-secrets-dependabot`.
+
 ### LL-019 — Liens de fichiers tiers suivis sans contrôle (2026-10-01) — Close
 
 - **Contexte** : revue de sécurité de 004 (T044), avant toute mise en service de la 2.0 ;
