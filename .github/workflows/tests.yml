@@ -15,11 +15,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Les conteneurs de service démarrent avant toute étape : la présence du secret est vérifiée
+  # dans un job préalable, avec un message clair (LL-020).
+  secret-base-de-test:
+    name: secret-base-de-test
+    runs-on: ubuntu-26.04
+    environment: ci-tests
+    permissions: {}
+    steps:
+      - name: Présence de CI_POSTGRES_PASSWORD
+        env:
+          CI_POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+        run: |
+          if [ -z "$CI_POSTGRES_PASSWORD" ]; then
+            echo "::error title=Secret absent::CI_POSTGRES_PASSWORD est vide. Les exécutions déclenchées par Dependabot ne lisent que les secrets Dependabot (Settings → Secrets and variables → Dependabot) ; les autres le lisent dans l'environnement ci-tests (LL-020)."
+            exit 1
+          fi
+
   tests:
     name: tests
+    needs: secret-base-de-test
     runs-on: ubuntu-26.04
-    # Secret CI_POSTGRES_PASSWORD rangé dans l'environnement « ci-tests » : accessible à ce
-    # seul job (zizmor : secrets-outside-env ; revue de la PR #14).
+    # Secret CI_POSTGRES_PASSWORD rangé dans l'environnement « ci-tests » : accessible aux
+    # seuls jobs qui le déclarent (zizmor : secrets-outside-env ; revue de la PR #14).
+    # Exécutions déclenchées par Dependabot : même nom dans les secrets Dependabot (LL-020).
     environment: ci-tests
     permissions:
       contents: read
