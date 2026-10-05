@@ -50,6 +50,11 @@ ol.liste li.sel{background:var(--puce);box-shadow:inset 5px 0 0 var(--sel),0 0 0
 table{border-collapse:collapse;width:100%;font-size:.9rem;overflow-wrap:anywhere}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ligne)}
 .legende{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--discret);margin-top:6px}
 a{color:inherit;text-decoration-color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:.8rem 0 0}
+.action{display:inline-flex;align-items:center;min-height:2.75rem;padding:.5rem 1rem;border-radius:6px;
+background:var(--encre);color:var(--surface);font-weight:600;text-decoration:none}
+.action:hover{background:var(--accent);color:var(--surface)}
+.action:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -59,8 +64,8 @@ a{color:inherit;text-decoration-color:var(--accent)}
   <h1>Risque d'orniérage sur le réseau bus — {{ commune }}</h1>
   <p class="chapeau">Rapport généré le {{ date }} · méthode {{ version_methode }} · {{ points|length }} points
     (arrêts de bus, carrefours à feux et giratoires traversés par des lignes).</p>
-  <p class="petit"><a href="/parcours/{{ insee }}">Préparer un parcours de surveillance</a>
-    (boucle depuis une adresse, fichier GPX ; connexion requise).</p>
+  <p class="actions"><a class="action" href="/parcours/{{ insee }}">Préparer un parcours de surveillance</a>
+    <span class="petit">boucle depuis une adresse vers les points à relever, fichier GPX ; connexion requise</span></p>
 </header>
 
 <p class="avertissement" role="note">Ce rapport <strong>classe des points à relever en priorité sur le

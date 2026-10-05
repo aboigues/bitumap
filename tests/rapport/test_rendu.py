@@ -316,5 +316,10 @@ def test_classement_corrige_prevu_en_2_0_seulement(rapport):
 
 
 def test_lien_vers_le_parcours(rapport):
-    """006 T015 : le rapport mène au formulaire du parcours de surveillance."""
-    assert '<a href="/parcours/92026">Préparer un parcours de surveillance</a>' in rapport["html"]
+    """006 T015 : le rapport mène au formulaire du parcours de surveillance, par un bouton
+    visible sous le titre (revue de la PR #41)."""
+    html = rapport["html"]
+    lien = '<a class="action" href="/parcours/92026">Préparer un parcours de surveillance</a>'
+    assert lien in html
+    assert html.index(lien) < html.index("</header>")
+    assert ".action{" in html
