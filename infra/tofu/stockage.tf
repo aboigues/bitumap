@@ -14,8 +14,9 @@ locals {
 
 # Rapports : privé, versionné ; anciennes versions gardées 30 jours (coût borné).
 resource "scaleway_object_bucket" "rapports" {
-  name = "bitumap-rapports-${local.suffixe}"
-  tags = { application = "bitumap", contenu = "rapports" }
+  name          = "bitumap-rapports-${local.suffixe}"
+  force_destroy = var.autoriser_destruction
+  tags          = { application = "bitumap", contenu = "rapports" }
 
   versioning {
     enabled = true
@@ -33,8 +34,9 @@ resource "scaleway_object_bucket" "rapports" {
 
 # Cache des sources : privé, régénérable, expiration à 30 jours.
 resource "scaleway_object_bucket" "cache" {
-  name = "bitumap-cache-${local.suffixe}"
-  tags = { application = "bitumap", contenu = "cache" }
+  name          = "bitumap-cache-${local.suffixe}"
+  force_destroy = var.autoriser_destruction
+  tags          = { application = "bitumap", contenu = "cache" }
 
   lifecycle_rule {
     id      = "expiration"
@@ -50,8 +52,9 @@ resource "scaleway_object_bucket" "cache" {
 # la quarantaine (originaux avec EXIF) expire à 1 jour, versions non courantes et marqueurs
 # de suppression compris (LL-013).
 resource "scaleway_object_bucket" "terrain" {
-  name = "bitumap-terrain-${local.suffixe}"
-  tags = { application = "bitumap", contenu = "terrain" }
+  name          = "bitumap-terrain-${local.suffixe}"
+  force_destroy = var.autoriser_destruction
+  tags          = { application = "bitumap", contenu = "terrain" }
 
   versioning {
     enabled = true

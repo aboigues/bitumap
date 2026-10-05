@@ -31,3 +31,9 @@ variable "domaine_service" {
     error_message = "Nom de domaine invalide (minuscules, sans schéma ni chemin)."
   }
 }
+
+variable "autoriser_destruction" {
+  description = "Vrai seulement pour détruire l'infrastructure : autorise la suppression des buckets non vides (rapports, cache, photos, toutes versions). Irréversible."
+  type        = bool
+  default     = false
+}

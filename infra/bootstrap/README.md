@@ -54,12 +54,32 @@ Ajouter le jeu de permissions dans la liste correspondante du script (`PERMISSIO
 `API_PERMISSION_SETS`, `JOB_PERMISSION_SETS`, `CI_PERMISSION_SETS`) et relancer le script :
 les règles de la politique existante sont remplacées par la liste.
 
+## Démantèlement
+
+`demantelement.sh` défait, dans l'ordre inverse, tout ce que crée `bootstrap.sh` : secrets
+GitHub de la CI, secrets `bitumap-cle-…` et `bitumap-id-…`, applications et politiques
+(leurs clés sont révoquées avec elles), bucket d'état vidé de toutes ses versions, clé du
+profil `bitumap`, fichier d'identifiants du backend, puis le projet. À lancer **après**
+`tofu destroy` (procédure complète : [`infra/tofu/README.md`](../tofu/README.md),
+« Destruction ») : il s'arrête si une ressource gérée par OpenTofu existe encore.
+
+```bash
+infra/bootstrap/demantelement.sh --simulation   # affiche les actions, ne supprime rien
+infra/bootstrap/demantelement.sh                # demande de taper « DÉTRUIRE BITUMAP »
+```
+
+Idempotent : relancé après une interruption, il ignore ce qui n'existe plus. Prérequis en
+plus de ceux du bootstrap : `uv` et l'environnement Python du dépôt (vidage du bucket
+versionné, que `scw` ne sait pas faire).
+
 ## Rotation des clés
 
 Clés d'exécution et de CI (365 jours) : avant expiration, désactiver la version du secret
 (`bitumap-cle-<composant>`) ou supprimer les secrets GitHub `BITUMAP_CI_CLE_…`, supprimer
 l'ancienne clé dans la console IAM, relancer le script, puis `tofu apply` (nouvelle clé
 injectée dans le conteneur et le job).
+
+Après une rotation de la clé de `bitumap-tofu`, relancer `infra/tofu/identifiants-etat.sh`.
 
 Clé de `bitumap-tofu` (180 jours) : avant expiration, supprimer la clé dans la console IAM, vider `access-key` et
 `secret-key` du profil `bitumap` (`scw -p bitumap config unset access-key`, idem

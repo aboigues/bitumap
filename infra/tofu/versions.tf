@@ -35,7 +35,8 @@ terraform {
 }
 
 provider "scaleway" {
-  # Identifiants : profil scw « bitumap » (SCW_PROFILE=bitumap), jamais dans le dépôt.
-  region = "fr-par"
-  zone   = "fr-par-1"
+  # Identifiants : profil scw « bitumap » (~/.config/scw/config.yaml), jamais dans le dépôt.
+  profile = "bitumap"
+  region  = "fr-par"
+  zone    = "fr-par-1"
 }

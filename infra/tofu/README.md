@@ -7,8 +7,9 @@ Spécification : `specs/002-on-demand-report/tasks.md`, phase 7.
 | Fichier | Contenu |
 |---|---|
 | `versions.tf` | OpenTofu 1.13.1, fournisseurs Scaleway 2.84.0 et random 3.9.1 ; chiffrement de l'état et des plans |
-| `backend.tf` | état dans le bucket du bootstrap, verrou par fichier (`use_lockfile`) |
-| `variables.tf` | bucket d'état, phrase de chiffrement, application `bitumap-tofu`, domaine du service |
+| `backend.tf` | état dans le bucket du bootstrap, verrou par fichier (`use_lockfile`) ; identifiants lus dans `~/.config/bitumap/etat-tofu` |
+| `identifiants-etat.sh` | écrit ce fichier (mode 600) depuis le profil scw `bitumap`, sans rien afficher |
+| `variables.tf` | bucket d'état, phrase de chiffrement, application `bitumap-tofu`, domaine du service, autorisation de destruction |
 | `identites.tf` | identifiants publics des applications `bitumap-api` et `bitumap-job` (lus dans Secret Manager) |
 | `stockage.tf` | buckets rapports, cache et photos des relevés, cycles de vie, CORS, politiques de bucket |
 | `base.tf` | base Serverless SQL (0 vCPU au repos) |
@@ -55,14 +56,18 @@ bootstrap exécuté (il crée les secrets `bitumap-id-…` lus par `identites.tf
 ```bash
 cd infra/tofu
 cp terraform.tfvars.example terraform.tfvars   # valeurs de la sortie du bootstrap, domaine
-export SCW_PROFILE=bitumap
-export AWS_ACCESS_KEY_ID="$(scw -p bitumap config get access-key)"      # backend S3
-export AWS_SECRET_ACCESS_KEY="$(scw -p bitumap config get secret-key)"
-export TF_VAR_phrase_chiffrement='…'   # gestionnaire de mots de passe, ≥ 32 caractères
-tofu init   # le bucket d'état vient de terraform.tfvars (évaluation précoce d'OpenTofu)
+./identifiants-etat.sh                         # identifiants du backend, depuis le profil scw « bitumap »
+export TF_VAR_phrase_chiffrement='…'           # gestionnaire de mots de passe, ≥ 32 caractères
+tofu init    # le bucket d'état vient de terraform.tfvars (évaluation précoce d'OpenTofu)
 tofu plan -out=bitumap.tfplan
 tofu apply bitumap.tfplan
 ```
+
+- Aucune variable d'environnement `AWS_…` ni `SCW_…` : le fournisseur Scaleway lit le
+  profil `bitumap` (`provider "scaleway" { profile = "bitumap" }`), le backend lit le
+  fichier écrit par `identifiants-etat.sh`. OpenTofu refuse une clé passée en variable
+  dans le bloc `backend`, qu'il recopierait dans `.terraform/`. Le format du fichier
+  (`aws_access_key_id`, `aws_secret_access_key`) est imposé par le protocole S3 du backend.
 
 - La phrase de chiffrement n'est écrite nulle part dans le dépôt ni dans `terraform.tfvars`.
   **Sans elle, l'état est illisible** : la garder dans un gestionnaire de mots de passe.
@@ -70,6 +75,35 @@ tofu apply bitumap.tfplan
 - Les politiques de bucket ne laissent l'accès qu'aux applications listées : la console
   Scaleway ne montre plus le contenu des buckets ; passer par `scw -p bitumap` (application
   `bitumap-tofu`).
+
+## Destruction
+
+Supprime **toutes** les données (rapports, cache, photos des relevés, base et ses
+sauvegardes, images, secrets) : irréversible. Action humaine.
+
+1. Si des données doivent être gardées, les exporter avant : base
+   (`scw -p bitumap sdb-sql backup list`, puis `… backup export`), photos et rapports
+   (copie des buckets).
+2. Autoriser la suppression des buckets non vides, sans rien détruire encore (seul
+   `force_destroy` change), puis détruire :
+
+   ```bash
+   cd infra/tofu
+   tofu apply -var autoriser_destruction=true      # vérifier : 3 buckets modifiés, rien d'autre
+   tofu destroy -var autoriser_destruction=true
+   ```
+
+3. Démanteler le socle du bootstrap (applications IAM, clés, secrets écrits par le
+   bootstrap, secrets GitHub de la CI, bucket d'état, projet) :
+
+   ```bash
+   infra/bootstrap/demantelement.sh --simulation   # liste ce qui sera supprimé
+   infra/bootstrap/demantelement.sh                # demande « DÉTRUIRE BITUMAP »
+   ```
+
+   Le script refuse de démarrer tant qu'une ressource gérée par OpenTofu existe encore.
+   Les enregistrements DNS créés à la main chez le registraire du domaine sont à retirer
+   à la main.
 
 ## Vérifications avant une PR
 
