@@ -126,14 +126,25 @@ Courbevoie, Critique + Sérieux, voiture, 3 h : 14 points, 26,2 km, 2 h 49, calc
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Écrire `tests/parcours/test_carte.py` : la carte SVG contient la trace de la boucle (un `path` dédié) et un numéro par visite placé à la **position projetée** du point (même vérification de position que `test_feux_a_leur_place_sur_la_carte`, LL-017 : aucun `transform` sur les numéros) ; la carte du rapport stocké n'est pas modifiée
+- [-] T020 [P] [US3] Écrire `tests/parcours/test_carte.py` : la carte SVG contient la trace de la boucle (un `path` dédié) et un numéro par visite placé à la **position projetée** du point (même vérification de position que `test_feux_a_leur_place_sur_la_carte`, LL-017 : aucun `transform` sur les numéros) ; la carte du rapport stocké n'est pas modifiée
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Étendre `src/bitumap/rapport/carte_svg.py` : `dessiner(…, parcours=None)` ajoute en surcouche la trace et les numéros de visite (sans changer le rendu existant quand `parcours` est absent) ; l'utiliser dans `resultat.html` avec le contour et les voies du rapport en vigueur
-- [ ] T022 [US3] Ajouter la feuille de route dans `resultat.html` : ordre, niveau, désignation, distance cumulée, point inaccessible signalé ; feuille de style d'impression (`@media print` : carte et liste sur A4, navigation masquée)
+- [-] T021 [US3] Étendre `src/bitumap/rapport/carte_svg.py` : `dessiner(…, parcours=None)` ajoute en surcouche la trace et les numéros de visite (sans changer le rendu existant quand `parcours` est absent) ; l'utiliser dans `resultat.html` avec le contour et les voies du rapport en vigueur
+- [X] T022 [US3] Ajouter la feuille de route dans `resultat.html` : ordre, niveau, désignation, distance cumulée, point inaccessible signalé ; feuille de style d'impression (`@media print` : carte et liste sur A4, navigation masquée)
 
-**Checkpoint**: US3 vérifiée dans un navigateur (carte et aperçu d'impression), conformément à LL-012 et LL-017.
+**Checkpoint**: US3 vérifiée dans un navigateur (aperçu d'impression), conformément à LL-012.
+
+*Écarts au développement (2026-10-05)* : T020 et T021 **abandonnées** (décision du
+mainteneur : « génère juste un GPX de l'itinéraire ») ; le rapport stocké ne garde ni le
+contour ni les voies, et le GPX contient déjà le tracé et les points numérotés ; FR-010
+abandonnée dans la spec. T022 réduite à la feuille de route : la liste de la page de
+résultat, sans carte, avec une feuille de style d'impression ; vérifiée dans un navigateur
+(Chromium, PDF A4) : 21 points sur **une** page, en-tête, pied et liens masqués ; la
+numérotation automatique de la liste est retirée (le numéro de visite est déjà écrit, il
+apparaissait en double). US4 : case « exclure » et nombre de jours (1 à 365, 30 par défaut),
+nombre ignoré si la case n'est pas cochée ; points relevés lus par `service.releves_recents`.
+T028 : revue de sécurité sans constat.
 
 ---
 
@@ -145,12 +156,12 @@ Courbevoie, Critique + Sérieux, voiture, 3 h : 14 points, 26,2 km, 2 h 49, calc
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Écrire `tests/parcours/test_exclusion_releves.py` (base, relevés déposés par l'API de 003 comme dans `tests/terrain/aides.py`) : points dont le **dernier relevé visible** date de moins de N jours ⇒ non visités raison `releve_recent`, comptés dans le résumé ; relevé retiré ⇒ ignoré ; relevé plus ancien ⇒ point candidat ; option absente ⇒ aucun effet
+- [X] T023 [P] [US4] Écrire `tests/parcours/test_exclusion_releves.py` (base, relevés déposés par l'API de 003 comme dans `tests/terrain/aides.py`) : points dont le **dernier relevé visible** date de moins de N jours ⇒ non visités raison `releve_recent`, comptés dans le résumé ; relevé retiré ⇒ ignoré ; relevé plus ancien ⇒ point candidat ; option absente ⇒ aucun effet
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Implémenter l'exclusion dans `src/bitumap/parcours/service.py` en réutilisant `terrain.depot.releves_de_la_commune` (relevés visibles, dernière version) : date du dernier relevé par point, comparée à `now() - N jours` ; aucune donnée de relevé (auteur, observation) dans le parcours
-- [ ] T025 [US4] Ajouter l'option au formulaire (`formulaire.html` : case et nombre de jours, 30 par défaut) et au résumé de `resultat.html` (« N points exclus : relevés depuis moins de N jours »)
+- [X] T024 [US4] Implémenter l'exclusion dans `src/bitumap/parcours/service.py` en réutilisant `terrain.depot.releves_de_la_commune` (relevés visibles, dernière version) : date du dernier relevé par point, comparée à `now() - N jours` ; aucune donnée de relevé (auteur, observation) dans le parcours
+- [X] T025 [US4] Ajouter l'option au formulaire (`formulaire.html` : case et nombre de jours, 30 par défaut) et au résumé de `resultat.html` (« N points exclus : relevés depuis moins de N jours »)
 
 **Checkpoint**: les quatre stories fonctionnent ; PR 2.
 
@@ -158,9 +169,9 @@ Courbevoie, Critique + Sérieux, voiture, 3 h : 14 points, 26,2 km, 2 h 49, calc
 
 ## Phase 7: Polish & sujets transverses
 
-- [ ] T026 [P] Compléter la page « Données personnelles » (`src/bitumap/api/gabarits/confidentialite.html`) : adresse de départ conservée 24 h au plus, jamais journalisée, transmise au service de géocodage de l'IGN ; et le README (feuille de route : 006 en cours, section fonctionnalités)
-- [ ] T027 [P] Documenter les routes dans `specs/002-on-demand-report/contracts/http-api.md` (renvoi au contrat de 006) et la table dans le contrat de configuration si un réglage est ajouté (`BITUMAP_` uniquement)
-- [ ] T028 Revue de sécurité de la branche (`/security-review`) : accès au résultat limité au compte, CSRF, quota, entrées bornées, aucune adresse dans les journaux, appels externes (URL constantes, `verifier_url`, délais), aucun script en ligne ; corriger les constats
+- [X] T026 [P] Compléter la page « Données personnelles » (`src/bitumap/api/gabarits/confidentialite.html`) : adresse de départ conservée 24 h au plus, jamais journalisée, transmise au service de géocodage de l'IGN ; et le README (feuille de route : 006 en cours, section fonctionnalités)
+- [X] T027 [P] Documenter les routes dans `specs/002-on-demand-report/contracts/http-api.md` (renvoi au contrat de 006) et la table dans le contrat de configuration si un réglage est ajouté (`BITUMAP_` uniquement)
+- [X] T028 Revue de sécurité de la branche (`/security-review`) : accès au résultat limité au compte, CSRF, quota, entrées bornées, aucune adresse dans les journaux, appels externes (URL constantes, `verifier_url`, délais), aucun script en ligne ; corriger les constats
 - [ ] T029 Exécuter le quickstart § 2 (`uv run pytest tests/parcours`), puis § 3 en réel sur Courbevoie (voiture 3 h, à pied 2 h) dans un navigateur : durée de calcul (SC-001 < 30 s), carte, aperçu d'impression A4, GPX ouvert dans deux applications (SC-002, par le mainteneur) ; `uv run pytest` complet, `ruff check`, `ruff format --check` ; consigner les mesures dans la PR
 
 ---

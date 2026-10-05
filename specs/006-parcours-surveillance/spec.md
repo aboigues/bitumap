@@ -174,7 +174,10 @@ boucle.
   nommé (ordre, niveau, désignation) et décrit (rang, identifiant, lien vers la fiche).
 - **FR-009**: Une feuille de route imprimable DOIT lister les points dans l'ordre de visite,
   avec niveau, désignation et distance cumulée.
-- **FR-010**: La carte du rapport DOIT pouvoir afficher la boucle et l'ordre de visite.
+- ~~**FR-010**: La carte du rapport DOIT pouvoir afficher la boucle et l'ordre de visite.~~
+  *Abandonnée (décision du mainteneur, 2026-10-05)* : la boucle se suit dans le GPX
+  (FR-008), qui contient le tracé complet et les points numérotés ; le rapport stocké ne
+  garde ni le contour ni les voies nécessaires à un nouveau dessin.
 
 **Relevés (dépend de 003)**
 

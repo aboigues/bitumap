@@ -11,11 +11,15 @@
     {{ resume.distance_m|km }} · {{ resume.duree_s|duree }}
     (dont {{ resume.duree_arrets_s|duree }} d'arrêts et {{ resume.duree_retour_s|duree }} de retour) ·
     reste {{ resume.duree_restante_s|duree }} sur {{ (parcours.duree_max_min * 60)|duree }}</p>
-  <p><a href="/parcours/resultat/{{ parcours.id }}.gpx" download>Télécharger le GPX</a></p>
+  {% if parcours.exclusion_releves_jours %}
+  <p>{{ resume.nb_exclus }} point{{ 's' if resume.nb_exclus > 1 }} exclu{{ 's' if resume.nb_exclus > 1 }} : relevés depuis moins de {{ parcours.exclusion_releves_jours }} jours</p>
+  {% endif %}
+  <p class="ecran"><a href="/parcours/resultat/{{ parcours.id }}.gpx" download>Télécharger le GPX</a> ·
+    feuille de route : imprimez cette page</p>
 </section>
 
-<h2>Ordre de visite</h2>
-<ol class="liste-points">
+<h2>Feuille de route</h2>
+<ol class="liste-points feuille-de-route">
 {% for v in r.visites %}
   <li><strong>{{ v.ordre }} · {{ libelles_groupes[v.niveau] }} · {{ v.designation }}</strong>
     <span class="petit">rang {{ v.rang }} · {{ v.point_id }} · {{ v.distance_cumulee_m|km }} ·
@@ -37,5 +41,5 @@
 <ul class="petit">
 {% for s in resume.sources %}<li><a href="{{ s.url }}" rel="noopener noreferrer">{{ s.nom }}</a> · {{ s.licence }}</li>{% endfor %}
 </ul>
-<p class="petit">Parcours conservé 24 heures. <a href="/parcours/{{ parcours.commune_insee }}">Nouveau parcours</a></p>
+<p class="petit ecran">Parcours conservé 24 heures. <a href="/parcours/{{ parcours.commune_insee }}">Nouveau parcours</a></p>
 {% endblock %}

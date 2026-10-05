@@ -28,6 +28,7 @@ routeur = APIRouter(prefix="/parcours")
 _INSEE = re.compile(r"^\d{5}$")
 QUOTA_PARCOURS = 20
 MODES = {"voiture": "en voiture", "pied": "à pied"}
+JOURS_RELEVES_DEFAUT = 30
 
 
 def _insee(insee: str) -> str:
@@ -69,7 +70,14 @@ def _formulaire(requete, session, insee, r, valeurs=None, propositions=None, err
             "effectifs": {g: effectifs.get(g, 0) for g in service.NIVEAUX},
             "modes": MODES,
             "valeurs": valeurs
-            or {"niveaux": ["P1a", "P1b"], "mode": "voiture", "duree_max_min": 180, "arret_min": 5},
+            or {
+                "niveaux": ["P1a", "P1b"],
+                "mode": "voiture",
+                "duree_max_min": 180,
+                "arret_min": 5,
+                "exclure_releves": False,
+                "exclusion_releves_jours": JOURS_RELEVES_DEFAUT,
+            },
             "propositions": propositions or [],
             "erreur": erreur,
         },
@@ -150,6 +158,8 @@ def calculer(
     mode: Annotated[str, Form()] = "voiture",
     duree_max_min: Annotated[int, Form()] = 180,
     arret_min: Annotated[int, Form()] = 5,
+    exclure_releves: Annotated[bool, Form()] = False,
+    exclusion_releves_jours: Annotated[int, Form()] = JOURS_RELEVES_DEFAUT,
 ) -> Response:
     verifier_csrf(session, csrf)
     r = _rapport(insee)
@@ -159,6 +169,8 @@ def calculer(
         "mode": mode,
         "duree_max_min": duree_max_min,
         "arret_min": arret_min,
+        "exclure_releves": exclure_releves,
+        "exclusion_releves_jours": exclusion_releves_jours,
     }
     if (
         not niveaux
@@ -166,6 +178,7 @@ def calculer(
         or mode not in MODES
         or not 30 <= duree_max_min <= 480
         or not 0 <= arret_min <= 30
+        or (exclure_releves and not 1 <= exclusion_releves_jours <= 365)
     ):
         raise ErreurPublique(400, "parametres_invalides", "Paramètres du parcours invalides.")
     try:
@@ -199,7 +212,14 @@ def calculer(
     )
     try:
         ident = service.calculer(
-            insee, session.compte_id, depart, niveaux, mode, duree_max_min, arret_min
+            insee,
+            session.compte_id,
+            depart,
+            niveaux,
+            mode,
+            duree_max_min,
+            arret_min,
+            exclusion_releves_jours=exclusion_releves_jours if exclure_releves else None,
         )
     except service.ErreurParcours as e:
         raise ErreurPublique(e.statut, e.code, e.message) from e

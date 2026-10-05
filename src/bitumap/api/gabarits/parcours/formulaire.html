@@ -35,6 +35,13 @@
   <input id="duree" name="duree_max_min" type="number" min="30" max="480" step="15" value="{{ valeurs.duree_max_min }}" required>
   <label for="arret">Temps d'arrêt par point (minutes)</label>
   <input id="arret" name="arret_min" type="number" min="0" max="30" value="{{ valeurs.arret_min }}" required>
+  <fieldset>
+    <legend>Points déjà relevés</legend>
+    <label><input type="checkbox" name="exclure_releves" value="1" {% if valeurs.exclure_releves %}checked{% endif %}>
+      Exclure les points relevés depuis moins de</label>
+    <input id="jours" name="exclusion_releves_jours" type="number" min="1" max="365"
+      value="{{ valeurs.exclusion_releves_jours }}" aria-label="Nombre de jours"> jours
+  </fieldset>
   <button type="submit">Calculer le parcours</button>
 </form>
 <p class="petit">L'adresse de départ est envoyée au service de géocodage de l'IGN et conservée 24 heures au plus ;

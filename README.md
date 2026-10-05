@@ -365,7 +365,7 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 | 003 | Relevés terrain : annotations et photos par commune et par point | 🟡 en cours : saisie, constaté, corrections et export fusionnés ; modération (RGPD) en revue |
 | 004 | Méthode v2 : ensoleillement LiDAR HD, chaleur, poids lourds, explication des changements, réfections confirmées | 🟡 développée derrière un réglage ; mise en service après validation sur les relevés de 003 |
 | 005 | Échelle du département, export PDF | ⬜ |
-| 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture ou à pied ([#21](https://github.com/aboigues/bitumap/issues/21)) | ⬜ |
+| 006 | Parcours de surveillance : boucle depuis une adresse vers les points d'un ou plusieurs niveaux, export GPX, en voiture ou à pied ([#21](https://github.com/aboigues/bitumap/issues/21)) | 🟡 en cours : boucle et GPX fusionnés ; feuille de route et exclusion des points relevés en revue |
 | 007 | Projection opérationnelle : évolution, été après été (2027, 2028…), d'un indice de potentiel d'orniérage par point selon la fréquentation et trois scénarios d'été tirés d'étés observés (moyen, chaud type 2019/2022, très chaud type 2003/2026 ; données quotidiennes Météo-France), pour dire quels points traiter avant quel été ; indice relatif, calibrage en millimètres après les relevés terrain de 003 ([#20](https://github.com/aboigues/bitumap/issues/20)) | ⬜ |
 
 L'ordre de 003, 004, 006 et 007 sera arbitré selon les besoins du terrain. 007 et 004 partagent

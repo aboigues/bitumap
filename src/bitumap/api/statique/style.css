@@ -27,3 +27,23 @@ th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--
 button.lien { background: none; color: inherit; border: none; padding: .25rem 0; margin-right: 1rem;
               text-decoration: underline; text-decoration-color: var(--accent); min-height: 2.75rem; }
 .photo { display: inline-grid; margin: .25rem .5rem .25rem 0; }
+.feuille-de-route { list-style: none; padding-left: 0; }  /* le numéro de visite est écrit */
+
+/* Feuille de route du parcours (006 FR-009) : une page A4 pour une vingtaine de points. */
+@page { size: A4; margin: 12mm; }
+@media print {
+  :root { --fond: #fff; --surface: #fff; --encre: #000; --discret: #333; --ligne: #999; }
+  body { font-size: 10pt; line-height: 1.25; }
+  .entete, .pied, .ecran { display: none; }
+  main { max-width: none; padding: 0; }
+  .carte { max-width: none; border: none; padding: 0; }
+  h1 { font-size: 14pt; margin: 0 0 .3em; }
+  h2 { font-size: 11pt; margin: .8em 0 .3em; }
+  p { margin: .2em 0; }
+  ul { margin: .2em 0; padding-left: 1.6em; }
+  ol { margin: .2em 0; }
+  .feuille-de-route li { break-inside: avoid; margin-bottom: .1em; }
+  .feuille-de-route .petit { font-size: 9pt; color: var(--discret); }
+  .feuille-de-route .petit::before { content: " — "; }
+  a { text-decoration: none; }
+}
