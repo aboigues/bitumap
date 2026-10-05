@@ -25,3 +25,8 @@ var/
 
 # Outils locaux
 .playwright-mcp/
+
+# OpenTofu : fichiers locaux (le verrou des fournisseurs, lui, est versionné)
+.terraform/
+*.tfvars
+!*.tfvars.example

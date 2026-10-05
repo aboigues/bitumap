@@ -195,13 +195,13 @@ SC-004, SC-006, SC-010, SC-012).
 
 ## Phase 7: Infrastructure, livraison et finitions
 
-- [ ] T074 Étendre `infra/bootstrap/bootstrap.sh` et son README : applications IAM `bitumap-api`, `bitumap-job`, `bitumap-ci` avec politiques minimales (plan, suivi de complexité), clés écrites **directement** dans Secret Manager, jamais affichées ; exécuter **deux fois** (LL-001)
-- [ ] T075 [P] Créer `infra/tofu/versions.tf` et `infra/tofu/backend.tf` : OpenTofu 1.12, fournisseur Scaleway 2.83, backend S3 sur le bucket d'état avec `use_lockfile = true`, bloc `encryption` (clé dérivée d'une phrase secrète fournie par variable d'environnement, hors dépôt)
-- [ ] T076 [P] Créer `infra/tofu/stockage.tf` : bucket `bitumap-rapports` (privé, versionné) et `bitumap-cache` (privé, expiration 30 jours)
+- [X] T074 Étendre `infra/bootstrap/bootstrap.sh` et son README : applications IAM `bitumap-api`, `bitumap-job`, `bitumap-ci` avec politiques minimales (plan, suivi de complexité), clés écrites **directement** dans Secret Manager, jamais affichées ; exécuter **deux fois** (LL-001)
+- [X] T075 [P] Créer `infra/tofu/versions.tf` et `infra/tofu/backend.tf` : OpenTofu 1.12, fournisseur Scaleway 2.83, backend S3 sur le bucket d'état avec `use_lockfile = true`, bloc `encryption` (clé dérivée d'une phrase secrète fournie par variable d'environnement, hors dépôt)
+- [X] T076 [P] Créer `infra/tofu/stockage.tf` : bucket `bitumap-rapports` (privé, versionné) et `bitumap-cache` (privé, expiration 30 jours)
 - [ ] T095 [P] Compléter `infra/tofu/stockage.tf` pour 003 (relevés terrain, `specs/003-terrain-releves/tasks.md` T040) : bucket `bitumap-terrain` privé et **versionné** ; règle de cycle de vie du préfixe `quarantaine/` : expiration à 1 jour **versions non courantes et marqueurs de suppression compris** (LL-013), aucune expiration ailleurs (photos conservées sans limite, 003 R12) ; règle CORS limitée à `BITUMAP_URL_PUBLIQUE` pour l'envoi présigné (`POST`) ; droits de `bitumap-api` sur ce bucket : lecture, écriture, liste des versions, suppression de versions (retrait RGPD) ; variable `BITUMAP_BUCKET_TERRAIN` et source `connect-src` de la CSP des pages de terrain vérifiées après `tofu apply`
-- [ ] T077 [P] Créer `infra/tofu/base.tf` : Serverless SQL Database (sans minimum de vCPU, pour revenir à zéro)
-- [ ] T078 [P] Créer `infra/tofu/registre.tf` : espace de noms privé du Container Registry
-- [ ] T079 [P] Créer `infra/tofu/secrets.tf` : secrets de `contracts/configuration.md` (valeurs aléatoires générées pour `bitumap-altcha-hmac` et `bitumap-sel-origine`)
+- [X] T077 [P] Créer `infra/tofu/base.tf` : Serverless SQL Database (sans minimum de vCPU, pour revenir à zéro)
+- [X] T078 [P] Créer `infra/tofu/registre.tf` : espace de noms privé du Container Registry
+- [X] T079 [P] Créer `infra/tofu/secrets.tf` : secrets de `contracts/configuration.md` (valeurs aléatoires générées pour `bitumap-altcha-hmac` et `bitumap-sel-origine`)
 - [ ] T080 Créer `infra/tofu/api.tf` : conteneur serverless `min_scale = 0`, `max_scale = 2`, image par digest, références de secrets, variables d'environnement, sonde `/sante`
 - [ ] T081 Créer `infra/tofu/job.tf` : `scaleway_job_definition` avec `cron { schedule = "*/15 * * * *", timezone = "Europe/Paris" }`, `timeout = "3h"`, image par digest, références de secrets
 - [ ] T082 [P] Créer `infra/tofu/courriel.tf` : domaine Transactional Email (variable `domaine_envoi`) et sorties des enregistrements DNS à créer (SPF, DKIM, DMARC, MX)
@@ -211,6 +211,8 @@ SC-004, SC-006, SC-010, SC-012).
 - [X] T085 [P] Créer `docs/methode/CHANGELOG.md` : méthode 1.0 (facteurs, effets, priorités, limites connues de l'ensoleillement et des îlots de chaleur) et **écart assumé avec le prototype** : les priorités sont figées avant l'âge de l'enrobé, qui ne réordonne qu'à l'intérieur des P1 (le prototype faisait descendre certains P1 en P2)
 - [ ] T086 Revue de sécurité de la branche : en-têtes, cookies, CSRF, absence de secret et de donnée personnelle dans les journaux et le dépôt, requêtes SQL paramétrées ; `/security-review` si pertinent
 - [ ] T087 Dérouler le quickstart §1 à §4 en local et consigner les résultats (dont SC-002b) dans la description de la PR ; une entrée `LESSON-LEARNED.md` pour chaque incident rencontré
+- [ ] T096 Drapeau « file non vide » (décision du mainteneur, 2026-10-05, coût) : l'API écrit un objet témoin dans le stockage à la mise en file ; le job ne se connecte à la base que s'il est présent (sinon arrêt sans requête), plus un passage quotidien pour la purge ; tests ; politiques de bucket ajustées. Sans lui, le job toutes les 15 min réveille la base 96 fois par jour (16 à 33 €/mois à vide, `infra/tofu/README.md`)
+- [ ] T097 Migrations du schéma appliquées par le job au début d'un lot (application `bitumap-job`, seule à avoir `ServerlessSQLDatabaseReadWrite`) ; l'API n'a que les droits sur les données
 - [ ] T088 Pousser la branche `002-on-demand-report` et ouvrir la PR vers `main`, avec la liste des actions humaines : domaine d'envoi, bootstrap, secret GitHub, ajout de `tests` aux contrôles requis du ruleset, alerte de facturation (T092), `tofu apply`, quickstart §6 dont la **mesure de SC-001** (premier accès à un rapport en cache après 30 min d'inactivité, démarrage à froid du conteneur et de la base compris : < 10 s)
 
 ---
@@ -228,7 +230,14 @@ T095 (bucket des relevés terrain) vient de la tâche T040 de 003.
 - **US3 (T063–T068, T093)** : dépend de T030 (BD TOPO) et T051 (rendu de base) ; T093 dépend aussi de T028 (offre IDFM).
 - **US1** : T090 avant T053 (tests d'abord).
 - **US4 (T069–T073, T091)** : dépend de T043, T045 et T050 ; T073 exige le mainteneur (vérité terrain) ; T091 après T043.
-- **Phase 7** : T092 après T075.
+- **Phase 7** : T092 après T075 ; T096 et T097 avant T081 (job).
+
+*Écarts (2026-10-05, PR A de la phase 7)* : versions relevées à la date de la PR (OpenTofu
+1.13.1, Scaleway 2.84.0) ; une clé IAM et un secret par composant (`bitumap-cle-api`,
+`bitumap-cle-job`) au lieu de `bitumap-db-url`, `bitumap-s3`, `bitumap-tem`,
+`bitumap-genai` partagés (contrat de configuration mis à jour) ; noms de bucket suffixés ;
+politiques de bucket par composant ; T095 écrite, sa vérification après `tofu apply` reste
+à faire avec le conteneur (PR B).
 - **Phase 7** : T074 avant T079–T081 ; T075 avant les autres fichiers OpenTofu ; T083 après T003 ; T087 et T088 en dernier.
 
 ## Parallel Example
