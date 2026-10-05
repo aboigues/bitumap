@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import asdict
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from psycopg.types.json import Jsonb
@@ -66,6 +67,18 @@ def _candidats(r: RapportEnVigueur, niveaux: list[str]) -> list[selection.Candid
     )
 
 
+def releves_recents(insee: str, jours: int) -> dict[str, str]:
+    """Points dont le dernier relevé visible (003) date de moins de ``jours`` jours, avec la
+    raison ``releve_recent`` (US4, FR-011). Seuls le point et la date sont lus : aucune donnée
+    du relevé (auteur, observation) n'entre dans le parcours."""
+    from bitumap.terrain import depot  # import tardif : depot dépend de l'API (cycle)
+
+    limite = datetime.now(UTC) - timedelta(days=jours)
+    with connexion() as conn:
+        lignes = depot.releves_de_la_commune(conn, insee)
+    return {li["point_id"]: "releve_recent" for li in lignes if li["cree_le"] >= limite}
+
+
 def _boucle(depart, visites, mode, client) -> itineraire.Trajet:
     return itineraire.trajet([depart, *((v.lon, v.lat) for v in visites), depart], mode, client)
 
@@ -94,9 +107,12 @@ def calculer(
     client: httpx.Client | None = None,
 ) -> str:
     """Calcule et enregistre le parcours ; renvoie son identifiant. ``exclus`` : points à
-    écarter avec leur raison (US4)."""
+    écarter avec leur raison ; ``exclusion_releves_jours`` : y ajoute les points relevés
+    depuis moins de ce nombre de jours (US4)."""
     r = rapport(insee)
     candidats = _candidats(r, niveaux)
+    if exclusion_releves_jours is not None:
+        exclus = releves_recents(insee, exclusion_releves_jours) | (exclus or {})
     exclus = exclus or {}
     ecartes = [c for c in candidats if c.point_id in exclus]
     candidats = [c for c in candidats if c.point_id not in exclus]

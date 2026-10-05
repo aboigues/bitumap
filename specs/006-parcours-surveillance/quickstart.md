@@ -27,7 +27,7 @@ Contrat : [contracts/http-api.md](contracts/http-api.md) ; données :
 
 - Départ « 2 place de l'hôtel de ville, Courbevoie » ; niveaux Critique et Sérieux
   (21 points) ; voiture ; 3 h ; arrêt 5 min.
-- Attendu : résultat en moins de 30 s (SC-001) ; boucle sur la carte ; feuille de route sur
+- Attendu : résultat en moins de 30 s (SC-001) ; boucle dans le GPX ; feuille de route sur
   une page A4 ; non visités listés s'il y en a.
 - Télécharger le GPX et l'ouvrir dans deux applications de navigation et un GPS de randonnée
   (SC-002).

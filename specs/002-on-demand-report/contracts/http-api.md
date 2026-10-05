@@ -62,6 +62,12 @@ base-uri 'none'; form-action 'none'; frame-ancestors 'none'`, où l'empreinte es
 `script-src 'none'`) et non sur le script du code en cours : un rapport en cache produit par
 une version antérieure reste fonctionnel (LL-011).
 
+## Parcours de surveillance (006, session requise)
+
+Routes `/parcours/…` (formulaire, calcul, résultat, GPX) : voir
+[le contrat de 006](../../006-parcours-surveillance/contracts/http-api.md). Mêmes en-têtes et
+même CSP que les autres pages de l'API ; aucun script.
+
 ## Exploitation
 
 | Méthode, chemin | Réponse |

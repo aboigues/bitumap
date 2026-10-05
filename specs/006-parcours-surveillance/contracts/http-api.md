@@ -8,8 +8,8 @@ erreurs `{ "erreur", "message" }` sans détail technique.
 |---|---|---|---|
 | `GET /parcours/{insee}` | — | formulaire : adresse, niveaux (avec le nombre de points de chacun), mode, durée maximale, temps d'arrêt, option « exclure les points relevés depuis moins de N jours » (si 003) | `404` rapport absent |
 | `GET /parcours/adresses?q=&insee=` | texte saisi | 5 propositions d'adresses officielles (libellé, position, score) | `400` texte trop court |
-| `POST /parcours/{insee}` | `csrf`, adresse choisie (libellé et position), `niveaux[]`, `mode`, `duree_max_min`, `arret_min`, `exclusion_releves_jours` | `303` vers `/parcours/resultat/{id}` | `400 aucun_point`, `400 duree_insuffisante` (avec la durée minimale), `400 depart_trop_loin` (> 20 km), `429 quota_parcours`, `503 itineraire_indisponible` |
-| `GET /parcours/resultat/{id}` | — | carte (boucle numérotée), résumé, feuille de route imprimable, liste des non visités, liens de téléchargement | `404` (inconnu, expiré ou d'un autre compte) |
+| `POST /parcours/{insee}` | `csrf`, `adresse` (texte, 300 caractères au plus), `choix` (indice de la proposition si l'adresse est ambiguë), `niveaux[]`, `mode`, `duree_max_min` (30–480), `arret_min` (0–30), `exclure_releves` (case), `exclusion_releves_jours` (1–365, 30 par défaut, pris en compte si la case est cochée) | `303` vers `/parcours/resultat/{id}` ; adresse ambiguë ou introuvable : formulaire `400` avec les propositions | `400 parametres_invalides`, `400 aucun_point`, `400 duree_insuffisante` (avec la durée minimale), `400 depart_trop_loin` (> 20 km), `429 quota_parcours`, `503 itineraire_indisponible` |
+| `GET /parcours/resultat/{id}` | — | résumé (dont le nombre de points exclus pour relevé récent), feuille de route imprimable (A4), liste des non visités, lien de téléchargement du GPX ; pas de carte : la boucle se suit dans le GPX (décision du 2026-10-05) | `404` (inconnu, expiré ou d'un autre compte) |
 | `GET /parcours/resultat/{id}.gpx` | — | `application/gpx+xml`, `Content-Disposition: attachment; filename="parcours-{insee}-{date}.gpx"` | `404` |
 
 ## GPX 1.1 (FR-008)
