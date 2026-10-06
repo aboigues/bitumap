@@ -36,9 +36,10 @@ d'environ **0,60 à 1 € par mois**, sous le plafond de 5 €/mois (FR-029).
 
 **Réveils de la base** : chaque requête réveille la base pour au moins 5 minutes facturées.
 Un job lancé toutes les 15 minutes qui interrogerait la base coûterait 16 à 33 €/mois à vide.
-Décision (2026-10-05) : le job ne se connecte à la base que si un **drapeau « file non vide »**
-est présent dans le stockage objet (écrit par l'API à la mise en file), plus un passage
-quotidien pour la purge (PR suivante).
+Décision (2026-10-05) : le job ne se connecte à la base que si un **témoin de demande** est
+présent dans le bucket du cache (`file/<demande>`, déposé par l'API à la mise en file ; seul
+droit de l'API sur ce bucket), plus un passage quotidien pour la purge et un passage après
+chaque nouvelle migration (T096, `specs/002-on-demand-report/contracts/lot-job.md`).
 
 Sources : [Serverless](https://www.scaleway.com/en/pricing/serverless/),
 [Object Storage](https://www.scaleway.com/en/pricing/storage/),

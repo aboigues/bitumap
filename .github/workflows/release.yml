@@ -1,5 +1,6 @@
 # Livraison (spec US3, FR-010, FR-011) : déclenchée par un tag vX.Y.Z poussé par le mainteneur.
-# La version GitHub n'est créée que si l'analyse et le SBOM ont réussi.
+# La version GitHub n'est créée que si l'analyse, le SBOM et la publication des images
+# (registre Scaleway, T083) ont réussi.
 name: release
 
 on:
@@ -29,26 +30,6 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
             fs --cache-dir /cache --scanners vuln,misconfig --skip-dirs .git \
             --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore .
-      - name: Trivy — images de conteneur, bloquant ≥ HIGH
-        run: |
-          image=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
-          mapfile -t dockerfiles < <(find . \( -name Dockerfile -o -name '*.Dockerfile' \) -not -path './.git/*' -not -path './.github/*' | sort)
-          if [ "${#dockerfiles[@]}" -eq 0 ]; then
-            echo "Aucune image à analyser (aucun Dockerfile applicatif)."
-            exit 0
-          fi
-          for i in "${!dockerfiles[@]}"; do
-            df="${dockerfiles[$i]}"
-            tag="bitumap-release:${i}"
-            echo "::group::Image analysée : ${df}"
-            docker build -t "$tag" -f "$df" .   # contexte : racine du dépôt (LL-003, T089)
-            docker save "$tag" -o "$RUNNER_TEMP/image-${i}.tar"
-            docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
-              -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$image" \
-              image --cache-dir /cache --skip-db-update --input "/out/image-${i}.tar" \
-              --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore
-            echo "::endgroup::"
-          done
 
   sbom:
     name: sbom
@@ -75,9 +56,75 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  images:
+    # Construction, analyse puis publication dans le même job : l'image publiée est celle
+    # qui a été analysée. Aucune image n'est publiée si l'une d'elles échoue à l'analyse.
+    name: images
+    needs: scan
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    outputs:
+      digests: ${{ steps.publication.outputs.digests }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configuration du registre
+        env:
+          REGISTRE: ${{ vars.BITUMAP_REGISTRE }}
+          CLE: ${{ secrets.BITUMAP_CI_CLE_SECRETE }}
+        run: |
+          # Message explicite plutôt qu'un échec obscur au push (LL-020).
+          [ -n "$REGISTRE" ] || { echo "::error::variable BITUMAP_REGISTRE absente (tofu output -raw registre)"; exit 1; }
+          [ -n "$CLE" ] || { echo "::error::secret BITUMAP_CI_CLE_SECRETE absent (bootstrap)"; exit 1; }
+      - name: Construction et Trivy, bloquant ≥ HIGH
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          scanner=$(awk '/^FROM/{print $2}' .github/scanners/trivy.Dockerfile)
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          for nom in api job; do
+            echo "::group::Image ${nom}"
+            docker build -t "bitumap-${nom}:${TAG}" -f "docker/${nom}.Dockerfile" .   # contexte : racine (T089)
+            docker save "bitumap-${nom}:${TAG}" -o "$RUNNER_TEMP/image-${nom}.tar"
+            docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/out" \
+              -v "$RUNNER_TEMP/trivy-cache:/cache" -w /src "$scanner" \
+              image --cache-dir /cache --input "/out/image-${nom}.tar" \
+              --severity HIGH,CRITICAL --exit-code 1 --ignorefile .trivyignore
+            echo "::endgroup::"
+          done
+      - name: Publication dans le registre Scaleway
+        id: publication
+        env:
+          REGISTRE: ${{ vars.BITUMAP_REGISTRE }}
+          CLE: ${{ secrets.BITUMAP_CI_CLE_SECRETE }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          hote="${REGISTRE%%/*}"
+          printf '%s' "$CLE" | docker login "$hote" --username nologin --password-stdin
+          digests=""
+          for nom in api job; do
+            docker tag "bitumap-${nom}:${TAG}" "${REGISTRE}/${nom}:${TAG}"
+            docker push "${REGISTRE}/${nom}:${TAG}"
+            digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${REGISTRE}/${nom}:${TAG}")
+            digests="${digests}- ${nom} : \`${digest}\`"$'\n'
+          done
+          {
+            echo "digests<<FIN"
+            printf '%s' "$digests"
+            echo "FIN"
+          } >> "$GITHUB_OUTPUT"
+          { echo "### Images publiées"; printf '%s' "$digests"; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Déconnexion du registre
+        if: always()
+        env:
+          REGISTRE: ${{ vars.BITUMAP_REGISTRE }}
+        run: docker logout "${REGISTRE%%/*}" || true
+
   publish:
     name: publish
-    needs: [scan, sbom]
+    needs: [sbom, images]
     runs-on: ubuntu-26.04
     permissions:
       contents: write   # création de la version GitHub et ajout du SBOM
@@ -85,11 +132,14 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: sbom
-      - name: Création de la version avec le SBOM
+      - name: Création de la version avec le SBOM et les digests des images
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          DIGESTS: ${{ needs.images.outputs.digests }}
         run: |
+          # Les digests sont ceux qu'OpenTofu déploie (image par digest, T080 et T081).
+          printf '## Images\n\n%s\n' "$DIGESTS" > notes.md
           gh release create "$TAG" "bitumap-${TAG}.cdx.json" \
-            --repo "$REPO" --verify-tag --generate-notes --title "$TAG"
+            --repo "$REPO" --verify-tag --generate-notes --notes-file notes.md --title "$TAG"

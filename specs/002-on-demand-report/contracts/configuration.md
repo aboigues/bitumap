@@ -27,6 +27,7 @@ déclarée sur Scaleway.)
 | `BITUMAP_COMPTE_INACTIF_MOIS` | 12 | FR-027 |
 | `BITUMAP_LOT_TAILLE` | 10 | FR-007a |
 | `BITUMAP_COMMUNE_DELAI_MAX_MIN` | 30 | FR-017 |
+| `BITUMAP_LOT_HEURE_QUOTIDIENNE_UTC` | 2 | heure UTC du passage quotidien du job sans demande (purge, lots interrompus ; T096) |
 | `BITUMAP_IA_PLAFOND_RAPPORT_EUR` | 2 | FR-024 |
 | `BITUMAP_IA_PLAFOND_JOUR_EUR` | 5 | FR-024 |
 | `BITUMAP_IA_MODELE` | issu de l'évaluation (R7) | FR-014 |
@@ -80,3 +81,11 @@ passe = clé secrète).
 
 Les noms de bucket portent un suffixe aléatoire (unicité sur tout Scaleway) : les variables
 `BITUMAP_BUCKET_…` reçoivent les sorties `buckets` d'OpenTofu.
+
+## GitHub (publication des images, T083)
+
+| Nom | Type | Origine | Utilisé par |
+|---|---|---|---|
+| `BITUMAP_REGISTRE` | variable du dépôt | sortie `registre` d'OpenTofu (`rg.fr-par.scw.cloud/<espace>`) | `release.yml` |
+| `BITUMAP_CI_CLE_SECRETE` | secret du dépôt | bootstrap (application `bitumap-ci`) | `release.yml` (`docker login`) |
+| `BITUMAP_CI_CLE_ACCES` | secret du dépôt | bootstrap | non utilisé par `release.yml` : `docker login` ne demande que la clé secrète (identifiant `nologin`) |

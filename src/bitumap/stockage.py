@@ -50,6 +50,19 @@ def effacer_definitivement(bucket: str, cle: str) -> int:
     return supprimees
 
 
+def lister(bucket: str, prefixe: str) -> list[str]:
+    """Clés des objets sous ``prefixe``."""
+    cles = []
+    for page in _client().get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefixe):
+        cles.extend(objet["Key"] for objet in page.get("Contents", []))
+    return cles
+
+
+def supprimer(bucket: str, cle: str) -> None:
+    """Suppression simple (bucket non versionné) ; voir ``effacer_definitivement`` sinon."""
+    _client().delete_object(Bucket=bucket, Key=cle)
+
+
 def existe(bucket: str, cle: str) -> bool:
     try:
         _client().head_object(Bucket=bucket, Key=cle)

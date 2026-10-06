@@ -33,6 +33,27 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-022 — Trace d'erreur à chaque fin du job de lot (2026-10-06) — Close
+
+- **Contexte** : développement de T096 (branche `002-images-et-job`), premier lancement de
+  l'image `job` contre la base et le S3 locaux ; défaut présent sur `main`, rien de déployé.
+- **Symptôme** : à chaque fin de job ayant ouvert la base, code de sortie 0 mais trace
+  `PythonFinalizationError: cannot join thread at interpreter shutdown`
+  (`ConnectionPool.__del__`) dans la sortie. En production, chaque lot aurait laissé une
+  erreur dans Cockpit, de quoi masquer les vraies.
+- **Causes racines** :
+  1. Pourquoi ? Le pool de connexions de psycopg n'était jamais fermé : son destructeur
+     s'exécute pendant l'arrêt de l'interpréteur et tente de joindre ses fils, ce que
+     Python 3.14 interdit à ce stade.
+  2. Pourquoi non vu ? Les tests appellent `executer()` dans le processus de pytest, qui
+     ferme le pool à la fin de la session ; le job n'avait jamais été lancé comme un
+     processus réel, dans son image.
+- **Correctif** : `main()` ferme le pool (`fermer_pool`) dans un `finally`.
+- **Mesure préventive** : test `test_le_job_ferme_le_pool_avant_de_sortir` ; image du job
+  lancée contre la base et le S3 locaux avant la PR (sortie sans trace). Règle : tout point
+  d'entrée d'image est lancé au moins une fois dans son image avant sa PR.
+- **Références** : branche `002-images-et-job`.
+
 ### LL-021 — Backend OpenTofu pointé sur le bucket d'un tiers (2026-10-06) — Close
 
 - **Contexte** : première mise en œuvre d'`infra/tofu` par le mainteneur (PR A de la phase 7

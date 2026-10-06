@@ -116,7 +116,7 @@ def test_alerte_budget_sans_destinataire_configure(base, courriels, monkeypatch)
     assert courriels == []
 
 
-def test_alerte_erreur_d_infrastructure(base, courriels, monkeypatch):
+def test_alerte_erreur_d_infrastructure(base, courriels, s3, monkeypatch):
     from bitumap.lot import __main__ as lot
 
     monkeypatch.setattr(reglages(), "email_mainteneur", "mainteneur@exemple.fr")
@@ -125,8 +125,8 @@ def test_alerte_erreur_d_infrastructure(base, courriels, monkeypatch):
         raise ConnectionError("base injoignable")
 
     monkeypatch.setattr(lot, "executer", panne)
-    assert lot.main([]) == 1
-    assert lot.main([]) == 1  # même heure : pas de seconde alerte
+    assert lot.main(["--complet"]) == 1  # --complet : base ouverte même sans témoin (T096)
+    assert lot.main(["--complet"]) == 1  # même heure : pas de seconde alerte
     alertes = [c for c in courriels if c.sujet.startswith("[bitumap] lot interrompu")]
     assert len(alertes) == 1 and "ConnectionError" in alertes[0].sujet
 

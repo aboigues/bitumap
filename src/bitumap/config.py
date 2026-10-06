@@ -46,6 +46,8 @@ class Reglages(BaseSettings):
     commune_delai_max_min: int = 30
     lot_delai_max_h: int = 3
     lot_intervalle_min: int = 15
+    # Passage quotidien du job même sans demande (purge, lots interrompus ; T096)
+    lot_heure_quotidienne_utc: int = 2
 
     # IA (FR-014, FR-024, FR-029)
     ia_modele: str = "mistral-small-3.2-24b-instruct-2506"
