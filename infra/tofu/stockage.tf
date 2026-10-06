@@ -149,6 +149,14 @@ resource "scaleway_object_bucket_policy" "cache" {
         Action    = local.ecriture
         Resource  = [scaleway_object_bucket.cache.name, "${scaleway_object_bucket.cache.name}/*"]
       },
+      {
+        # Témoins de la file (T096) : l'API les dépose, seul le job les lit et les retire.
+        Sid       = "ApiTemoins"
+        Effect    = "Allow"
+        Principal = { SCW = local.principal_api }
+        Action    = ["s3:PutObject"]
+        Resource  = ["${scaleway_object_bucket.cache.name}/file/*"]
+      },
     ]
   })
 }

@@ -24,7 +24,7 @@ from bitumap.api.auth import SessionRequise, verifier_csrf
 from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.ia.budget import budget_jour_epuise
-from bitumap.lot import versions
+from bitumap.lot import temoin, versions
 from bitumap.rapport.rendu import csp_du_document, json_dans_html
 from bitumap.score.methode import VERSION_METHODE
 from bitumap.terrain import classement
@@ -111,6 +111,9 @@ def _creer_ou_rattacher(commune, empreinte: str, compte_id: str) -> str:
             " VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
             (demande_id, compte_id, compte_quota),
         )
+        # Dans la transaction : sans témoin, pas de mise en file (le job ne verrait pas la
+        # demande avant son passage quotidien, T096).
+        temoin.signaler(str(demande_id))
     return demande_id
 
 

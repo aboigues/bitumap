@@ -4,6 +4,27 @@ Point d'entrée : `python -m bitumap.lot` (image `job`). Déclenché par la plan
 job toutes les 15 minutes (`*/15 * * * *`, `Europe/Paris`) ; peut aussi être lancé à la main
 par le mainteneur. Délai maximal d'exécution : 3 h.
 
+## Réveil de la base (T096) et migrations (T097)
+
+Le job liste d'abord les **témoins** `file/<demande_id>` du bucket du cache (objets vides
+déposés par l'API à chaque mise en file ou rattachement, dans la transaction de la demande).
+Il ne se connecte à la base que dans l'un de ces cas :
+
+| Motif | Condition |
+|---|---|
+| `demandes` | au moins un témoin |
+| `quotidien` | premier créneau de l'heure `BITUMAP_LOT_HEURE_QUOTIDIENNE_UTC` (purge, lots interrompus) |
+| `schema` | `schema/<dernière migration de l'image>` absent du bucket du cache (nouvelle image) |
+| `complet` | option `--complet` (premier déploiement, lancement manuel) |
+
+Sinon : fin immédiate, code 0, aucune requête à la base. Base ouverte : migrations
+manquantes appliquées (`bitumap-job` est seul à avoir les droits sur le schéma),
+`schema/<numéro>` noté, puis déroulement ci-dessous. En fin de lot, les témoins listés au
+départ dont la demande n'est plus `en_file` ni `en_cours` sont retirés (événement
+`lot.temoins`) ; un témoin déposé pendant le lot reste pour le lot suivant. Lot interrompu :
+les témoins restent. Une demande reportée (budget IA) garde son témoin : la base est
+réveillée à chaque lot jusqu'au lendemain.
+
 ## Déroulement
 
 1. **Réveil et prise en charge** (transaction) :

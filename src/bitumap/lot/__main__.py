@@ -1,7 +1,8 @@
 """Point d'entrée du job de lot : ``python -m bitumap.lot`` (contracts/lot-job.md).
 
-Déclenché toutes les 15 minutes ; file vide ⇒ fin immédiate (SC-008). Codes de sortie :
-0 lot traité (même avec des communes en échec), 1 erreur d'infrastructure.
+Déclenché toutes les 15 minutes ; file vide ⇒ fin immédiate (SC-008), sans connexion à la
+base si aucun témoin n'est déposé (T096, ``lot.temoin``). Codes de sortie : 0 lot traité (même
+avec des communes en échec), 1 erreur d'infrastructure.
 """
 
 from __future__ import annotations
@@ -17,10 +18,12 @@ from functools import partial
 from pathlib import Path
 
 from bitumap import courriel
+from bitumap.db import fermer_pool
+from bitumap.db.migrer import migrer
 from bitumap.db.purge import purger
 from bitumap.ia.budget import alerter_une_fois
 from bitumap.journal import configurer_journalisation, evenement
-from bitumap.lot import commune, regional
+from bitumap.lot import commune, regional, temoin
 from bitumap.lot import prise_en_charge as file
 from bitumap.sources import ortho
 from bitumap.sources.fournisseur import FournisseurEnLigne
@@ -89,13 +92,53 @@ def alerter_erreur_infrastructure(erreur: Exception) -> None:
         courriel.envoyer(courriel.alerte_mainteneur(sujet, texte))
 
 
+def _motif(temoins: list[str], complet: bool, maintenant: datetime) -> str | None:
+    if complet:
+        return "complet"
+    if temoins:
+        return "demandes"
+    if temoin.passage_quotidien(maintenant):
+        return "quotidien"
+    if not temoin.schema_note():
+        return "schema"
+    return None
+
+
+def lancer(dossier_cache: Path = DOSSIER_CACHE, complet: bool = False, maintenant=None, **lot):
+    """Ouvre la base seulement s'il y a du travail : témoin de demande, passage quotidien,
+    nouvelle migration, ou lancement ``--complet`` ; sinon ``None`` (T096). Applique les
+    migrations avant le lot (T097 : seul le job a les droits sur le schéma)."""
+    temoins = temoin.en_attente()
+    motif = _motif(temoins, complet, maintenant or datetime.now(UTC))
+    if motif is None:
+        journal.info("aucun témoin de demande : fin sans connexion à la base")
+        return None
+    for nom in migrer():
+        evenement(journal, "schema.migration", migration=nom)
+    temoin.noter_schema()
+    resultats = executer(dossier_cache, **lot)
+    evenement(
+        journal,
+        "lot.temoins",
+        motif=motif,
+        listes=len(temoins),
+        retires=temoin.nettoyer(temoins),
+    )
+    return resultats
+
+
 def main(argv=None) -> int:
     configurer_journalisation()
     parser = argparse.ArgumentParser(description="Traite un lot de demandes de rapport.")
     parser.add_argument("--cache", type=Path, default=DOSSIER_CACHE)
+    parser.add_argument(
+        "--complet",
+        action="store_true",
+        help="ouvre la base même sans témoin (migrations, purge) : premier déploiement",
+    )
     args = parser.parse_args(argv)
     try:
-        resultats = executer(args.cache)
+        resultats = lancer(args.cache, complet=args.complet) or []
     except Exception as erreur:
         journal.exception("erreur d'infrastructure")
         try:
@@ -103,6 +146,10 @@ def main(argv=None) -> int:
         except Exception:
             journal.exception("alerte au mainteneur impossible")
         return 1
+    finally:
+        # Pool fermé avant l'arrêt de l'interpréteur : sinon son ramasse-miettes tente de
+        # joindre ses fils trop tard (PythonFinalizationError dans le journal, LL-022).
+        fermer_pool()
     for r in resultats:
         journal.info("%s : %s", r.commune, r.statut)
     return 0
