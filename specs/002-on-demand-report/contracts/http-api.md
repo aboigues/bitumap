@@ -72,7 +72,7 @@ même CSP que les autres pages de l'API ; aucun script.
 
 | Méthode, chemin | Réponse |
 |---|---|
-| `GET /sante` | `200 {"etat":"ok"}` sans accès base (sonde du conteneur) |
+| `GET /health` | `200 {"etat":"ok"}` sans accès base (sonde du conteneur) |
 | `GET /.well-known/security.txt` | RFC 9116 : `Contact` (signalement privé GitHub, réglage `BITUMAP_CONTACT_SECURITE`), `Expires` glissant à 180 jours, `Preferred-Languages`, `Canonical` |
 
 ## Limites

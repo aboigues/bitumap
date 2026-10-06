@@ -65,7 +65,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [X] T013 [P] Implémenter `src/bitumap/territoire/api_geo.py` : validation du format (5 chiffres, sans appel externe), départements `75, 77, 78, 91, 92, 93, 94, 95`, appel API Géo, Paris par `type=arrondissement-municipal` (`75011` → `75111`), contour communal (FR-001 à FR-003)
 - [X] T014 [P] Tests `tests/unit/test_territoire.py` : `92400` → Courbevoie, `95000` → 4 communes, `75011` → Paris 11e, `69001` refusé, `9240` refusé, `99999` inexistant (réponses API figées avec respx)
 - [X] T015 [P] Implémenter `src/bitumap/courriel.py` : interface d'envoi, implémentation console (local) et Scaleway Transactional Email ; gabarits texte minimaux (FR-028) : lien de connexion, rapport prêt, échec
-- [X] T016 Implémenter `src/bitumap/api/__init__.py` (application FastAPI), en-têtes de sécurité de `contracts/http-api.md` (CSP, HSTS, nosniff, Referrer-Policy), gestion d'erreurs sans détail technique, `GET /sante`
+- [X] T016 Implémenter `src/bitumap/api/__init__.py` (application FastAPI), en-têtes de sécurité de `contracts/http-api.md` (CSP, HSTS, nosniff, Referrer-Policy), gestion d'erreurs sans détail technique, `GET /health`
 - [X] T017 Implémenter `src/bitumap/api/auth.py` : `POST /connexion` (réponse **identique** que le compte existe ou non, FR-006b), `GET /connexion/{jeton}` (jeton 32 octets, seule l'empreinte SHA-256 stockée, usage unique par `UPDATE … WHERE utilise_le IS NULL`, 15 min), session cookie `__Host-session` (`Secure`, `HttpOnly`, `SameSite=Lax`, 7 jours), jeton CSRF vérifié sur chaque `POST`, `POST /deconnexion`, dépendance `session_requise`
 - [X] T018 Tests `tests/api/test_auth.py` : lien valide, réutilisé (410), expiré (410), autre appareil accepté, CSRF manquant refusé, réponse identique pour adresse connue et inconnue
 - [X] T019 [P] Implémenter `src/bitumap/sources/base.py` : interface d'adaptateur (`acquerir(emprise) → extraction` avec licence, URL, date), client HTTP partagé, cache régional / communal (data-model.md, stockage objet)
@@ -202,7 +202,7 @@ SC-004, SC-006, SC-010, SC-012).
 - [X] T077 [P] Créer `infra/tofu/base.tf` : Serverless SQL Database (sans minimum de vCPU, pour revenir à zéro)
 - [X] T078 [P] Créer `infra/tofu/registre.tf` : espace de noms privé du Container Registry
 - [X] T079 [P] Créer `infra/tofu/secrets.tf` : secrets de `contracts/configuration.md` (valeurs aléatoires générées pour `bitumap-altcha-hmac` et `bitumap-sel-origine`)
-- [ ] T080 Créer `infra/tofu/api.tf` : conteneur serverless `min_scale = 0`, `max_scale = 2`, image par digest, références de secrets, variables d'environnement, sonde `/sante`
+- [ ] T080 Créer `infra/tofu/api.tf` : conteneur serverless `min_scale = 0`, `max_scale = 2`, image par digest, références de secrets, variables d'environnement, sonde `/health`
 - [ ] T081 Créer `infra/tofu/job.tf` : `scaleway_job_definition` avec `cron { schedule = "*/15 * * * *", timezone = "Europe/Paris" }`, `timeout = "3h"`, image par digest, références de secrets
 - [ ] T082 [P] Créer `infra/tofu/courriel.tf` : domaine Transactional Email (variable `domaine_envoi`) et sorties des enregistrements DNS à créer (SPF, DKIM, DMARC, MX)
 - [ ] T092 Mettre en place l'**alerte de facturation Scaleway à 5 € par mois** sur le projet `BITUMAP` (tout le coût : calcul, base, stockage, e-mail, IA) : ressource OpenTofu dans `infra/tofu/alertes.tf` si le fournisseur Scaleway 2.83 la propose (vérifier), sinon procédure pas à pas pour le mainteneur dans `infra/tofu/README.md` (action humaine, console de facturation) ; destinataire non versionné
