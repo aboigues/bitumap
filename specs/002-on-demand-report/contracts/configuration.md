@@ -58,19 +58,25 @@ OpenTofu (planification et `timeout` du job).
 
 ## Secrets (Secret Manager)
 
-| Secret | Utilisé par |
-|---|---|
-| `bitumap-db-url` | API, job |
-| `bitumap-altcha-hmac` | API |
-| `bitumap-sel-origine` | API (empreinte salée des adresses IP, renouvelée chaque jour) |
-| `bitumap-s3` (clé d'accès de l'application d'exécution) | API, job |
-| `bitumap-tem` (clé d'envoi d'e-mails) | API, job |
-| `bitumap-genai` (clé Generative APIs) | job |
+| Secret | Créé par | Utilisé par |
+|---|---|---|
+| `bitumap-cle-api`, `bitumap-cle-job` | bootstrap | clé secrète IAM du composant : base (mot de passe), stockage objet, envoi d'e-mails, IA (job) |
+| `bitumap-id-api`, `bitumap-id-job` | bootstrap | identifiants publics `{application_id, access_key}`, lus par OpenTofu |
+| `bitumap-altcha-hmac` | OpenTofu (`secrets.tf`, aléatoire) | API |
+| `bitumap-sel-origine` | OpenTofu (`secrets.tf`, aléatoire) | API (empreinte salée des adresses IP, renouvelée chaque jour) |
+| URL de la base de chaque composant | OpenTofu, avec le conteneur et le job | API, job (`BITUMAP_DB_URL` : application et clé du composant, point d'accès de la base) |
 
 Chaque composant tourne avec **sa propre** application IAM limitée à ce dont il a besoin
-(`bitumap-api` : base, lecture des rapports, e-mail ; `bitumap-job` : base, écriture rapports
-et cache, e-mail, IA). L'application `bitumap-tofu` n'ayant aucun droit IAM (bootstrap), ces
-applications, leurs politiques et leurs clés sont créées par
-`infra/bootstrap/bootstrap.sh` (profil d'administration, action humaine) ; les clés sont
-écrites directement dans Secret Manager, jamais affichées. Serverless SQL Database
-s'authentifie avec ces clés IAM (identifiant = application, mot de passe = clé secrète).
+(`bitumap-api` : données de la base, lecture des rapports, photos, e-mail ; `bitumap-job` :
+base et migrations, rapports et cache, e-mail, IA). Une seule clé IAM par composant sert à
+la base, au stockage objet, à l'envoi d'e-mails et à l'IA : `BITUMAP_S3_CLE_SECRETE`,
+`BITUMAP_TEM_CLE` et `BITUMAP_GENAI_CLE` reçoivent `bitumap-cle-<composant>`. L'application
+`bitumap-tofu` n'ayant aucun droit IAM (bootstrap), ces applications, leurs politiques et
+leurs clés sont créées par `infra/bootstrap/bootstrap.sh` (profil d'administration, action
+humaine) ; les clés sont écrites directement dans Secret Manager, jamais affichées. La
+restriction par bucket est faite par les politiques de bucket (`infra/tofu/stockage.tf`).
+Serverless SQL Database s'authentifie avec ces clés IAM (identifiant = application, mot de
+passe = clé secrète).
+
+Les noms de bucket portent un suffixe aléatoire (unicité sur tout Scaleway) : les variables
+`BITUMAP_BUCKET_…` reçoivent les sorties `buckets` d'OpenTofu.

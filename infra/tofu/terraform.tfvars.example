@@ -1,0 +1,5 @@
+# Copier en terraform.tfvars (non versionné). La phrase de chiffrement n'y figure pas :
+# export TF_VAR_phrase_chiffrement=… (gestionnaire de mots de passe).
+bucket_etat      = "bitumap-tofu-state-xxxxxxxx"
+application_tofu = "00000000-0000-0000-0000-000000000000"
+domaine_service  = "bitumap.exemple.fr"

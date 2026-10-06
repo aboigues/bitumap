@@ -90,7 +90,7 @@ def creer_application() -> FastAPI:
             requete, 500, "erreur_interne", "Une erreur est survenue. Réessayez plus tard."
         )
 
-    @app.get("/sante")
+    @app.get("/health")
     def sante() -> dict:
         return {"etat": "ok"}
 

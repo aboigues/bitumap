@@ -71,7 +71,14 @@ def test_deconnexion(client, courriels):
     assert "Se déconnecter" not in client.get("/").text
 
 
+def test_sonde_du_conteneur(client):
+    # Chemin lu par le HEALTHCHECK de l'image et par la sonde du conteneur (T080).
+    reponse = client.get("/health")
+    assert reponse.status_code == 200
+    assert reponse.json() == {"etat": "ok"}
+
+
 def test_en_tetes_de_securite(client):
-    en_tetes = client.get("/sante").headers
+    en_tetes = client.get("/health").headers
     assert "frame-ancestors 'none'" in en_tetes["content-security-policy"]
     assert en_tetes["x-content-type-options"] == "nosniff"
