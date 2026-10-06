@@ -1,5 +1,9 @@
 # Copier en terraform.tfvars (non versionné). La phrase de chiffrement n'y figure pas :
 # export TF_VAR_phrase_chiffrement=… (gestionnaire de mots de passe).
+# Valeurs refusées telles quelles (variables.tf, identifiants-etat.sh) : les remplacer.
+# bucket_etat : sortie « state_bucket » du bootstrap.
+# application_tofu : sortie « application_id » du bootstrap = application IAM bitumap-tofu
+# (console : Organisation > IAM > Applications), pas l'identifiant du projet.
 bucket_etat      = "bitumap-tofu-state-xxxxxxxx"
 application_tofu = "00000000-0000-0000-0000-000000000000"
 domaine_service  = "bitumap.exemple.fr"

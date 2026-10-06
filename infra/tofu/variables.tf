@@ -4,6 +4,13 @@
 variable "bucket_etat" {
   description = "Bucket d'état OpenTofu (sortie « state_bucket » du bootstrap)."
   type        = string
+
+  # Évaluée au plan seulement : OpenTofu configure le backend avant de valider les variables
+  # (d'où tofu init -input=false et le contrôle d'identifiants-etat.sh, LL-021).
+  validation {
+    condition     = can(regex("^bitumap-tofu-state-[0-9a-f]{8}$", var.bucket_etat))
+    error_message = "Bucket d'état invalide : attendu bitumap-tofu-state-<8 caractères hexadécimaux> (sortie « state_bucket » du bootstrap, dans terraform.tfvars)."
+  }
 }
 
 variable "phrase_chiffrement" {
@@ -20,6 +27,16 @@ variable "phrase_chiffrement" {
 variable "application_tofu" {
   description = "Identifiant de l'application IAM bitumap-tofu (sortie « application_id » du bootstrap), seule à administrer les buckets."
   type        = string
+
+  # Seul principal autorisé à administrer les buckets (stockage.tf) : un identifiant faux
+  # enfermerait OpenTofu hors des buckets dès l'apply (LL-021).
+  validation {
+    condition = (
+      can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.application_tofu))
+      && var.application_tofu != "00000000-0000-0000-0000-000000000000"
+    )
+    error_message = "application_tofu invalide : identifiant de l'application IAM bitumap-tofu (sortie « application_id » du bootstrap ; console : Organisation > IAM > Applications), pas celui du projet."
+  }
 }
 
 variable "domaine_service" {
