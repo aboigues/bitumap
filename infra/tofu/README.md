@@ -8,7 +8,7 @@ Spécification : `specs/002-on-demand-report/tasks.md`, phase 7.
 |---|---|
 | `versions.tf` | OpenTofu 1.13.1, fournisseurs Scaleway 2.84.0 et random 3.9.1 ; chiffrement de l'état et des plans |
 | `backend.tf` | état dans le bucket du bootstrap, verrou par fichier (`use_lockfile`) ; identifiants lus dans `~/.config/bitumap/etat-tofu` |
-| `identifiants-etat.sh` | écrit ce fichier (mode 600) depuis le profil scw `bitumap`, sans rien afficher |
+| `identifiants-etat.sh` | contrôle `terraform.tfvars` (bucket d'état du projet), puis écrit ce fichier (mode 600) depuis le profil scw `bitumap`, sans rien afficher |
 | `variables.tf` | bucket d'état, phrase de chiffrement, application `bitumap-tofu`, domaine du service, autorisation de destruction |
 | `identites.tf` | identifiants publics des applications `bitumap-api` et `bitumap-job` (lus dans Secret Manager) |
 | `stockage.tf` | buckets rapports, cache et photos des relevés, cycles de vie, CORS, politiques de bucket |
@@ -55,13 +55,27 @@ bootstrap exécuté (il crée les secrets `bitumap-id-…` lus par `identites.tf
 
 ```bash
 cd infra/tofu
+tofu version                                   # 1.13.1 (versions.tf refuse une autre version)
 cp terraform.tfvars.example terraform.tfvars   # valeurs de la sortie du bootstrap, domaine
-./identifiants-etat.sh                         # identifiants du backend, depuis le profil scw « bitumap »
-export TF_VAR_phrase_chiffrement='…'           # gestionnaire de mots de passe, ≥ 32 caractères
-tofu init    # le bucket d'état vient de terraform.tfvars (évaluation précoce d'OpenTofu)
-tofu plan -out=bitumap.tfplan
+./identifiants-etat.sh                         # contrôle terraform.tfvars, identifiants du backend
+read -rs TF_VAR_phrase_chiffrement && export TF_VAR_phrase_chiffrement   # ≥ 32 caractères
+tofu init -input=false   # jamais d'invite : une variable manquante est une erreur
+tofu plan -input=false -out=bitumap.tfplan
 tofu apply bitumap.tfplan
 ```
+
+Pièges (LL-021) :
+
+- **Toujours `-input=false`** : OpenTofu configure le backend *avant* de valider les
+  variables. Sans `terraform.tfvars`, `tofu init` demande `var.bucket_etat` et accepte
+  n'importe quelle réponse (« yes » a désigné le bucket public d'un tiers). Les validations
+  de `variables.tf` n'agissent qu'au `plan`.
+- **`application_tofu`** est l'identifiant de l'**application IAM** `bitumap-tofu`, pas
+  celui du projet : sortie `application_id` du bootstrap, ou console *Organisation → IAM →
+  Applications*. C'est le seul principal autorisé à administrer les buckets : un identifiant
+  faux enfermerait OpenTofu hors des buckets dès l'apply.
+- **Un plan enregistré fige les variables** : après toute modification de
+  `terraform.tfvars`, refaire `tofu plan -out=…` avant `tofu apply`.
 
 - Aucune variable d'environnement `AWS_…` ni `SCW_…` : le fournisseur Scaleway lit le
   profil `bitumap` (`provider "scaleway" { profile = "bitumap" }`), le backend lit le
@@ -69,8 +83,11 @@ tofu apply bitumap.tfplan
   dans le bloc `backend`, qu'il recopierait dans `.terraform/`. Le format du fichier
   (`aws_access_key_id`, `aws_secret_access_key`) est imposé par le protocole S3 du backend.
 
-- La phrase de chiffrement n'est écrite nulle part dans le dépôt ni dans `terraform.tfvars`.
-  **Sans elle, l'état est illisible** : la garder dans un gestionnaire de mots de passe.
+- La phrase de chiffrement est choisie par le mainteneur (ex. `openssl rand -base64 48`) ;
+  elle n'est écrite nulle part dans le dépôt ni dans `terraform.tfvars`. **Sans elle, l'état
+  est illisible** : la garder dans un gestionnaire de mots de passe. Variante : un fichier
+  hors dépôt en mode 600 (`export TF_VAR_phrase_chiffrement=…`, chargé par `source`) ; il
+  est alors lisible par tout programme lancé sous le compte du poste, agents compris.
 - Le domaine du service n'est pas versionné : il est dans `terraform.tfvars`.
 - Les politiques de bucket ne laissent l'accès qu'aux applications listées : la console
   Scaleway ne montre plus le contenu des buckets ; passer par `scw -p bitumap` (application

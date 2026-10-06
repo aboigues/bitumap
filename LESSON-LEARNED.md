@@ -33,6 +33,38 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-021 — Backend OpenTofu pointé sur le bucket d'un tiers (2026-10-06) — Close
+
+- **Contexte** : première mise en œuvre d'`infra/tofu` par le mainteneur (PR A de la phase 7
+  de 002, #42), poste local ; aucune donnée exposée.
+- **Symptôme** : après `tofu init`, `.terraform/terraform.tfstate` désignait le bucket
+  `yes`, qui existe chez Scaleway, appartient à un tiers et est lisible publiquement. Le
+  premier plan enregistré utilisait aussi `application_tofu` = UUID nul (valeur du modèle) :
+  appliqué, il aurait réservé l'administration des buckets à une application inexistante et
+  enfermé OpenTofu hors de ses propres buckets.
+- **Causes racines** :
+  1. Pourquoi « yes » ? `terraform.tfvars` n'existait pas encore : `tofu init` a demandé
+     `var.bucket_etat`, et la réponse a été prise pour une confirmation.
+  2. Pourquoi accepté ? OpenTofu configure le backend avant de valider les variables
+     (vérifié : un bloc `validation` n'agit qu'au `plan`) ; et le README ne demandait pas
+     `-input=false`.
+  3. Pourquoi l'UUID nul ? Le modèle `terraform.tfvars.example` ne disait pas où trouver
+     l'identifiant de l'application IAM, confondu avec celui du projet, et aucune variable
+     n'était validée. Le plan enregistré avant la correction l'aurait conservé.
+  4. Pourquoi non vu en revue ? La validation locale (`fmt`, `validate`, Trivy) n'exécute
+     ni `init` avec backend ni `plan` : la mise en œuvre humaine n'avait jamais été jouée.
+- **Correctif** : état réinitialisé sur le bon bucket (`tofu init -reconfigure`),
+  `application_tofu` corrigée, nouveau plan enregistré puis appliqué ; plan de contrôle
+  sans changement.
+- **Mesure préventive** : `identifiants-etat.sh` refuse de s'exécuter sans
+  `terraform.tfvars`, avec un `bucket_etat` hors du format du bootstrap ou absent du projet ;
+  validations de `bucket_etat` et `application_tofu` (format, UUID nul) dans `variables.tf` ;
+  README : `tofu init -input=false`, `plan -input=false`, où trouver l'identifiant de
+  l'application, refaire le plan après toute modification des variables. Essais rejoués
+  sans réseau (conteneur `--network none`). Règle : toute procédure humaine d'infrastructure
+  est jouée de bout en bout (init, plan) sur une copie avant sa PR.
+- **Références** : PR #42, branche `fix/tofu-garde-fous-variables`.
+
 ### LL-020 — Tests en échec sur la première PR Dependabot : secret absent (2026-10-02) — Close
 
 - **Contexte** : CI, PR #39 (Dependabot, digests `chainguard/python`), première PR
