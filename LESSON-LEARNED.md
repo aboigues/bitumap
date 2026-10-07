@@ -33,6 +33,28 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-026 — IA jamais appelée en production, sans alerte (2026-10-07) — Ouverte
+
+- **Contexte** : premiers rapports de production (Courbevoie, Asnières), relus par le
+  mainteneur ; défaut découvert dans `points.geojson`, aucun avertissement ne le signalait.
+- **Symptôme** : `ia.appels = 0` dans le journal des rapports ; 10 à 14 points P1 par
+  commune « non évalués (service indisponible : PermissionDeniedError) ».
+- **Causes racines** :
+  1. Pourquoi ? L'API de l'IA répond 403 à la clé de `bitumap-job` sur
+     `https://api.scaleway.ai/v1` et 200 sur `https://api.scaleway.ai/<projet>/v1`
+     (vérifié avec la clé du job, liste des modèles et chat).
+  2. Pourquoi ? Une application dont la politique est limitée à un projet doit nommer le
+     projet dans l'adresse ; l'évaluation des modèles (R7) avait été faite avec une clé
+     de portée organisation, qui n'a pas ce besoin.
+  3. Pourquoi non vu ? La CI simule l'IA (T094 ouverte) ; un échec d'appel ne produit qu'un
+     facteur « non évalué », ni avertissement dans le rapport ni alerte au mainteneur.
+- **Correctif** : `BITUMAP_IA_URL` du projet passé au job par OpenTofu (`job.tf`).
+- **Mesure préventive** : à faire dans la PR suivante : avertissement dans le rapport et
+  alerte au mainteneur quand l'IA échoue (la leçon reste ouverte jusque-là). Règle : tout
+  service appelé avec une clé d'exécution est essayé avec **cette** clé avant la mise en
+  service.
+- **Références** : branche `fix/ia-url-projet`.
+
 ### LL-025 — Domaine d'envoi créé mais marqué « tainted » (2026-10-07) — Close
 
 - **Contexte** : apply suivant #46 par le mainteneur (bootstrap relancé, offre TEM

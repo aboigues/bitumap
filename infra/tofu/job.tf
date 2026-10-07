@@ -39,6 +39,8 @@ resource "scaleway_job_definition" "lot" {
 
   env = merge(local.env_commun, {
     BITUMAP_S3_CLE_ACCES = local.id_job.access_key
+    # Droits limités au projet : l'IA exige l'adresse du projet, sinon 403 (LL-026).
+    BITUMAP_IA_URL = "https://api.scaleway.ai/${scaleway_sdb_sql_database.bitumap.project_id}/v1"
   })
 
   secret_reference {
