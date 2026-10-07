@@ -54,7 +54,7 @@ minimales) et le stockage objet (rapports immuables, cache des sources).
 |---|---|---|
 | `id` | uuid | identifiant de suivi |
 | `commune_insee` | texte | code commune ou arrondissement (751xx) |
-| `empreinte` | texte | commune + version de méthode + versions des sources |
+| `empreinte` | texte | commune + version de méthode + versions des sources + modèle d'IA et prompt + révision du calcul (`lot/empreinte.py`, incrémentée quand un correctif change le contenu des rapports) |
 | `etat` | énuméré | voir transitions |
 | `etape` | énuméré, nul | `acquisition`, `calcul`, `rapport` |
 | `cree_le`, `pris_en_charge_le`, `termine_le` | horodatage | |
