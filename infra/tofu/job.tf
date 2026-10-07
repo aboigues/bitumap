@@ -31,6 +31,12 @@ resource "scaleway_job_definition" "lot" {
     timezone = "Europe/Paris"
   }
 
+  # Aucune nouvelle tentative : le lot suivant reprend les demandes (15 min plus tard).
+  # Déclaré car Scaleway le renseigne (sinon écart à chaque plan, LL-025).
+  retry_policy {
+    max_retries = 0
+  }
+
   env = merge(local.env_commun, {
     BITUMAP_S3_CLE_ACCES = local.id_job.access_key
   })
