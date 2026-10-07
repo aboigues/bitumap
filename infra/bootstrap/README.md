@@ -18,6 +18,7 @@ techniques »). Tout le reste de l'infrastructure est décrit en OpenTofu.
 | Secrets | `bitumap-cle-api`, `bitumap-cle-job` | clé secrète IAM seule (injectée telle quelle dans le conteneur et le job) |
 | Secrets | `bitumap-id-api`, `bitumap-id-job` | identifiants publics `{application_id, access_key}`, lus par OpenTofu |
 | Secrets GitHub | `BITUMAP_CI_CLE_ACCES`, `BITUMAP_CI_CLE_SECRETE` | clé de `bitumap-ci` |
+| Offre Transactional Email | `essential` | gratuite, 300 e-mails par mois pour l'organisation ; sans elle, le domaine d'envoi est refusé (403). Le fournisseur OpenTofu ne sait que la lire (LL-024) |
 
 Chaque application a sa politique `<nom>-project`, limitée au projet `BITUMAP` ; les jeux
 de permissions sont listés en tête du script. La restriction **par bucket** (l'API ne

@@ -33,6 +33,31 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-024 — Apply interrompu : offre TEM absente, disque du job hors limite (2026-10-07) — Close
+
+- **Contexte** : premier `tofu apply` de la PR C (#45) par le mainteneur.
+- **Symptôme** : apply arrêté après 4 créations sur 6 : `403 Forbidden: No active offer
+  subscription for the project` (domaine d'envoi) et `local storage capacity must be greater
+  than 1000 and lower than 10240 MiB` (job). Le plan suivant voulait aussi modifier la mémoire
+  du conteneur, qui venait d'être créé (1 073 741 824 → 1 073 000 000 octets).
+- **Causes racines** :
+  1. Pourquoi ? Transactional Email exige un abonnement du projet à une offre, que le
+     fournisseur OpenTofu ne sait que lire ; le job demandait 20 Gio de disque, au-delà du
+     maximum de Scaleway ; Scaleway arrondit la mémoire au Mo décimal.
+  2. Pourquoi non vu au plan ? `tofu plan` ne vérifie que le schéma du fournisseur, pas les
+     règles de l'API (bornes, abonnements) : seul l'apply les rencontre.
+  3. Pourquoi non vu à la revue ? Valeurs choisies sans relire les limites publiées du
+     service ; l'abonnement n'apparaît dans aucune ressource du fournisseur.
+- **Correctif** : offre `essential` souscrite par le bootstrap (étape 6) ; source
+  `scaleway_tem_offer_subscription` et précondition sur le domaine d'envoi, qui arrête le
+  **plan** avant toute création (la source renvoie `null` sans abonnement, pas une erreur) ;
+  disque du job à 10 000 Mio ; mémoire du conteneur en Mo décimaux.
+- **Mesure préventive** : précondition ci-dessus, rejouée sur le projet réel (plan arrêté
+  avec le message attendu). Règle : toute nouvelle ressource Scaleway a ses limites
+  (bornes, prérequis de compte) relevées dans la documentation du service avant la PR, et
+  un plan relancé juste après l'apply doit être vide.
+- **Références** : PR #45, branche `fix/tem-offre-stockage-job`.
+
 ### LL-023 — Le job n'aurait jamais démarré sur Scaleway (2026-10-07) — Close
 
 - **Contexte** : écriture du job Scaleway (`infra/tofu/job.tf`, T081, branche
