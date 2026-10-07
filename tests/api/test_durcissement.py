@@ -25,3 +25,47 @@ def test_image_api_sans_en_tete_server():
         ligne for ligne in dockerfile.read_text().splitlines() if ligne.startswith("ENTRYPOINT")
     )
     assert '"--no-server-header"' in point_entree
+
+
+def test_le_job_demarre_sans_les_secrets_de_l_api(monkeypatch):
+    # Le job ne reçoit ni la clé ALTCHA ni le sel (moindre privilège, infra/tofu/job.tf) :
+    # sa configuration doit se charger sans eux.
+    from bitumap.config import reglages
+
+    monkeypatch.delenv("BITUMAP_ALTCHA_HMAC")
+    monkeypatch.delenv("BITUMAP_SEL_ORIGINE")
+    monkeypatch.chdir(Path(__file__).parent)  # aucun .env local
+    reglages.cache_clear()
+    try:
+        assert reglages().altcha_hmac is None and reglages().sel_origine is None
+    finally:
+        reglages.cache_clear()
+
+
+def test_l_api_refuse_de_demarrer_sans_ses_secrets(monkeypatch):
+    import pytest
+    from fastapi.testclient import TestClient
+
+    from bitumap.api import creer_application
+    from bitumap.config import reglages
+
+    monkeypatch.delenv("BITUMAP_SEL_ORIGINE")
+    monkeypatch.chdir(Path(__file__).parent)
+    reglages.cache_clear()
+    try:
+        with (
+            pytest.raises(RuntimeError, match="BITUMAP_SEL_ORIGINE"),
+            TestClient(creer_application()),
+        ):
+            pass
+    finally:
+        reglages.cache_clear()
+
+
+def test_l_api_demarre_avec_ses_secrets():
+    from fastapi.testclient import TestClient
+
+    from bitumap.api import creer_application
+
+    with TestClient(creer_application()) as client:
+        assert client.get("/health").json() == {"etat": "ok"}

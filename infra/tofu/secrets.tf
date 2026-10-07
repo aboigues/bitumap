@@ -1,6 +1,6 @@
 # Secrets générés (002 T079, contracts/configuration.md). Les clés IAM d'exécution sont
-# écrites par le bootstrap (« bitumap-cle-… ») ; l'URL de la base de chaque composant sera
-# composée avec le conteneur et le job (PR B). Valeurs dans l'état, qui est chiffré.
+# écrites par le bootstrap (« bitumap-cle-… ») ; l'URL de la base de chaque composant est
+# composée dans api.tf et job.tf. Valeurs dans l'état, qui est chiffré.
 resource "random_password" "altcha_hmac" {
   length  = 64
   special = false

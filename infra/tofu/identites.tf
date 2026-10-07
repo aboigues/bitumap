@@ -20,3 +20,21 @@ locals {
 
   url_publique = "https://${var.domaine_service}"
 }
+
+# Clés secrètes d'exécution (écrites par le bootstrap) : mot de passe de la base, stockage
+# objet, envoi d'e-mails, IA. Le job les lit directement dans Secret Manager ; le conteneur
+# les reçoit par OpenTofu (pas de référence de secret pour un conteneur).
+data "scaleway_secret_version" "cle_api" {
+  secret_name = "bitumap-cle-api"
+  revision    = "latest_enabled"
+}
+
+data "scaleway_secret_version" "cle_job" {
+  secret_name = "bitumap-cle-job"
+  revision    = "latest_enabled"
+}
+
+locals {
+  cle_api = base64decode(data.scaleway_secret_version.cle_api.data)
+  cle_job = base64decode(data.scaleway_secret_version.cle_job.data)
+}

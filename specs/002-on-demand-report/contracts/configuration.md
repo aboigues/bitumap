@@ -42,15 +42,16 @@ déclarée sur Scaleway.)
 | `BITUMAP_IA_TARIF_ENTREE_EUR_MTOK`, `…_SORTIE_…` | tarif Scaleway en vigueur | calcul du coût |
 | `BITUMAP_PANORAMAX_RAYON_M` | 30 | FR-015 |
 | `BITUMAP_BUCKET_RAPPORTS`, `BITUMAP_BUCKET_CACHE` | noms des buckets | |
-| `BITUMAP_EMAIL_EXPEDITEUR` | adresse sur le domaine vérifié | FR-028 |
+| `BITUMAP_EMAIL_EXPEDITEUR` | `ne-pas-repondre@<domaine_envoi>` (OpenTofu) | FR-028 ; domaine d'envoi distinct du domaine du service (le CNAME du service ne cohabite pas avec SPF et MX) |
 | `BITUMAP_URL_PUBLIQUE` | URL du service | liens des e-mails |
 | `BITUMAP_METHODE` | `1.2` | méthode des nouveaux rapports (`1.2` ou `2.0`, toute autre valeur refusée) ; passe à `2.0` à la mise en service de 004, décidée par le mainteneur |
 | `BITUMAP_ETE_REFERENCE` | dernier été complet (à partir d'octobre) | été des indicateurs annuels de 004 (FR-007) ; entre dans l'empreinte en 2.0 |
 | `BITUMAP_STATION_METEO` | `75114001` (Paris-Montsouris) | station des données quotidiennes (004 R4, partagée avec 007) |
 | `BITUMAP_CONTACT_SECURITE` | avis de sécurité privés GitHub du dépôt | `Contact` de `/.well-known/security.txt` |
 
-**Aucune valeur secrète par défaut** (revue de la PR #14) : `BITUMAP_DB_URL`,
-`BITUMAP_ALTCHA_HMAC` et `BITUMAP_SEL_ORIGINE` sont obligatoires. En local, ils viennent de
+**Aucune valeur secrète par défaut** (revue de la PR #14) : `BITUMAP_DB_URL` est
+obligatoire ; `BITUMAP_ALTCHA_HMAC` et `BITUMAP_SEL_ORIGINE` le sont pour l'API, qui refuse
+de démarrer sans eux, et ne sont pas transmis au job, qui n'en a pas l'usage (LL-023). En local, ils viennent de
 `.env` (non versionné, lu par l'application et par `docker compose`) ; en CI, de secrets
 GitHub ; en production, de Secret Manager.
 
@@ -65,7 +66,12 @@ OpenTofu (planification et `timeout` du job).
 | `bitumap-id-api`, `bitumap-id-job` | bootstrap | identifiants publics `{application_id, access_key}`, lus par OpenTofu |
 | `bitumap-altcha-hmac` | OpenTofu (`secrets.tf`, aléatoire) | API |
 | `bitumap-sel-origine` | OpenTofu (`secrets.tf`, aléatoire) | API (empreinte salée des adresses IP, renouvelée chaque jour) |
-| URL de la base de chaque composant | OpenTofu, avec le conteneur et le job | API, job (`BITUMAP_DB_URL` : application et clé du composant, point d'accès de la base) |
+| `bitumap-url-base-job` | OpenTofu (`job.tf`) | job (`BITUMAP_DB_URL` : application et clé du composant, point d'accès de la base) |
+
+Le job lit ses secrets dans Secret Manager au lancement (références de secret). Le
+conteneur de l'API n'a pas de référence de secret (fournisseur Scaleway 2.84) : OpenTofu
+lui transmet les valeurs (`secret_environment_variables`, URL de sa base comprise), qui
+passent donc par l'état chiffré.
 
 Chaque composant tourne avec **sa propre** application IAM limitée à ce dont il a besoin
 (`bitumap-api` : données de la base, lecture des rapports, photos, e-mail ; `bitumap-job` :

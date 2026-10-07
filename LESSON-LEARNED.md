@@ -33,6 +33,30 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-023 — Le job n'aurait jamais démarré sur Scaleway (2026-10-07) — Close
+
+- **Contexte** : écriture du job Scaleway (`infra/tofu/job.tf`, T081, branche
+  `002-conteneurs`), avant tout déploiement ; défaut présent sur `main` depuis la PR #14.
+- **Symptôme** (prévisible, reproduit) : configuration chargée avec les seuls secrets du
+  job ⇒ `ValidationError` de pydantic, `altcha_hmac` et `sel_origine` « Field required ».
+  Chaque lancement planifié (96 par jour) se serait arrêté avant toute action, sans
+  alerte au mainteneur (l'alerte lit la même configuration).
+- **Causes racines** :
+  1. Pourquoi ? `Reglages` déclarait obligatoires tous les secrets, y compris ceux que seule
+     l'API utilise (antibot, empreinte des adresses IP, pseudonymes).
+  2. Pourquoi non vu ? Les tests, le compose local et le lancement de l'image du job
+     (LL-022) fournissaient le même jeu complet de variables ; aucun ne jouait le job avec
+     ses seuls secrets.
+  3. Pourquoi ce jeu complet ? Les secrets de chaque composant n'ont été séparés qu'à
+     l'écriture de la définition du job (moindre privilège).
+- **Correctif** : `altcha_hmac` et `sel_origine` facultatifs dans la configuration ; l'API
+  refuse de démarrer sans eux (`verifier_secrets_api`, au démarrage du serveur) ; le job ne
+  les reçoit pas.
+- **Mesure préventive** : tests `test_le_job_demarre_sans_les_secrets_de_l_api`,
+  `test_l_api_refuse_de_demarrer_sans_ses_secrets`. Règle : tout point d'entrée d'image est
+  lancé avec **exactement** les variables que lui donne OpenTofu, pas celles du `.env`.
+- **Références** : branche `002-conteneurs`.
+
 ### LL-022 — Trace d'erreur à chaque fin du job de lot (2026-10-06) — Close
 
 - **Contexte** : développement de T096 (branche `002-images-et-job`), premier lancement de
