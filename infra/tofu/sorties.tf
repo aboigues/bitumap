@@ -37,12 +37,14 @@ output "dns_service" {
 }
 
 output "dns_courriel" {
-  description = "Enregistrements de l'envoi d'e-mails à créer chez le registraire."
+  description = "Enregistrements de l'envoi d'e-mails à créer chez le registraire (noms complets)."
+  # Scaleway donne déjà des noms complets terminés par un point (dkim_name, dmarc_name,
+  # mx_config) : ils sont repris tels quels, sans le point final (LL-025).
   value = [
     { nom = var.domaine_envoi, type = "TXT", valeur = scaleway_tem_domain.envoi.spf_value },
-    { nom = "${scaleway_tem_domain.envoi.dkim_name}.${var.domaine_envoi}", type = "TXT", valeur = scaleway_tem_domain.envoi.dkim_config },
-    { nom = var.domaine_envoi, type = "MX", valeur = "${scaleway_tem_domain.envoi.mx_priority} ${scaleway_tem_domain.envoi.mx_config}." },
-    { nom = "${scaleway_tem_domain.envoi.dmarc_name}.${var.domaine_envoi}", type = "TXT", valeur = scaleway_tem_domain.envoi.dmarc_config },
+    { nom = trimsuffix(scaleway_tem_domain.envoi.dkim_name, "."), type = "TXT", valeur = scaleway_tem_domain.envoi.dkim_config },
+    { nom = var.domaine_envoi, type = "MX", valeur = "${scaleway_tem_domain.envoi.mx_priority} ${scaleway_tem_domain.envoi.mx_config}" },
+    { nom = trimsuffix(scaleway_tem_domain.envoi.dmarc_name, "."), type = "TXT", valeur = scaleway_tem_domain.envoi.dmarc_config },
   ]
 }
 
