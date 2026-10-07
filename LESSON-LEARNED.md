@@ -51,7 +51,10 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
   3. Pourquoi le job ? Bloc `retry_policy` omis, donc vu comme absent face à la valeur
      renseignée par Scaleway (même famille que la mémoire du conteneur, LL-024).
 - **Correctif** : `tofu untaint scaleway_tem_domain.envoi` après vérification de son
-  existence (mainteneur) ; `retry_policy { max_retries = 0 }` déclaré.
+  existence (mainteneur) ; `retry_policy { max_retries = 0 }` déclaré. Le plan suivant a
+  révélé un autre défaut : la sortie `dns_courriel` ajoutait le domaine et un point à
+  `dkim_name`, `dmarc_name` et `mx_config`, déjà complets (`….fr..courriel…`) ; elle les
+  reprend désormais tels quels. Les enregistrements DNS, relevés dans l'API, étaient justes.
 - **Mesure préventive** : conduite à tenir dans `infra/tofu/README.md`. Règle de LL-024
   confirmée : un plan relancé juste après l'apply doit être vide ; tout écart est corrigé
   dans le code, pas accepté.
