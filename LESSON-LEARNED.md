@@ -107,6 +107,13 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 - **Mesure préventive** : tests `test_le_job_demarre_sans_les_secrets_de_l_api`,
   `test_l_api_refuse_de_demarrer_sans_ses_secrets`. Règle : tout point d'entrée d'image est
   lancé avec **exactement** les variables que lui donne OpenTofu, pas celles du `.env`.
+- **Récidive en production (2026-10-07)** : le job déployé échoue à chaque passage depuis
+  12 h (heure de Paris), avec la même erreur. Le correctif est arrivé avec #45, après le tag
+  `v0.1.0` : les digests déployés désignaient des images qui ne le contenaient pas
+  (reproduit en reconstruisant l'image du tag). Correction : version `v0.1.1`, digests mis
+  à jour. Règle : un correctif de code n'est en production qu'après une nouvelle version
+  **et** la mise à jour des digests ; la PR qui le livre le rappelle dans ses actions
+  humaines.
 - **Références** : branche `002-conteneurs`.
 
 ### LL-022 — Trace d'erreur à chaque fin du job de lot (2026-10-06) — Close

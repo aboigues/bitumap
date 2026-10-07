@@ -97,6 +97,7 @@ enregistrement : SPF et MX ne peuvent donc pas être posés sur le domaine du se
 5. Premier lancement du job, qui crée le schéma de la base :
 
    ```bash
+   cd infra/tofu   # tofu output ne lit l'état que depuis ce répertoire
    scw -p bitumap jobs definition start "$(tofu output -raw job_lot)" args.0=--complet --wait
    ```
 
