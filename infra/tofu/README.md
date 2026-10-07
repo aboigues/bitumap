@@ -15,9 +15,12 @@ Spécification : `specs/002-on-demand-report/tasks.md`, phase 7.
 | `base.tf` | base Serverless SQL (0 vCPU au repos) |
 | `registre.tf` | registre privé des images |
 | `secrets.tf` | secrets générés : clé HMAC ALTCHA, sel des adresses IP |
+| `api.tf` | conteneur de l'API (0 à 2 instances, image par digest, sonde `/health`), domaine du service |
+| `job.tf` | job de lot (toutes les 15 min, 3 h au plus), URL de sa base dans Secret Manager |
+| `courriel.tf` | domaine d'envoi des e-mails (Transactional Email) |
+| `sorties.tf` | buckets, base, registre, adresses du conteneur et du job, enregistrements DNS à créer |
 
-Le conteneur de l'API, le job, le domaine, l'envoi d'e-mails et l'alerte de budget viennent
-avec la PR suivante.
+L'alerte de budget n'est pas gérée par OpenTofu : voir « Alerte de budget » ci-dessous.
 
 ## Coût estimé
 
@@ -31,8 +34,8 @@ d'environ **0,60 à 1 € par mois**, sous le plafond de 5 €/mois (FR-029).
 | Base Serverless SQL, calcul | 0,13752 €/vCPU/h, **rien au repos** ; active jusqu'à 5 min après la dernière requête | réveillée par l'usage réel seulement (voir ci-dessous) | ≈ 0 à quelques € |
 | Registre privé | 0,027 €/Go/mois | 2 images, peu de versions gardées | ≈ 0,08 |
 | Secret Manager | 0,04 € par version de secret et par mois ; 0,03 € les 10 000 appels | 8 à 10 secrets | ≈ 0,40 |
-| Conteneur de l'API, job (PR suivante) | 1 € les 100 000 vCPU-s ; 0,20 € les 100 000 Go-s ; 200 000 vCPU-s et 400 000 Go-s gratuits par mois | usage faible | 0 à 1 |
-| Transactional Email (PR suivante) | 300 e-mails gratuits par mois pour l'organisation, puis 0,25 € les 1 000 | quelques dizaines | 0 |
+| Conteneur de l'API, job | 1 € les 100 000 vCPU-s ; 0,20 € les 100 000 Go-s ; 200 000 vCPU-s et 400 000 Go-s gratuits par mois | usage faible | 0 à 1 |
+| Transactional Email | 300 e-mails gratuits par mois pour l'organisation, puis 0,25 € les 1 000 | quelques dizaines | 0 |
 
 **Réveils de la base** : chaque requête réveille la base pour au moins 5 minutes facturées.
 Un job lancé toutes les 15 minutes qui interrogerait la base coûterait 16 à 33 €/mois à vide.
@@ -64,6 +67,55 @@ tofu init -input=false   # jamais d'invite : une variable manquante est une erre
 tofu plan -input=false -out=bitumap.tfplan
 tofu apply bitumap.tfplan
 ```
+
+### Déploiement des services (conteneur, job, e-mails)
+
+Deux domaines distincts, tous deux sous-domaines d'un domaine du mainteneur : le service
+(`domaine_service`, un CNAME vers le conteneur) et l'envoi d'e-mails (`domaine_envoi`, par
+exemple `courriel.<domaine_service>`). Un CNAME ne peut cohabiter avec aucun autre
+enregistrement : SPF et MX ne peuvent donc pas être posés sur le domaine du service.
+
+1. Dans `terraform.tfvars` : `domaine_envoi`, `digest_api` et `digest_job` (notes de la
+   version : `gh release view v<x.y.z>`, lignes « api » et « job »), `email_mainteneur`
+   (facultatif). Laisser `activer_domaine` à `false`.
+2. `tofu plan -input=false -out=bitumap.tfplan` puis `tofu apply bitumap.tfplan` : crée le
+   conteneur, le job, le domaine d'envoi. Le job tourne dès lors toutes les 15 minutes.
+3. Chez le registraire, créer les enregistrements donnés par :
+
+   ```bash
+   tofu output dns_service    # CNAME du service vers le conteneur
+   tofu output dns_courriel   # SPF, DKIM, MX, DMARC du domaine d'envoi
+   ```
+
+   Le domaine parent peut avoir sa propre politique DMARC (`sp=`) : l'enregistrement
+   `_dmarc` du domaine d'envoi la remplace pour celui-ci.
+4. Une fois le CNAME visible (`dig +short CNAME <domaine_service>`), passer
+   `activer_domaine = true` dans `terraform.tfvars`, refaire le plan et l'appliquer : Scaleway
+   rattache le domaine au conteneur et obtient son certificat.
+5. Premier lancement du job, qui crée le schéma de la base :
+
+   ```bash
+   scw -p bitumap jobs definition start "$(tofu output -raw job_lot)" args.0=--complet --wait
+   ```
+
+   Sans cela, le premier passage planifié le fait aussi (motif `schema`,
+   `specs/002-on-demand-report/contracts/lot-job.md`).
+6. Vérifier : `curl -sS https://<domaine_service>/health`, puis `tofu refresh` et
+   `tofu output courriel_statut` (`checked` une fois les enregistrements vus par
+   Scaleway), et quickstart §6.
+
+Nouvelle version : remplacer les digests dans `terraform.tfvars`, refaire le plan, l'appliquer.
+
+### Alerte de budget (T092)
+
+Les budgets Scaleway portent sur **toute l'organisation**, pas sur un projet, et
+`bitumap-tofu` n'a aucun droit de facturation : l'alerte est posée à la main.
+Console : menu de l'organisation → *Billing* → onglet *Consumption* → *Billing alerts* →
+*Create a billing alert* : budget mensuel de 5 €, seuils à 50 % et 100 %, notification par
+e-mail. Si l'organisation porte d'autres projets, ajouter leur coût habituel au budget ;
+le coût du seul projet BITUMAP se lit dans *Consumption*, filtré par projet. Le coût de
+l'IA a en plus sa propre alerte, envoyée par l'application (`BITUMAP_ALERTE_MENSUELLE_EUR`).
+[Documentation](https://www.scaleway.com/en/docs/billing/how-to/use-billing-alerts/).
 
 Pièges (LL-021) :
 

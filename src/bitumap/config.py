@@ -93,10 +93,12 @@ class Reglages(BaseSettings):
     # security.txt (RFC 9116) : signalement privé, comme SECURITY.md
     contact_securite: str = "https://github.com/aboigues/bitumap/security/advisories/new"
 
-    # Secrets (Secret Manager en production, jamais dans le dépôt)
+    # Secrets (Secret Manager en production, jamais dans le dépôt). ALTCHA et le sel ne
+    # servent qu'à l'API, qui refuse de démarrer sans eux (api.application) ; le job ne les
+    # reçoit pas (moindre privilège).
     db_url: SecretStr
-    altcha_hmac: SecretStr
-    sel_origine: SecretStr
+    altcha_hmac: SecretStr | None = None
+    sel_origine: SecretStr | None = None
     s3_cle_acces: SecretStr | None = None
     s3_cle_secrete: SecretStr | None = None
     tem_cle: SecretStr | None = None

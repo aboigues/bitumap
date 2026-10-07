@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -56,9 +57,26 @@ def reponse_erreur(requete: Request, statut: int, code: str, message: str):
     )
 
 
+def verifier_secrets_api() -> None:
+    """Secrets propres à l'API, facultatifs pour le job : leur absence arrête le serveur au
+    démarrage plutôt qu'à la première requête."""
+    r = reglages()
+    manquants = [
+        f"BITUMAP_{nom.upper()}" for nom in ("altcha_hmac", "sel_origine") if not getattr(r, nom)
+    ]
+    if manquants:
+        raise RuntimeError(f"secrets de l'API absents : {', '.join(manquants)}")
+
+
+@asynccontextmanager
+async def _demarrage(app: FastAPI):
+    verifier_secrets_api()
+    yield
+
+
 def creer_application() -> FastAPI:
     app = FastAPI(
-        title="bitumap", docs_url=None, redoc_url=None, openapi_url=None
+        title="bitumap", docs_url=None, redoc_url=None, openapi_url=None, lifespan=_demarrage
     )  # pas de documentation publique de l'API
 
     @app.middleware("http")

@@ -7,3 +7,12 @@
 bucket_etat      = "bitumap-tofu-state-xxxxxxxx"
 application_tofu = "00000000-0000-0000-0000-000000000000"
 domaine_service  = "bitumap.exemple.fr"
+# domaine_envoi : distinct de domaine_service (CNAME du service incompatible avec SPF et MX).
+domaine_envoi = "courriel.bitumap.exemple.fr"
+# Digests des images : notes de la version GitHub (gh release view v<x.y.z>).
+digest_api = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+digest_job = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+# Vrai seulement après création du CNAME de domaine_service (sortie dns_service).
+activer_domaine = false
+# Facultatif : destinataire des alertes, compte mainteneur.
+# email_mainteneur = "…"

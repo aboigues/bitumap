@@ -54,3 +54,46 @@ variable "autoriser_destruction" {
   type        = bool
   default     = false
 }
+
+variable "domaine_envoi" {
+  description = "Domaine d'envoi des e-mails (Transactional Email), distinct du domaine du service : le CNAME du service ne peut cohabiter avec les enregistrements SPF et MX (ex. courriel.bitumap.exemple.fr)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$", var.domaine_envoi))
+    error_message = "Nom de domaine invalide (minuscules, sans schéma ni chemin)."
+  }
+}
+
+variable "digest_api" {
+  description = "Digest de l'image api à déployer (notes de la version GitHub, « api : bitumap-api@sha256:… »)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.digest_api)) && !can(regex("^sha256:0+$", var.digest_api))
+    error_message = "Digest invalide : attendu sha256:<64 caractères hexadécimaux>, celui des notes de la version (pas la valeur du modèle)."
+  }
+}
+
+variable "digest_job" {
+  description = "Digest de l'image job à déployer (notes de la version GitHub, « job : bitumap-job@sha256:… »)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.digest_job)) && !can(regex("^sha256:0+$", var.digest_job))
+    error_message = "Digest invalide : attendu sha256:<64 caractères hexadécimaux>, celui des notes de la version (pas la valeur du modèle)."
+  }
+}
+
+variable "activer_domaine" {
+  description = "Vrai une fois le CNAME du domaine du service créé chez le registraire (sortie « dns_service ») : Scaleway refuse le domaine tant qu'il ne pointe pas vers le conteneur."
+  type        = bool
+  default     = false
+}
+
+variable "email_mainteneur" {
+  description = "Destinataire des alertes et compte mainteneur (BITUMAP_EMAIL_MAINTENEUR) ; vide : alertes seulement journalisées."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

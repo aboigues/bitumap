@@ -1,5 +1,5 @@
 # Buckets (002 T076, 003 T040/T095). Les noms de bucket sont uniques sur tout Scaleway :
-# suffixe aléatoire, noms transmis à l'application par BITUMAP_BUCKET_… (PR B).
+# suffixe aléatoire, noms transmis à l'application par BITUMAP_BUCKET_… (api.tf, job.tf).
 resource "random_id" "suffixe_buckets" {
   byte_length = 4
 }
