@@ -23,8 +23,9 @@ output "conteneur_api" {
 }
 
 output "job_lot" {
-  description = "Identifiant de la définition du job (scw jobs definition start …)."
-  value       = scaleway_job_definition.lot.id
+  description = "Identifiant de la définition du job (scw jobs definition start …), sans la région."
+  # L'identifiant OpenTofu est « fr-par/<uuid> » ; scw attend l'UUID seul.
+  value = element(split("/", scaleway_job_definition.lot.id), 1)
 }
 
 output "dns_service" {
