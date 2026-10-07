@@ -33,6 +33,30 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-025 — Domaine d'envoi créé mais marqué « tainted » (2026-10-07) — Close
+
+- **Contexte** : apply suivant #46 par le mainteneur (bootstrap relancé, offre TEM
+  souscrite).
+- **Symptôme** : `waiting for Domain failed: … resource domain with ID … is not found` sur
+  `scaleway_tem_domain.envoi`. Le domaine existait pourtant (`unchecked`, bon projet) et se
+  lisait sans erreur quelques minutes plus tard ; OpenTofu l'avait marqué `tainted`, et le
+  plan suivant voulait le **détruire et le recréer**. Ce plan voulait aussi retirer du job
+  un `retry_policy` que Scaleway renseigne à 0.
+- **Causes racines** :
+  1. Pourquoi ? Le fournisseur 2.84 lit le domaine aussitôt après sa création ; l'API
+     ne le connaît pas encore (cohérence différée) et répond 404, ce que l'attente traite
+     comme une erreur.
+  2. Pourquoi « tainted » ? Toute erreur après la création d'une ressource la marque
+     ainsi, même si elle est saine.
+  3. Pourquoi le job ? Bloc `retry_policy` omis, donc vu comme absent face à la valeur
+     renseignée par Scaleway (même famille que la mémoire du conteneur, LL-024).
+- **Correctif** : `tofu untaint scaleway_tem_domain.envoi` après vérification de son
+  existence (mainteneur) ; `retry_policy { max_retries = 0 }` déclaré.
+- **Mesure préventive** : conduite à tenir dans `infra/tofu/README.md`. Règle de LL-024
+  confirmée : un plan relancé juste après l'apply doit être vide ; tout écart est corrigé
+  dans le code, pas accepté.
+- **Références** : branche `fix/job-retry-tem-attente`.
+
 ### LL-024 — Apply interrompu : offre TEM absente, disque du job hors limite (2026-10-07) — Close
 
 - **Contexte** : premier `tofu apply` de la PR C (#45) par le mainteneur.

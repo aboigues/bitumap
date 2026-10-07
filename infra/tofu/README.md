@@ -106,6 +106,12 @@ enregistrement : SPF et MX ne peuvent donc pas être posés sur le domaine du se
    `tofu output courriel_statut` (`checked` une fois les enregistrements vus par
    Scaleway), et quickstart §6.
 
+Si l'apply s'arrête sur `waiting for Domain failed: … is not found` (domaine d'envoi,
+LL-025) : le domaine est créé mais lu trop tôt par le fournisseur, qui le marque
+`tainted`. Vérifier qu'il existe (`scw -p bitumap tem domain list region=fr-par`), puis
+`tofu untaint scaleway_tem_domain.envoi` et refaire le plan : il ne doit plus le
+remplacer.
+
 Nouvelle version : remplacer les digests dans `terraform.tfvars`, refaire le plan, l'appliquer.
 
 ### Alerte de budget (T092)
