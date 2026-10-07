@@ -121,3 +121,27 @@ def test_alerte_mensuelle_une_seule_fois(base, courriels, monkeypatch):
     b.ajuster(Decimal("0"), Decimal("0"))
     alertes = [c for c in courriels if "coût IA du mois" in c.sujet]
     assert len(alertes) == 1
+
+
+def test_echec_du_service_trace_avec_sa_cause(base):
+    # LL-026 : un 403 de l'IA doit être visible (cause dans le facteur, échec compté).
+    class PermissionDeniedError(Exception):
+        pass
+
+    f, _, a = _analyser(Faux(None, erreur=PermissionDeniedError("403 ?cle=secret")))
+    assert "PermissionDeniedError" in f.explication and "secret" not in f.explication
+    assert a.echecs["service"] == [("A1", "PermissionDeniedError")]
+
+
+def test_orthophotos_en_echec_tracees_avec_leur_cause(base):
+    from bitumap.sources.base import SourceIndisponible
+
+    def vignettes(lon, lat):
+        raise SourceIndisponible("Orthophotos IGN", "HTTP 429")
+
+    stats = StatistiquesIA()
+    a = age_enrobe.AnalyseurAge(vignettes, budget.BudgetRapport(), stats, Faux(None), annee=2026)
+    p = _p1()
+    a([p])
+    assert "HTTP 429" in p.facteur("age_enrobe").explication
+    assert a.echecs["orthophotos"] == [("A1", "Orthophotos IGN : HTTP 429")]

@@ -153,3 +153,64 @@ def test_versions_enregistrees(base):
     versions.enregistrer("osm", date(2026, 9, 27))
     versions.enregistrer("osm", date(2026, 10, 4))
     assert versions.courantes()["osm"] == date(2026, 10, 4)
+
+
+def test_ia_indisponible_signalee(base, s3, courriels, monkeypatch):
+    # LL-026 : en production, toutes les analyses ont échoué (403) sans aucun signalement.
+    from bitumap import courriel
+    from bitumap.config import reglages
+
+    monkeypatch.setattr(reglages(), "email_mainteneur", "mainteneur@exemple.fr")
+
+    def appel_refuse(prompt, vignettes):
+        raise PermissionError("403")
+
+    ident = _demande()
+    executer_lot(appel_ia=appel_refuse)
+    etat = _etat(ident)
+    journal = (
+        s3.get_object(
+            Bucket="bitumap-rapports", Key=f"communes/92026/{etat['empreinte']}/journal.json"
+        )["Body"]
+        .read()
+        .decode()
+    )
+    assert "service d'IA" in journal and "PermissionError" in journal
+    alertes = [m for m in courriel.ENVOYES if "service d'IA indisponible" in m.sujet]
+    assert len(alertes) == 1 and alertes[0].destinataire == "mainteneur@exemple.fr"
+
+
+def test_alerte_ia_une_fois_par_jour(base, courriels, monkeypatch):
+    from bitumap import courriel
+    from bitumap.config import reglages
+    from bitumap.lot.commune import _signaler_echecs_ia
+
+    monkeypatch.setattr(reglages(), "email_mainteneur", "mainteneur@exemple.fr")
+
+    from types import SimpleNamespace
+
+    analyseur = SimpleNamespace(
+        echecs={"orthophotos": [], "service": [("A1", "PermissionDeniedError")]}
+    )
+    for insee in ("92026", "92004"):  # deux communes du même jour
+        _signaler_echecs_ia(analyseur, [], insee)
+    assert sum("service d'IA" in m.sujet for m in courriel.ENVOYES) == 1
+
+
+def test_orthophotos_indisponibles_signalees_dans_le_rapport(base, s3):
+    from bitumap.sources.base import SourceIndisponible
+
+    def vignettes_en_echec(lon, lat):
+        raise SourceIndisponible("Orthophotos IGN", "HTTP 429")
+
+    ident = _demande()
+    executer_lot(vignettes=vignettes_en_echec)
+    etat = _etat(ident)
+    journal = (
+        s3.get_object(
+            Bucket="bitumap-rapports", Key=f"communes/92026/{etat['empreinte']}/journal.json"
+        )["Body"]
+        .read()
+        .decode()
+    )
+    assert "orthophotos IGN" in journal and "HTTP 429" in journal

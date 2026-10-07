@@ -64,6 +64,15 @@ def agreger(lignes: list[dict]) -> dict[str, ArretOffre]:
     return arrets
 
 
+# L'offre IDFM rattache tout Paris à la commune 75056 : un arrondissement (751xx) n'y figure
+# pas. Les arrêts sont ensuite gardés par le contour de l'arrondissement (points.arrets).
+PARIS = "75056"
+
+
+def code_commune_offre(insee: str) -> str:
+    return PARIS if insee.startswith("751") else insee
+
+
 def date_mise_a_jour(client: httpx.Client) -> date:
     meta = obtenir(client, "IDFM", URL).json()
     return date.fromisoformat(meta["metas"]["default"]["modified"][:10])
@@ -78,7 +87,9 @@ def acquerir(insee: str, client: httpx.Client | None = None) -> Extraction:
             client,
             "IDFM",
             f"{URL}/exports/json",
-            params={"where": f'code_commune="{insee}" AND libelle_mode_ligne="Bus"'},
+            params={
+                "where": f'code_commune="{code_commune_offre(insee)}" AND libelle_mode_ligne="Bus"'
+            },
         ).json()
     finally:
         if fermer:

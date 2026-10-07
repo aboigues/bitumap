@@ -22,6 +22,7 @@ from bitumap.ia import client as client_ia
 from bitumap.journal import StatistiquesIA
 from bitumap.modele import Facteur, Point
 from bitumap.score.combinaison import FACTEUR_IA
+from bitumap.sources.base import cause
 
 NB_MILLESIMES_MAX = 6
 EFFET_5_12_ANS = 0.85
@@ -111,6 +112,9 @@ class AnalyseurAge:
         self._annee = annee or date.today().year
         self.bruts: dict[str, dict] = {}  # réponses brutes, écrites dans ia/{point_id}.json
         self.hors_plafond = 0  # points P1 laissés « non évalués » par un plafond de coût
+        # Échecs par étape (« orthophotos », « service ») : (point, cause), signalés dans le
+        # rapport et, pour le service, au mainteneur (LL-026).
+        self.echecs: dict[str, list[tuple[str, str]]] = {"orthophotos": [], "service": []}
         r = reglages()
         self._modele, self._version = r.ia_modele, r.ia_version_prompt
         stats.modele, stats.version_prompt = self._modele, self._version
@@ -122,9 +126,10 @@ class AnalyseurAge:
     def _analyser(self, p: Point) -> Facteur:
         try:
             vignettes = choisir_millesimes(self._vignettes(p.lon, p.lat))
-        except Exception:
+        except Exception as erreur:
             self._stats.non_evalues += 1
-            return _non_evalue("orthophotos indisponibles")
+            self.echecs["orthophotos"].append((p.id, cause(erreur)))
+            return _non_evalue(f"orthophotos indisponibles : {cause(erreur)}")
         if len(vignettes) < 2:
             self._stats.non_evalues += 1
             return _non_evalue("moins de deux millésimes disponibles")
@@ -144,7 +149,8 @@ class AnalyseurAge:
         except Exception as erreur:
             self._budget.ajuster(reserve, budget_ia.cout(0, 0))
             self._stats.non_evalues += 1
-            return _non_evalue(f"service indisponible : {type(erreur).__name__}")
+            self.echecs["service"].append((p.id, cause(erreur)))
+            return _non_evalue(f"service indisponible : {cause(erreur)}")
         reel = budget_ia.cout(appel.jetons_entree, appel.jetons_sortie)
         self._budget.ajuster(reserve, reel)
         self._stats.appels += 1

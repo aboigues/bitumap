@@ -14,10 +14,15 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from bitumap import courriel, stockage
-from bitumap.calcul import calculer_commune
+from bitumap.calcul import calculer_commune, regrouper
 from bitumap.config import reglages
 from bitumap.ia.age_enrobe import AnalyseurAge
-from bitumap.ia.budget import BudgetRapport, alerter_budget_jour, budget_jour_epuise
+from bitumap.ia.budget import (
+    BudgetRapport,
+    alerter_budget_jour,
+    alerter_une_fois,
+    budget_jour_epuise,
+)
 from bitumap.journal import JournalGeneration, evenement
 from bitumap.lot import prise_en_charge as file
 from bitumap.lot import versions
@@ -109,6 +114,26 @@ def notifier(demande: dict, statut: str, empreinte: str | None = None) -> None:
             journal.exception("envoi de la notification impossible")
 
 
+def _signaler_echecs_ia(analyseur: AnalyseurAge, avertissements: list[str], insee: str) -> None:
+    """Échecs de l'âge de l'enrobé visibles dans le rapport ; panne du service d'IA signalée
+    au mainteneur, une fois par jour (LL-026 : 403 passés inaperçus en production)."""
+    ortho, service = analyseur.echecs["orthophotos"], analyseur.echecs["service"]
+    if ortho:
+        avertissements.append(regrouper("Âge de l'enrobé non évalué : orthophotos IGN", ortho))
+    if not service:
+        return
+    avertissements.append(regrouper("Âge de l'enrobé non évalué : service d'IA", service))
+    try:
+        alerter_une_fois(
+            f"ia_indisponible:{time.strftime('%Y-%m-%d')}",
+            "service d'IA indisponible",
+            f"Commune {insee} : {len(service)} appel(s) en échec "
+            f"({', '.join(sorted({c for _, c in service}))}). Voir le journal (Cockpit).",
+        )
+    except Exception:
+        journal.exception("alerte « service d'IA indisponible » impossible")
+
+
 def traiter(
     demande: dict,
     lot_id: str,
@@ -158,6 +183,7 @@ def traiter(
                     f"Plafond de coût de l'IA atteint : âge de l'enrobé non évalué pour "
                     f"{analyseur.hors_plafond} point(s) prioritaire(s)."
                 )
+            _signaler_echecs_ia(analyseur, resultat.avertissements, insee)
             file.etape(ident, "rapport")
             with jg.chronometrer("rapport"):
                 jg.nb_points = len(resultat.points)
