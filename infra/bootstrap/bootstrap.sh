@@ -8,7 +8,9 @@
 #   4. le bucket d'état OpenTofu, privé et versionné ;
 #   5. les applications IAM d'exécution « bitumap-api » et « bitumap-job » (clés écrites
 #      directement dans Secret Manager) et « bitumap-ci » (clé écrite directement dans les
-#      secrets GitHub du dépôt) : aucune clé n'est jamais affichée.
+#      secrets GitHub du dépôt) : aucune clé n'est jamais affichée ;
+#   6. l'abonnement du projet à l'offre « essential » de Transactional Email (gratuite,
+#      300 e-mails par mois), que le fournisseur OpenTofu ne sait que lire (LL-024).
 #
 # Toute autre ressource DOIT être décrite en OpenTofu.
 # Usage : infra/bootstrap/bootstrap.sh            (ADMIN_PROFILE lu dans .env)
@@ -230,6 +232,11 @@ else
   unset key_json
   log "clé de bitumap-ci créée et écrite dans les secrets GitHub"
 fi
+
+# 6. Offre Transactional Email : sans elle, la création du domaine d'envoi est refusée
+# (403 « No active offer subscription for the project »). Mise à jour idempotente.
+offre=$(admin tem offers update project-id="$project_id" name=essential region="$REGION" -o json | jq -r '.offer_name // .name // empty')
+log "offre Transactional Email du projet : ${offre:-inconnue}"
 
 jq -n --arg project_id "$project_id" --arg app_id "$app_id" --arg bucket "$bucket" \
   --arg region "$REGION" --arg profile "$TARGET_PROFILE" \

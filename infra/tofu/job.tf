@@ -23,7 +23,7 @@ resource "scaleway_job_definition" "lot" {
   image_uri              = "${scaleway_registry_namespace.bitumap.endpoint}/job@${var.digest_job}"
   cpu_limit              = 2000
   memory_limit           = 4096
-  local_storage_capacity = 20480 # sources régionales et communales (cache éphémère)
+  local_storage_capacity = 10000 # cache éphémère des sources ; Scaleway : ]1000, 10240[ Mio (LL-024)
   timeout                = "3h"
 
   cron {

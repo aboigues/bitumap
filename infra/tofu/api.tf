@@ -37,8 +37,8 @@ resource "scaleway_container" "api" {
   timeout      = 60
   privacy      = "public"
 
-  memory_limit_bytes     = 1024 * 1024 * 1024
-  https_connections_only = true # cookies __Host- : HTTPS seulement
+  memory_limit_bytes     = 1024 * 1000 * 1000 # Scaleway compte en Mo décimaux (sinon écart à chaque plan)
+  https_connections_only = true               # cookies __Host- : HTTPS seulement
 
   liveness_probe {
     http {

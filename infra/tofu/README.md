@@ -75,6 +75,8 @@ Deux domaines distincts, tous deux sous-domaines d'un domaine du mainteneur : le
 exemple `courriel.<domaine_service>`). Un CNAME ne peut cohabiter avec aucun autre
 enregistrement : SPF et MX ne peuvent donc pas être posés sur le domaine du service.
 
+0. Bootstrap à jour (étape 6 : offre Transactional Email du projet). Sinon le plan
+   s'arrête sur « Aucune offre Transactional Email sur le projet ».
 1. Dans `terraform.tfvars` : `domaine_envoi`, `digest_api` et `digest_job` (notes de la
    version : `gh release view v<x.y.z>`, lignes « api » et « job »), `email_mainteneur`
    (facultatif). Laisser `activer_domaine` à `false`.
