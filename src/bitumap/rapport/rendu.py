@@ -6,12 +6,12 @@ import base64
 import hashlib
 import json
 from collections import Counter
-from datetime import date
 from html.parser import HTMLParser
 from importlib import resources
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from bitumap import heure
 from bitumap.calcul import ResultatCommune
 from bitumap.facteurs.voirie import libelle
 from bitumap.journal import JournalGeneration
@@ -141,7 +141,7 @@ def rendre(
     html = _env.get_template("rapport.html.j2").render(
         commune=resultat.nom,
         insee=resultat.insee,
-        date=date.today().isoformat(),
+        date=heure.aujourd_hui().isoformat(),
         version_methode=journal.version_methode,
         v2=journal.version_methode != VERSION_METHODE,
         points=resultat.points,

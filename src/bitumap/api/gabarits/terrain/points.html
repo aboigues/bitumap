@@ -24,7 +24,7 @@
       <strong>{{ p.rang }} · {{ p.designation }}</strong>
     </a>
     <span class="petit">{{ libelles_niveau(p.groupe) }} · {{ p.id }}
-      {% if r %} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le[:10] }}, {{ r.nb_releves }} relevé(s)){% else %} · non relevé{% endif %}
+      {% if r %} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le|heure("%d/%m/%Y") }}, {{ r.nb_releves }} relevé(s)){% else %} · non relevé{% endif %}
     </span>
   </li>
 {% endfor %}
@@ -35,7 +35,7 @@
 <ul>
 {% for r in absents %}
   <li><a href="/terrain/{{ insee }}/{{ r.point_id }}">{{ r.point_designation }}</a>
-    <span class="petit">{{ r.point_id }} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le[:10] }})</span></li>
+    <span class="petit">{{ r.point_id }} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le|heure("%d/%m/%Y") }})</span></li>
 {% endfor %}
 </ul>
 {% endif %}

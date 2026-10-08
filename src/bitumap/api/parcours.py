@@ -16,6 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
+from bitumap import heure
 from bitumap.api import quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
@@ -109,7 +110,7 @@ def telecharger_gpx(ident: str, session: SessionRequise) -> Response:
     if parcours is None:
         raise ErreurPublique(404, "parcours_inconnu", "Parcours introuvable ou expiré.")
     commune = service.nom_commune(parcours["commune_insee"], parcours["empreinte"])
-    date = parcours["cree_le"].date().isoformat()
+    date = heure.locale(parcours["cree_le"]).date().isoformat()
     return Response(
         gpx.produire(parcours, commune, reglages().url_publique),
         media_type="application/gpx+xml",

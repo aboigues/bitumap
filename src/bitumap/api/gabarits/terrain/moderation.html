@@ -24,10 +24,10 @@
   {% for r in resultats %}
     <li>
       <strong>{{ r.point_id }} · {{ r.point_designation }}</strong> ({{ r.commune_insee }})<br>
-      <span class="petit">relevé {{ r.id }} · {{ r.cree_le[:16].replace('T', ' ') }} · version {{ r.version }}
+      <span class="petit">relevé {{ r.id }} · {{ r.cree_le|heure }} · version {{ r.version }}
         · {{ niveaux[r.niveau] }} · {{ r.email or "auteur supprimé" }} ({{ r.auteur }})</span>
       {% if r.observation %}<br><span class="petit">{{ r.observation }}</span>{% endif %}
-      {% if r.retire_le %}<br><em>retiré le {{ r.retire_le[:10] }} ({{ r.motif_retrait }})</em>
+      {% if r.retire_le %}<br><em>retiré le {{ r.retire_le|heure("%d/%m/%Y") }} ({{ r.motif_retrait }})</em>
       {% else %}<br><button type="button" class="lien" data-moderer-releve="{{ r.id }}">Retirer le relevé (RGPD)</button>{% endif %}
       {% for p in r.photos %}
         <div class="photo">

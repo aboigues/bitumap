@@ -6,20 +6,23 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlencode, urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from bitumap import heure
 from bitumap.config import reglages
 
 journal = logging.getLogger("bitumap.api")
 
 DOSSIER = Path(__file__).parent
 gabarits = Jinja2Templates(directory=str(DOSSIER / "gabarits"))
+gabarits.env.filters["heure"] = heure.formater  # heure de Paris (le serveur est en UTC)
 
 EN_TETES_SECURITE = {
     "Content-Security-Policy": (
@@ -49,11 +52,43 @@ def _veut_json(requete: Request) -> bool:
     return "application/json" in requete.headers.get("accept", "")
 
 
+def chemin_local(valeur: str | None) -> str | None:
+    """Chemin de ce site seulement (« /demandes?x=1 ») : jamais une autre origine
+    (« //exemple », « /\\exemple »), ni une page de connexion (boucle)."""
+    if (
+        not valeur
+        or len(valeur) > 512
+        or not valeur.startswith("/")
+        or valeur.startswith(("//", "/\\", "/connexion"))
+        or any(c in valeur for c in "\\\r\n")
+    ):
+        return None
+    return valeur
+
+
+def page_precedente(requete: Request) -> str | None:
+    """Page d'où vient la requête, si elle est sur ce site (en-tête Referer)."""
+    precedente = urlsplit(requete.headers.get("referer", ""))
+    if precedente.netloc != requete.url.netloc:
+        return None
+    chemin = precedente.path + (f"?{precedente.query}" if precedente.query else "")
+    return chemin_local(chemin)
+
+
 def reponse_erreur(requete: Request, statut: int, code: str, message: str):
     if _veut_json(requete):
         return JSONResponse({"erreur": code, "message": message}, status_code=statut)
+    if code == "connexion_requise":
+        # Session expirée ou absente : connexion, puis retour à la page voulue (anomalie 3).
+        voulue = requete.url.path + (f"?{requete.url.query}" if requete.url.query else "")
+        suite = chemin_local(voulue) if requete.method == "GET" else page_precedente(requete)
+        cible = "/?" + urlencode({"motif": "session", **({"suite": suite} if suite else {})})
+        return RedirectResponse(cible, status_code=303)
     return gabarits.TemplateResponse(
-        requete, "erreur.html", {"message": message, "code": code}, status_code=statut
+        requete,
+        "erreur.html",
+        {"message": message, "code": code, "retour": page_precedente(requete)},
+        status_code=statut,
     )
 
 

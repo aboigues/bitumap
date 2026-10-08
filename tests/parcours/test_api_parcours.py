@@ -144,7 +144,9 @@ def test_csrf_et_session(client, agent):
     simuler_ign()
     assert _demander(client, "faux").status_code == 403
     client.cookies.clear()
-    assert client.get("/parcours/92026").status_code in (401, 303)
+    reponse = client.get("/parcours/92026", follow_redirects=False)
+    assert reponse.status_code == 303
+    assert reponse.headers["location"] == "/?motif=session&suite=%2Fparcours%2F92026"
 
 
 @respx.mock
