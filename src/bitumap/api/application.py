@@ -6,7 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode, urlparse, urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -58,18 +58,17 @@ def chemin_local(valeur: str | None) -> str | None:
     (boucle)."""
     if not valeur or len(valeur) > 512 or any(c.isspace() or c == "\\" for c in valeur):
         return None
-    # Forme reconnue par CodeQL (py/url-redirection) : barres inverses ramenées à « / »,
-    # puis ni schéma ni hôte.
-    valeur = valeur.replace("\\", "/")
-    morceaux = urlsplit(valeur)
+    # Forme de la documentation de CodeQL (py/url-redirection) : barres inverses retirées,
+    # puis ni hôte ni schéma selon urlparse.
+    valeur = valeur.replace("\\", "")
     if (
-        morceaux.scheme
-        or morceaux.netloc
-        or not valeur.startswith("/")
-        or valeur.startswith(("//", "/connexion"))
+        not urlparse(valeur).netloc
+        and not urlparse(valeur).scheme
+        and valeur.startswith("/")
+        and not valeur.startswith(("//", "/connexion"))
     ):
-        return None
-    return valeur
+        return valeur
+    return None
 
 
 def page_precedente(requete: Request) -> str | None:
