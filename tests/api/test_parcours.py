@@ -93,7 +93,9 @@ def test_rapport_refuse_sans_session(client, courriels, territoire, s3):
     executer_lot()
     lien = client.get("/demandes").text.split('href="/rapports/', 1)[1].split('"', 1)[0]
     client.cookies.clear()
-    assert client.get(f"/rapports/{lien}").status_code == 401
+    reponse = client.get(f"/rapports/{lien}", follow_redirects=False)
+    assert reponse.status_code == 303 and reponse.headers["location"].startswith("/?motif=session")
+    assert "<svg" not in reponse.text  # aucun contenu du rapport
 
 
 def test_suivi_d_une_demande_d_un_autre_compte(client, courriels, territoire, s3):

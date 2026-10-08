@@ -19,6 +19,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from psycopg.types.json import Jsonb
 
+from bitumap import heure
 from bitumap.db import connexion
 from bitumap.parcours import geocodage, itineraire, selection
 from bitumap.parcours.geocodage import Adresse
@@ -183,7 +184,7 @@ def calculer(
             "nb_non_visites": len(s.non_visites),
             "nb_exclus": len(ecartes),
             "rapport_empreinte": r.empreinte,
-            "rapport_date": r.produit_le.date().isoformat(),
+            "rapport_date": heure.locale(r.produit_le).date().isoformat(),
             "sources": [
                 geocodage.provenance().en_dict(),
                 itineraire.provenance().en_dict(),

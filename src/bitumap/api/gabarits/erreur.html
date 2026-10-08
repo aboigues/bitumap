@@ -2,5 +2,5 @@
 {% block contenu %}
 <h1>Impossible de continuer</h1>
 <p role="alert">{{ message }}</p>
-<p><a href="/">Retour à l'accueil</a></p>
+<p>{% if retour %}<a href="{{ retour }}">Revenir à la page précédente</a> · {% endif %}<a href="/">Retour à l'accueil</a></p>
 {% endblock %}

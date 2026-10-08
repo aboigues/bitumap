@@ -49,7 +49,7 @@
     }
     var lignes = [
       NIVEAUX[r.niveau] + (r.profondeur_mm !== null ? " · " + r.profondeur_mm + " mm (" + r.instrument + ")" : ""),
-      r.cree_le.slice(0, 10) + " · " + r.auteur + (r.position_eloignee ? " · position éloignée" : ""),
+      new Date(r.cree_le).toLocaleDateString("fr-FR") + " · " + r.auteur + (r.position_eloignee ? " · position éloignée" : ""),
     ];
     if (r.annee_refection) { lignes.push("Réfection " + r.annee_refection + " (" + (SOURCES[r.source_refection] || r.source_refection) + ")"); }
     if (r.observation) { lignes.push(r.observation); }

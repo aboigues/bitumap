@@ -22,11 +22,12 @@ from fastapi.responses import RedirectResponse, Response
 
 from bitumap import courriel
 from bitumap.api import antibot, quotas
-from bitumap.api.application import ErreurPublique, gabarits
+from bitumap.api.application import ErreurPublique, chemin_local, gabarits
 from bitumap.config import reglages
 from bitumap.db import connexion
 
 routeur = APIRouter()
+COOKIE_SUITE = "suite"  # page à rouvrir après la connexion (chemin local seulement)
 
 _EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,63}$")
 
@@ -158,6 +159,7 @@ def demander_lien(
     requete: Request,
     email: Annotated[str, Form()] = "",
     altcha: Annotated[str, Form()] = "",
+    suite: Annotated[str, Form()] = "",
 ) -> Response:
     adresse = normaliser_email(email)
     antibot.verifier(altcha)
@@ -168,11 +170,23 @@ def demander_lien(
     quotas.limiter(quotas.lien_email(adresse), quotas.HEURE, r.quota_lien_email_heure, *trop)
     emettre_lien(adresse)
     # Réponse identique que le compte existe ou non (FR-006b).
-    return gabarits.TemplateResponse(requete, "lien_envoye.html", {})
+    reponse = gabarits.TemplateResponse(requete, "lien_envoye.html", {})
+    if chemin := chemin_local(suite):
+        # Page à rouvrir après la connexion (anomalie 3), le temps de validité du lien.
+        reponse.set_cookie(
+            COOKIE_SUITE,
+            chemin,
+            max_age=r.lien_validite_min * 60,
+            path="/",
+            secure=r.cookies_securises,
+            httponly=True,
+            samesite="lax",
+        )
+    return reponse
 
 
 @routeur.get("/connexion/{jeton}")
-def valider_lien(jeton: str) -> Response:
+def valider_lien(requete: Request, jeton: str) -> Response:
     resultat = ouvrir_session(jeton)
     if resultat is None:
         raise ErreurPublique(
@@ -181,7 +195,10 @@ def valider_lien(jeton: str) -> Response:
             "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
         )
     id_session, _ = resultat
-    reponse = RedirectResponse("/", status_code=303)
+    suite = chemin_local(requete.cookies.get(COOKIE_SUITE))
+    reponse = RedirectResponse(suite or "/", status_code=303)
+    if COOKIE_SUITE in requete.cookies:
+        reponse.delete_cookie(COOKIE_SUITE, path="/", secure=reglages().cookies_securises)
     reponse.set_cookie(
         nom_cookie(),
         id_session,

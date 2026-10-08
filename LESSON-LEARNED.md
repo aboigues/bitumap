@@ -33,6 +33,44 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-030 — Erreur en naviguant après être resté longtemps sur une page (2026-10-07) — Ouverte
+
+- **Contexte** : premiers usages en production, signalé par le mainteneur (anomalie 3) ;
+  non reproduit à ce jour.
+- **Symptôme** : après un long moment sur une page, la navigation aboutit à une page
+  d'erreur.
+- **Causes racines** (hypothèses, non vérifiées) :
+  1. Session expirée ou absente : page « Connexion requise » sans lien de connexion ni
+     retour à la page voulue.
+  2. Nouvelle connexion dans un autre onglet : le jeton CSRF des formulaires restés ouverts
+     n'est plus valable (« Formulaire expiré »).
+  3. Vérification anti-robot expirée (10 min) au moment d'envoyer un formulaire.
+  Dans tous les cas, la page d'erreur ne proposait que « Retour à l'accueil ».
+- **Correctif** : page HTML sans session ⇒ accueil avec « session expirée », puis retour à
+  la page voulue après la connexion (cookie de 15 min, chemin local seulement) ; page
+  d'erreur avec « Revenir à la page précédente » (même site seulement).
+- **Mesure préventive** : tests `test_page_protegee_sans_session_renvoie_vers_la_connexion`,
+  `test_retour_a_la_page_demandee_apres_connexion`, `test_retour_jamais_vers_un_autre_site`,
+  `test_page_d_erreur_propose_la_page_precedente`. Reste ouverte jusqu'à reproduction (message
+  exact et page) ou absence de récidive.
+- **Références** : branche `fix/interface-heure-session`.
+
+### LL-029 — Heures affichées en UTC (2026-10-07) — Close
+
+- **Contexte** : premiers usages en production (anomalie 2 du mainteneur).
+- **Symptôme** : heures (suivi, demandes, relevés, modération) décalées de 1 à 2 h.
+- **Causes racines** :
+  1. Pourquoi ? Dates mises en forme par le serveur (`strftime`, `astimezone()` sans fuseau,
+     ou chaînes ISO tronquées), alors que le conteneur tourne en UTC.
+  2. Pourquoi non vu ? En local, le poste est à l'heure de Paris : `astimezone()` donnait la
+     bonne heure ; les tests ne vérifiaient aucune heure affichée.
+- **Correctif** : module `heure` (heure de Paris), filtre `heure` des gabarits pour toutes
+  les dates affichées ; date du rapport et du parcours en heure de Paris ; date des relevés
+  du rapport par le navigateur.
+- **Mesure préventive** : tests `tests/unit/test_heure.py` (été, hiver, chaîne ISO, valeur
+  sans fuseau, filtre). Règle : aucune date affichée sans le filtre `heure`.
+- **Références** : branche `fix/interface-heure-session`.
+
 ### LL-028 — Orthophotos et infrarouge IGN en échec depuis Scaleway (2026-10-07) — Ouverte
 
 - **Contexte** : premiers rapports de production (Courbevoie, Asnières).

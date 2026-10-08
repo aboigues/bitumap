@@ -42,8 +42,10 @@ def test_suppression_exige_confirmation_et_csrf(client, courriels):
 
 
 def test_suppression_exige_une_session(client):
-    reponse = client.post("/compte/suppression", data={"confirmation": "SUPPRIMER"})
-    assert reponse.status_code == 401
+    reponse = client.post(
+        "/compte/suppression", data={"confirmation": "SUPPRIMER"}, follow_redirects=False
+    )
+    assert reponse.status_code == 303 and reponse.headers["location"].startswith("/?motif=session")
 
 
 def test_page_compte(client, courriels):

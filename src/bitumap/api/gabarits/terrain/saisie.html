@@ -70,7 +70,7 @@
   <li>
     <strong>{{ niveaux[r.niveau] }}</strong>
     {% if r.profondeur_mm is not none %} · {{ r.profondeur_mm }} mm ({{ r.instrument }}){% endif %}
-    · {{ r.cree_le[:16].replace('T', ' ') }} · {{ r.auteur }}
+    · {{ r.cree_le|heure }} · {{ r.auteur }}
     {% if r.version > 1 %} · version {{ r.version }}{% endif %}
     {% if r.position_eloignee %} · position éloignée{% endif %}
     {% if r.annee_refection %}<br><span class="petit">Réfection {{ r.annee_refection }} ({{ sources[r.source_refection] }})</span>{% endif %}
