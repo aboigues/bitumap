@@ -135,11 +135,11 @@ story **avant** son implémentation et vérifier qu'ils échouent.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T031 [P] Mettre à jour `specs/002-on-demand-report/contracts/http-api.md` (ligne `GET /communes`, renvoi vers `specs/008-navigation-communes/contracts/http-api.md`) et la page « Données personnelles » `src/bitumap/api/gabarits/confidentialite.html` si la mention de la liste des communes y a sa place (source, licence)
-- [ ] T032 [P] Documenter la mise à jour annuelle de la liste (`scripts/territoire/liste_communes.py`, relecture du diff, PR) dans `README.md` (section Développement)
-- [ ] T033 Suite complète : `uv run pytest -q`, `uv run ruff check src tests scripts`, `uv run ruff format --check src tests scripts` ; non-régression Courbevoie verte (`test_sc_005` instable connu : à signaler, pas à masquer)
-- [ ] T034 Essai navigateur du quickstart § 3 (points 1 à 6) avec Playwright et émulation mobile 360 px : propositions au clavier, sans script, menu replié/ouvert, rapport (filtres, carte, sélection, fiche, lien de saisie, thèmes clair et sombre), aucune erreur CSP en console ; consigner le résultat dans la PR (LL-007, LL-012, LL-017)
-- [ ] T035 Revue de sécurité de la PR (règle de LL-019) : CSP inchangées, échappement de tout texte inséré (nom de commune, saisie), absence de « Modération » pour un agent, aucune frappe journalisée ; résultat dans la description de la PR
+- [X] T031 [P] Mettre à jour `specs/002-on-demand-report/contracts/http-api.md` (ligne `GET /communes`, renvoi vers `specs/008-navigation-communes/contracts/http-api.md`) et la page « Données personnelles » `src/bitumap/api/gabarits/confidentialite.html` si la mention de la liste des communes y a sa place (source, licence)
+- [X] T032 [P] Documenter la mise à jour annuelle de la liste (`scripts/territoire/liste_communes.py`, relecture du diff, PR) dans `README.md` (section Développement)
+- [X] T033 Suite complète : `uv run pytest -q`, `uv run ruff check src tests scripts`, `uv run ruff format --check src tests scripts` ; non-régression Courbevoie verte (`test_sc_005` instable connu : à signaler, pas à masquer)
+- [X] T034 Essai navigateur du quickstart § 3 (points 1 à 6) avec Playwright et émulation mobile 360 px : propositions au clavier, sans script, menu replié/ouvert, rapport (filtres, carte, sélection, fiche, lien de saisie, thèmes clair et sombre), aucune erreur CSP en console ; consigner le résultat dans la PR (LL-007, LL-012, LL-017)
+- [X] T035 Revue de sécurité de la PR (règle de LL-019) : CSP inchangées, échappement de tout texte inséré (nom de commune, saisie), absence de « Modération » pour un agent, aucune frappe journalisée ; résultat dans la description de la PR
 - [ ] T036 Tout incident rencontré pendant l'implémentation ⇒ entrée dans `LESSON-LEARNED.md` (principe VIII) ; PR vers `main` avec rappel des actions humaines (nouvelle version, digests : LL-023)
 
 ---
