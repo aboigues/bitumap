@@ -140,7 +140,7 @@ story **avant** son implémentation et vérifier qu'ils échouent.
 - [X] T033 Suite complète : `uv run pytest -q`, `uv run ruff check src tests scripts`, `uv run ruff format --check src tests scripts` ; non-régression Courbevoie verte (`test_sc_005` instable connu : à signaler, pas à masquer)
 - [X] T034 Essai navigateur du quickstart § 3 (points 1 à 6) avec Playwright et émulation mobile 360 px : propositions au clavier, sans script, menu replié/ouvert, rapport (filtres, carte, sélection, fiche, lien de saisie, thèmes clair et sombre), aucune erreur CSP en console ; consigner le résultat dans la PR (LL-007, LL-012, LL-017)
 - [X] T035 Revue de sécurité de la PR (règle de LL-019) : CSP inchangées, échappement de tout texte inséré (nom de commune, saisie), absence de « Modération » pour un agent, aucune frappe journalisée ; résultat dans la description de la PR
-- [ ] T036 Tout incident rencontré pendant l'implémentation ⇒ entrée dans `LESSON-LEARNED.md` (principe VIII) ; PR vers `main` avec rappel des actions humaines (nouvelle version, digests : LL-023)
+- [X] T036 Tout incident rencontré pendant l'implémentation ⇒ entrée dans `LESSON-LEARNED.md` (principe VIII) ; PR vers `main` avec rappel des actions humaines (nouvelle version, digests : LL-023)
 
 ---
 
