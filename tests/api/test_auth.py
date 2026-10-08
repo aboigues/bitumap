@@ -111,8 +111,17 @@ def test_retour_a_la_page_demandee_apres_connexion(client, courriels):
 def test_retour_jamais_vers_un_autre_site(client, courriels):
     from bitumap.api.application import chemin_local
 
-    for piege in ("//exemple.org", "/\\exemple.org", "https://exemple.org", "/connexion/x", "a"):
-        assert chemin_local(piege) is None
+    for piege in (
+        "//exemple.org",
+        "/\\exemple.org",
+        "/\t/exemple.org",
+        "/ /exemple.org",
+        "https://exemple.org",
+        "/connexion/x",
+        "a",
+    ):
+        assert chemin_local(piege) is None, piege
+    assert chemin_local("/parcours/92026?x=1") == "/parcours/92026?x=1"
     demander_lien(client, "agent@exemple.fr", suite="//exemple.org/piege")
     reponse = client.get(f"/connexion/{_jeton(courriels)}", follow_redirects=False)
     assert reponse.headers["location"] == "/"
