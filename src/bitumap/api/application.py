@@ -87,9 +87,26 @@ def reponse_erreur(requete: Request, statut: int, code: str, message: str):
     return gabarits.TemplateResponse(
         requete,
         "erreur.html",
-        {"message": message, "code": code, "retour": page_precedente(requete)},
+        {
+            "message": message,
+            "code": code,
+            "retour": page_precedente(requete),
+            "session": _session_pour_le_menu(requete),
+        },
         status_code=statut,
     )
+
+
+def _session_pour_le_menu(requete: Request):
+    """Session du compte, pour que le menu de la page d'erreur lui corresponde (008 R5) ;
+    ``None`` si elle est illisible (base indisponible…) : jamais d'erreur en cascade."""
+    from bitumap.api.auth import session_courante  # auth dépend de ce module
+
+    try:
+        return session_courante(requete)
+    except Exception:
+        journal.warning("session illisible pour la page d'erreur", exc_info=True)
+        return None
 
 
 def verifier_secrets_api() -> None:

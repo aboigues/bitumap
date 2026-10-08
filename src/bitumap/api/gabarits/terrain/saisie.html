@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Relevés terrain", "/terrain"), (nom_commune(insee), "/terrain/" ~ insee), ("Point " ~ point_id, None)) %}
+{% set rubrique = "terrain" %}
 {% block titre %}Relevé · {{ point.designation if point else point_id }} · bitumap{% endblock %}
 {% block tete %}
 <link rel="manifest" href="/terrain/manifeste.webmanifest">

@@ -20,6 +20,7 @@ from bitumap import heure
 from bitumap.api import quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
+from bitumap.api.demandes import page_choix_commune
 from bitumap.config import reglages
 from bitumap.parcours import geocodage, gpx, service
 from bitumap.score.methode import LIBELLES_GROUPES
@@ -140,6 +141,14 @@ def resultat(requete: Request, ident: str, session: SessionRequise) -> Response:
         },
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+@routeur.get("")
+def choix_commune(
+    requete: Request, session: SessionRequise, q: str = "", insee: str = ""
+) -> Response:
+    """Entrée « Parcours » du menu : choix d'une commune à rapport disponible (008)."""
+    return page_choix_commune(requete, session, "parcours", q, insee)
 
 
 @routeur.get("/{insee}")

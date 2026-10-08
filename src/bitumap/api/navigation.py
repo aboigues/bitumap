@@ -10,7 +10,7 @@ from typing import Literal
 
 from bitumap.api.application import gabarits
 from bitumap.api.auth import Session, est_mainteneur
-from bitumap.territoire import metadonnees
+from bitumap.territoire import metadonnees, par_insee
 
 Visibilite = Literal["tous", "connecte", "mainteneur", "visiteur"]
 Fil = list[tuple[str, str | None]]  # (libellé, adresse) ; le dernier élément sans adresse
@@ -37,7 +37,7 @@ ENTREES = (
 
 def menu(session: Session | None) -> list[Entree]:
     """Entrées visibles par ce compte ; « Modération » pour le seul mainteneur (FR-013)."""
-    if session is None:
+    if not session:  # None, ou variable absente du contexte d'un gabarit
         return [e for e in ENTREES if e.visible in ("tous", "visiteur")]
     mainteneur = est_mainteneur(session)
     return [
@@ -54,3 +54,13 @@ def fil(*elements: tuple[str, str | None]) -> Fil:
 
 gabarits.env.globals["menu"] = menu
 gabarits.env.globals["metadonnees_communes"] = metadonnees
+
+
+def nom_commune(insee: str) -> str:
+    """Nom officiel pour le fil d'Ariane, sans appel réseau (liste intégrée)."""
+    commune = par_insee(insee)
+    return commune.nom if commune else insee
+
+
+gabarits.env.globals["fil_ariane"] = fil
+gabarits.env.globals["nom_commune"] = nom_commune

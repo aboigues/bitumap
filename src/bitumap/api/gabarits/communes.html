@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Choisir la commune", None)) %}
+{% set rubrique = "accueil" %}
 {% block contenu %}
 <h1>Choisir la commune</h1>
 {% with action="/communes", destination="/communes?insee=", valeur=q %}

@@ -1,0 +1,10 @@
+{# Fil d'Ariane (008 US3) : dernier élément = page courante, sans lien. Paramètre : fil. #}
+{% if fil %}
+<nav aria-label="Fil d'Ariane" class="fil">
+  <ol>
+    {% for libelle, adresse in fil %}
+    <li>{% if loop.last %}<span aria-current="page">{{ libelle }}</span>{% else %}<a href="{{ adresse }}">{{ libelle }}</a>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

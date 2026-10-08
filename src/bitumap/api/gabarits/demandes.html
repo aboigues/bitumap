@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Mes demandes", None)) %}
+{% set rubrique = "demandes" %}
 {% block contenu %}
 <h1>Mes demandes</h1>
 {% if demandes %}

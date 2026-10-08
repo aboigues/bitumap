@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Mes demandes", "/demandes"), (demande.commune_nom, None)) %}
+{% set rubrique = "demandes" %}
 {% block titre %}Suivi — {{ demande.commune_nom }}{% endblock %}
 {% block contenu %}
 {% if demande.etat in ("en_file", "en_cours") %}<meta http-equiv="refresh" content="30">{% endif %}
@@ -15,5 +17,4 @@
 {% else %}
   <p role="alert">{{ demande.erreur_publique or "La génération n'a pas abouti." }}</p>
 {% endif %}
-<p><a href="/demandes">Mes demandes</a></p>
 {% endblock %}

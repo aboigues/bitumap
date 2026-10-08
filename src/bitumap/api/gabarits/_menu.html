@@ -1,0 +1,16 @@
+{# Menu commun (008, contracts/interface.md). Deux listes, sans script : repliable (<details>)
+   sur écran étroit, en ligne sur écran large ; l'autre est en display:none (style.css et
+   rapport_menu.html). Paramètres : session, rubrique. #}
+{% set entrees = menu(session) %}
+<nav aria-label="Menu principal" class="menu">
+  <details><summary>Menu</summary>
+    <ul>
+      {% for e in entrees %}<li><a href="{{ e.adresse }}"{% if e.rubrique == rubrique %} aria-current="page"{% endif %}>{{ e.libelle }}</a></li>
+      {% endfor %}
+    </ul>
+  </details>
+  <ul class="large">
+    {% for e in entrees %}<li><a href="{{ e.adresse }}"{% if e.rubrique == rubrique %} aria-current="page"{% endif %}>{{ e.libelle }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>

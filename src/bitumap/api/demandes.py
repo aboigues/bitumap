@@ -22,6 +22,7 @@ from bitumap import stockage, territoire
 from bitumap.api import antibot, quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
+from bitumap.api.navigation import fil
 from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.ia.budget import budget_jour_epuise
@@ -150,6 +151,57 @@ def chercher_communes(q: str) -> tuple[list, str | None]:
         return trouvees, None
     trop_court = len(normaliser(q)) < SEUIL
     return [], TROP_COURT if trop_court else AUCUNE_COMMUNE
+
+
+def communes_avec_rapport() -> list[territoire.Commune]:
+    """Communes dont un rapport est disponible, quel que soit le compte qui l'a demandé
+    (008 FR-010, R7) : dernière demande terminée depuis moins de ``cache_rapport_jours`` et
+    d'empreinte courante (même règle que ``rapport_valide``, sans appel au stockage)."""
+    with connexion() as conn:
+        lignes = conn.execute(
+            "SELECT DISTINCT ON (commune_insee) commune_insee, commune_nom, empreinte"
+            " FROM demande WHERE etat = 'terminee'"
+            " AND termine_le >= now() - make_interval(days => %s)"
+            " ORDER BY commune_insee, termine_le DESC",
+            (reglages().cache_rapport_jours,),
+        ).fetchall()
+    disponibles = [
+        territoire.par_insee(ligne["commune_insee"])
+        or territoire.Commune(
+            ligne["commune_insee"], ligne["commune_nom"], ligne["commune_insee"][:2]
+        )
+        for ligne in lignes
+        if ligne["empreinte"] == versions.empreinte_courante(ligne["commune_insee"])
+    ]
+    return sorted(disponibles, key=lambda c: normaliser(c.nom))
+
+
+def page_choix_commune(
+    requete: Request, session, rubrique: str, q: str = "", insee: str = ""
+) -> Response:
+    """Choix d'une commune pour les relevés ou le parcours (008 US2, contracts/interface.md) ;
+    ``insee`` : commune choisie parmi les propositions pendant la frappe."""
+    disponibles = communes_avec_rapport()
+    codes = {c.insee for c in disponibles}
+    if insee in codes:
+        return RedirectResponse(f"/{rubrique}/{insee}", status_code=303)
+    choisie = territoire.par_insee(insee) if insee else None
+    if choisie:
+        trouvees, message = [choisie], None
+    else:
+        trouvees, message = chercher_communes(q) if q else ([], None)
+    return gabarits.TemplateResponse(
+        requete,
+        "choix_commune.html",
+        {
+            "session": session,
+            "rubrique": rubrique,
+            "q": q,
+            "message": message,
+            "trouvees": [(c, c.insee in codes) for c in trouvees],
+            "disponibles": disponibles,
+        },
+    )
 
 
 @routeur.get("/communes")
@@ -284,6 +336,28 @@ def _fichier_rapport(insee: str, empreinte: str, nom: str) -> bytes:
     return contenu
 
 
+_BODY = re.compile(r"<body\b[^>]*>", re.IGNORECASE)
+
+
+def _menu_du_rapport(insee: str, session) -> str:
+    """Menu et fil du compte qui consulte (008 R6, FR-015) : ni script ni formulaire."""
+    commune = territoire.par_insee(insee)
+    return gabarits.get_template("rapport_menu.html").render(
+        session=session,
+        rubrique="demandes",
+        fil=fil(("Mes demandes", "/demandes"), (commune.nom if commune else insee, None)),
+    )
+
+
+def _inserer_apres_body(html: str, bloc: str) -> str:
+    """Insère ``bloc`` juste après la balise ``<body>`` (présente dans toutes les versions du
+    gabarit du rapport) ; à défaut, en tête du document. Le rapport stocké n'est pas modifié."""
+    balise = _BODY.search(html)
+    if balise is None:
+        return bloc + html
+    return f"{html[: balise.end()]}\n{bloc}{html[balise.end() :]}"
+
+
 def _inserer_avant_script(html: str, bloc: str) -> str:
     """Insère ``bloc`` juste après le bloc ``donnees``, donc avant le script du rapport qui le
     lit au chargement (inséré après, il serait ignoré). Le JSON échappe ``</`` : la première
@@ -334,6 +408,7 @@ def rapport(insee: str, empreinte: str, session: SessionRequise) -> Response:
             f"{json_dans_html(corrige)}</script>"
         )
     html = _inserer_avant_script(html, bloc)
+    html = _inserer_apres_body(html, _menu_du_rapport(insee, session))
     return Response(
         html,
         media_type="text/html; charset=utf-8",
