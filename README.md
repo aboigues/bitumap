@@ -353,6 +353,10 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 - Les agents IA ouvrent des PR mais ne fusionnent jamais (principe IX).
 - Tout incident ou bug ⇒ une entrée dans [`LESSON-LEARNED.md`](LESSON-LEARNED.md).
 - Infrastructure : aucune ressource créée à la main ; tout passe par OpenTofu.
+- Essai des interfaces avant fusion (LL-031) : `scripts/essai/lancer.sh`, puis
+  <http://127.0.0.1:8000>. Rapport figé de Courbevoie prêt, sans appel réseau ; lien de
+  connexion affiché dans la console ; `mainteneur@exemple.fr` est le compte mainteneur, toute
+  autre adresse un agent. Ctrl+C pour arrêter.
 - Liste des communes de la recherche par nom (`src/bitumap/territoire/communes_idf.json`) :
   à régénérer une fois par an, après le 1er janvier (fusions et changements de nom), par
   `uv run python scripts/territoire/liste_communes.py` ; relire le diff, puis PR.

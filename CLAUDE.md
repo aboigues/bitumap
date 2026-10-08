@@ -21,6 +21,8 @@ Prototype de référence : `docs/reference/prototype-courbevoie-v2.html`.
   `.claude/settings.json` et `.claude/hooks/guard-main.sh`.
 - Principe VIII : tout bug ou incident rencontré ajoute une entrée à `LESSON-LEARNED.md`.
 - Dépendances : vérifier la dernière version stable avant tout ajout.
+- Toute PR qui touche une page : actions humaines « essai des interfaces par le mainteneur
+  avant fusion », avec les pages à essayer ; environnement : `scripts/essai/lancer.sh` (LL-031).
 
 ## Scaleway
 

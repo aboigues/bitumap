@@ -33,6 +33,29 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-031 — Défauts d'interface découverts en production, après fusion (2026-10-08) — Close
+
+- **Contexte** : premiers usages en production (v0.1.1) par le mainteneur.
+- **Symptôme** : quatre anomalies d'interface relevées à l'usage, après fusion et
+  déploiement : aucun menu, commune cherchée par code postal seulement, heures en UTC
+  (LL-029), erreur après une longue inactivité (LL-030). Les PR avaient des tests verts et un
+  essai dans un navigateur.
+- **Causes racines** :
+  1. Pourquoi non vu avant la production ? Seul l'auteur des PR (l'agent) avait utilisé les
+     pages, en suivant le contrat ; personne n'avait essayé les parcours réels de l'usager.
+  2. Pourquoi ? Aucune étape ne demandait au mainteneur d'essayer les interfaces avant de
+     fusionner : sa revue portait sur le code et la description de la PR.
+  3. Pourquoi ? Essayer en local demandait de tout préparer à la main (base, stockage,
+     rapport, comptes, lien de connexion), sans procédure écrite.
+- **Correctif** : interfaces de #52 et #53 essayées par le mainteneur en local avant leur
+  fusion.
+- **Mesure préventive** : `scripts/essai/lancer.sh` (base, stockage simulé, rapport figé de
+  Courbevoie, serveur, lien de connexion affiché dans la console, compte mainteneur) ; README,
+  section Développement. Règle : toute PR qui ajoute ou modifie une page porte, dans ses
+  actions humaines, « essai des interfaces par le mainteneur avant fusion » avec la liste des
+  pages à essayer ; le mainteneur ne fusionne qu'après cet essai.
+- **Références** : PR #52, #53.
+
 ### LL-030 — Erreur en naviguant après être resté longtemps sur une page (2026-10-07) — Ouverte
 
 - **Contexte** : premiers usages en production, signalé par le mainteneur (anomalie 3) ;
