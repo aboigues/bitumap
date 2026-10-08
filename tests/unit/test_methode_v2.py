@@ -56,3 +56,12 @@ def test_ete_de_reference_par_defaut(monkeypatch, jour, ete):
 def test_ete_de_reference_fixe(monkeypatch):
     monkeypatch.setattr(reglages(), "ete_reference", 2024)
     assert methode.ete_reference(date(2026, 10, 1)) == 2024
+
+
+def test_revision_du_calcul_rend_les_rapports_obsoletes(monkeypatch):
+    # Un correctif du calcul doit invalider les rapports en cache (30 jours sinon).
+    from bitumap.lot import empreinte as module
+
+    avant = versions.empreinte_pour("92026", SOURCES)
+    monkeypatch.setattr(module, "REVISION_CALCUL", module.REVISION_CALCUL + 1)
+    assert versions.empreinte_pour("92026", SOURCES) != avant

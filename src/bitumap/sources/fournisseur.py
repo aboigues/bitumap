@@ -101,7 +101,10 @@ class FournisseurEnLigne:
             self._client,
             "IDFM",
             f"{idfm.URL}/exports/json",
-            params={"where": f'code_commune="{self.insee}" AND libelle_mode_ligne="Bus"'},
+            params={
+                "where": f'code_commune="{idfm.code_commune_offre(self.insee)}"'
+                ' AND libelle_mode_ligne="Bus"'
+            },
         ).json()
         return (
             Provenance(

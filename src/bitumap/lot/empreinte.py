@@ -1,7 +1,7 @@
 """Empreinte d'un rapport (data-model.md) : clé du cache et du dossier de stockage.
 
-Mêmes commune, méthode, versions de sources, modèle d'IA et prompt ⇒ même empreinte
-⇒ même rapport (principe IV). Le modèle d'IA en fait partie (analyse F2).
+Mêmes commune, méthode, versions de sources, modèle d'IA, prompt et révision du calcul ⇒
+même empreinte ⇒ même rapport (principe IV). Le modèle d'IA en fait partie (analyse F2).
 """
 
 from __future__ import annotations
@@ -9,6 +9,11 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Mapping
 from datetime import date
+
+# Révision du calcul : à incrémenter quand un correctif change le contenu des rapports sans
+# changer de méthode ni de source (les rapports en cache deviennent alors obsolètes).
+# 2 : arrondissements de Paris, causes des échecs, IA du projet (LL-026 à LL-028).
+REVISION_CALCUL = 2
 
 
 def empreinte(
@@ -22,5 +27,5 @@ def empreinte(
         f"{nom}:{v.isoformat() if isinstance(v, date) else v}"
         for nom, v in sorted(versions_sources.items())
     )
-    texte = f"{insee}|{version_methode}|{sources}|{modele_ia}|{version_prompt}"
+    texte = f"{insee}|{version_methode}|{sources}|{modele_ia}|{version_prompt}|r{REVISION_CALCUL}"
     return hashlib.sha256(texte.encode()).hexdigest()[:16]

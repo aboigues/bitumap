@@ -5,11 +5,12 @@ import io
 from datetime import date
 
 import httpx
+import pytest
 import respx
 from PIL import Image
 
 from bitumap.facteurs import voirie
-from bitumap.sources import altimetrie, bdtopo, chaleur, ortho, osm, panoramax
+from bitumap.sources import altimetrie, base, bdtopo, chaleur, idfm, ortho, osm, panoramax
 from bitumap.sources.base import client_http
 
 
@@ -119,3 +120,31 @@ def test_normalisation_des_numeros_de_route():
     assert voirie.normaliser_numero("RD 908") == "D908"
     assert voirie.classement_osm("N 13") == "nationale"
     assert voirie.classement_osm("Avenue") is None
+
+
+@pytest.mark.parametrize(
+    ("insee", "attendu"), [("75117", "75056"), ("75101", "75056"), ("92004", "92004")]
+)
+def test_offre_d_un_arrondissement_de_paris(insee, attendu):
+    # IDFM rattache toute l'offre de Paris à 75056 : un arrondissement n'y figure pas.
+    assert idfm.code_commune_offre(insee) == attendu
+
+
+@respx.mock
+def test_offre_d_un_arrondissement_demandee_pour_paris(tmp_path):
+    from bitumap.sources.fournisseur import FournisseurEnLigne
+
+    respx.get(idfm.URL).mock(
+        return_value=httpx.Response(200, json={"metas": {"default": {"modified": "2026-03-31"}}})
+    )
+    route = respx.get(f"{idfm.URL}/exports/json").mock(return_value=httpx.Response(200, json=[]))
+    FournisseurEnLigne("75117", tmp_path / "osm.gpkg", date(2026, 9, 27)).offre()
+    assert 'code_commune="75056"' in route.calls.last.request.url.params["where"]
+
+
+def test_cause_lisible_d_un_echec():
+    assert base.cause(base.SourceIndisponible("Orthophotos IGN", "HTTP 429")) == (
+        "Orthophotos IGN : HTTP 429"
+    )
+    # Autre exception : son type seulement, jamais son message (adresse, clé…).
+    assert base.cause(RuntimeError("https://exemple/?cle=secret")) == "RuntimeError"

@@ -83,6 +83,13 @@ def client_http(timeout: float = 30) -> httpx.Client:
     return httpx.Client(timeout=timeout, headers={"User-Agent": USER_AGENT}, follow_redirects=True)
 
 
+def cause(erreur: Exception) -> str:
+    """Cause lisible d'un échec, pour le rapport : détail de la source (« Orthophotos IGN :
+    HTTP 429 ») ou, à défaut, type de l'exception (jamais son message, qui peut contenir une
+    adresse ou une clé)."""
+    return str(erreur) if isinstance(erreur, SourceIndisponible) else type(erreur).__name__
+
+
 def obtenir(
     client: httpx.Client, source: str, url: str, *, tentatives: int = 3, **kwargs
 ) -> httpx.Response:

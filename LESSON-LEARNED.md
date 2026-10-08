@@ -33,7 +33,43 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
-### LL-026 — IA jamais appelée en production, sans alerte (2026-10-07) — Ouverte
+### LL-028 — Orthophotos et infrarouge IGN en échec depuis Scaleway (2026-10-07) — Ouverte
+
+- **Contexte** : premiers rapports de production (Courbevoie, Asnières).
+- **Symptôme** : 26 points P1 par commune « âge de l'enrobé non évalué (orthophotos
+  indisponibles) » ; à Asnières, 10 avertissements « Infrarouge indisponible pour F… ». Les
+  mêmes lectures, rejouées depuis le poste de développement, réussissent toutes (6/6).
+- **Causes racines** :
+  1. Pourquoi ? Inconnue : l'erreur était avalée sans son type ni son détail ; hypothèse non
+     vérifiée, limitation de débit de l'IGN sur l'adresse de sortie partagée de Scaleway.
+  2. Pourquoi inconnue ? Le code ne gardait ni la cause ni le nombre d'échecs, et le
+     diagnostic par une exécution ponctuelle du job n'a pas été mené (à faire par le
+     mainteneur, action sur la production).
+- **Correctif** : cause de chaque échec (`sources.base.cause` : « Orthophotos IGN : HTTP
+  429 », ou type de l'exception, jamais son message) dans la raison du « non évalué » et
+  dans un avertissement regroupé par étape (nombre, causes, points).
+- **Mesure préventive** : tests `test_orthophotos_en_echec_tracees_avec_leur_cause`,
+  `test_orthophotos_indisponibles_signalees_dans_le_rapport`. Reste ouverte : correctif de
+  la cause, une fois connue grâce au premier rapport produit avec cette version.
+- **Références** : branche `fix/moteur-paris-ign-ia`.
+
+### LL-027 — Aucun point pour un arrondissement de Paris (2026-10-07) — Close
+
+- **Contexte** : premier rapport de production pour Paris 17e (75117).
+- **Symptôme** : « Aucun point à relever : aucune ligne de bus desservant la commune. »
+- **Causes racines** :
+  1. Pourquoi ? L'offre IDFM est demandée avec `code_commune="75117"` et ne renvoie rien.
+  2. Pourquoi ? IDFM rattache toute l'offre de Paris à la commune `75056` (vérifié :
+     88 420 lignes ; aucun code `751xx`).
+  3. Pourquoi non vu ? Fixtures et essais limités aux Hauts-de-Seine (Courbevoie).
+- **Correctif** : `idfm.code_commune_offre` : `75056` pour un arrondissement ; les arrêts
+  restent limités au contour de l'arrondissement (`points.arrets`).
+- **Mesure préventive** : tests `test_offre_d_un_arrondissement_de_paris`,
+  `test_offre_d_un_arrondissement_demandee_pour_paris`. Règle : toute source filtrée par
+  code commune est vérifiée sur un arrondissement de Paris.
+- **Références** : branche `fix/moteur-paris-ign-ia`.
+
+### LL-026 — IA jamais appelée en production, sans alerte (2026-10-07) — Close
 
 - **Contexte** : premiers rapports de production (Courbevoie, Asnières), relus par le
   mainteneur ; défaut découvert dans `points.geojson`, aucun avertissement ne le signalait.
@@ -49,11 +85,12 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
   3. Pourquoi non vu ? La CI simule l'IA (T094 ouverte) ; un échec d'appel ne produit qu'un
      facteur « non évalué », ni avertissement dans le rapport ni alerte au mainteneur.
 - **Correctif** : `BITUMAP_IA_URL` du projet passé au job par OpenTofu (`job.tf`).
-- **Mesure préventive** : à faire dans la PR suivante : avertissement dans le rapport et
-  alerte au mainteneur quand l'IA échoue (la leçon reste ouverte jusque-là). Règle : tout
-  service appelé avec une clé d'exécution est essayé avec **cette** clé avant la mise en
-  service.
-- **Références** : branche `fix/ia-url-projet`.
+- **Mesure préventive** : avertissement regroupé dans le rapport (nombre, cause, points)
+  et alerte au mainteneur une fois par jour quand le service d'IA échoue (tests
+  `test_ia_indisponible_signalee`, `test_alerte_ia_une_fois_par_jour`,
+  `test_echec_du_service_trace_avec_sa_cause`). Règle : tout service appelé avec une clé
+  d'exécution est essayé avec **cette** clé avant la mise en service.
+- **Références** : PR #50 (`fix/ia-url-projet`), branche `fix/moteur-paris-ign-ia`.
 
 ### LL-025 — Domaine d'envoi créé mais marqué « tainted » (2026-10-07) — Close
 

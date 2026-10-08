@@ -8,6 +8,7 @@ l'âge de l'enrobé par IA, est injecté (``analyse_ia``) et mis en cache ailleu
 from __future__ import annotations
 
 import math
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -36,7 +37,7 @@ from bitumap.score.methode import (
     version_appliquee,
 )
 from bitumap.sources import idfm, lidar, meteo, osm, temperature
-from bitumap.sources.base import Provenance
+from bitumap.sources.base import Provenance, cause
 from bitumap.sources.fournisseur import Fournisseur
 
 MARGE_EMPRISE_DEG = 0.003  # ≈ 250 m autour de la commune
@@ -235,6 +236,12 @@ def _poids_lourds(comptages_l93, chaussee, voie, p: Point) -> Facteur:
     return poids_lourds.calculer(section, bus_sens)
 
 
+def regrouper(quoi: str, echecs: list[tuple[str, str]]) -> str:
+    """Un avertissement pour tous les points d'un même échec : nombre, causes, points."""
+    causes = ", ".join(f"{c} ×{n}" for c, n in Counter(c for _, c in echecs).most_common())
+    return f"{quoi} pour {len(echecs)} point(s) ({causes}) : {', '.join(i for i, _ in echecs)}"
+
+
 def calculer_commune(
     f: Fournisseur,
     nom_commune: str,
@@ -341,6 +348,7 @@ def calculer_commune(
             provenances += provenances_pl
         except Exception as erreur:
             avertissements.append(f"Comptages poids lourds indisponibles : {type(erreur).__name__}")
+    infrarouge_ko: list[tuple[str, str]] = []
     for i, (p, g, voie) in enumerate(zip(points, geos_l93, voies_proches, strict=True)):
         p.facteurs.append(charge.calculer(p))
         p.facteurs += sollicitation.calculer(p, distances_feux.get(p.id))
@@ -357,8 +365,8 @@ def calculer_commune(
         vegetation = None
         try:
             vegetation = f.vegetation(round(p.lon, 6), round(p.lat, 6))
-        except Exception:
-            avertissements.append(f"Infrarouge indisponible pour {p.id}")
+        except Exception as erreur:
+            infrarouge_ko.append((p.id, cause(erreur)))
         # Ensoleillement mesuré sur la chaussée (voie bus la plus proche), pas au poteau ;
         # pour un arrêt, sur la zone où le bus s'arrête (méthode 1.2).
         chaussee, echantillons = g, [(g.x, g.y)]
@@ -427,6 +435,9 @@ def calculer_commune(
             p.panoramax = None if photo is None else photo.__dict__
         except Exception:
             avertissements.append(f"Panoramax indisponible pour {p.id}")
+
+    if infrarouge_ko:
+        avertissements.append(regrouper("Infrarouge indisponible", infrarouge_ko))
 
     points = combinaison.prioriser(points)
     if analyse_ia is not None:
