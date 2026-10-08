@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Mon compte", None)) %}
+{% set rubrique = "compte" %}
 {% block titre %}Mon compte · bitumap{% endblock %}
 {% block contenu %}
 <h1>Mon compte</h1>
 <p>Adresse : {{ session.email }}</p>
-<p><a href="/demandes">Mes demandes</a> · <a href="/confidentialite">Données personnelles</a></p>
 
 <h2>Supprimer mon compte</h2>
 <p>La suppression est immédiate et définitive : votre adresse, vos sessions et la liste de

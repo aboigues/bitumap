@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from bitumap.api.application import DOSSIER, ErreurPublique, gabarits
 from bitumap.api.auth import MainteneurRequis, SessionRequise, est_mainteneur, verifier_csrf
+from bitumap.api.demandes import page_choix_commune
 from bitumap.config import reglages
 from bitumap.score.methode import LIBELLES_GROUPES
 from bitumap.terrain import depot, export, moderation, photos
@@ -177,6 +178,16 @@ async def confirmer_photo(
         raise ErreurPublique(400, "saisie_invalide", "Saisie invalide.") from erreur
     resultat = photos.confirmer(session.compte_id, releve_id, photo_id, lon, lat, prise_le)
     return _reponse(201, resultat)
+
+
+@routeur.get("")
+def choix_commune(
+    requete: Request, session: SessionRequise, q: str = "", insee: str = ""
+) -> Response:
+    """Entrée « Relevés terrain » du menu : choix d'une commune à rapport disponible (008)."""
+    reponse = page_choix_commune(requete, session, "terrain", q, insee)
+    reponse.headers.update(en_tetes_terrain())
+    return reponse
 
 
 @routeur.get("/moderation")

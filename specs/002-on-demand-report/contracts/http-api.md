@@ -31,7 +31,7 @@ jamais de trace technique (FR-025).
 
 | Méthode, chemin | Entrée | Réponse | Erreurs |
 |---|---|---|---|
-| `GET /communes?code_postal=` | code postal | liste `[{insee, nom, departement}]` (arrondissements pour Paris) | `400 format_invalide`, `400 hors_ile_de_france`, `404 code_inexistant`, `401` |
+| `GET /communes?code_postal=` | code postal | liste `[{insee, nom, departement}]` (arrondissements pour Paris) | `400 format_invalide`, `400 hors_ile_de_france`, `404 code_inexistant`, `401` ; complétée par la recherche par nom (`?q=`, `?insee=`) : voir `specs/008-navigation-communes/contracts/http-api.md` |
 | `POST /demandes` | `insee`, `altcha`, `csrf` | `303` vers `/rapports/{insee}/{empreinte}` si en cache ; sinon `303` vers `/demandes/{id}` | `400 antibot_invalide`, `400 commune_invalide`, `429 quota_compte`, `429 quota_global`, `429 budget_ia_epuise`, `401` |
 | `GET /demandes` | — | mes demandes : commune, état, date, lien | `401` |
 | `GET /demandes/{id}` | — | suivi : état, position, heure estimée, étape, lien final ; rafraîchissement automatique toutes les 30 s | `404` (demande inconnue ou non rattachée au compte), `401` |

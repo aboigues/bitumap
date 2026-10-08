@@ -1,14 +1,12 @@
 {% extends "base.html" %}
+{% set rubrique = "accueil" %}
 {% block contenu %}
 {% if session %}
 <h1>Demander un rapport</h1>
-<form method="get" action="/communes" class="carte">
-  <label for="code_postal">Code postal (Île-de-France)</label>
-  <input id="code_postal" name="code_postal" inputmode="numeric" pattern="[0-9]{5}"
-         maxlength="5" required autocomplete="postal-code">
-  <button type="submit">Chercher les communes</button>
-</form>
-<p><a href="/demandes">Mes demandes</a> · <a href="/compte">Mon compte</a></p>
+{% with action="/communes", destination="/communes?insee=", valeur="" %}
+{% include "_recherche_commune.html" %}
+{% endwith %}
+{% include "_source_communes.html" %}
 {% else %}
 {% if compte_supprime %}<p role="status">Votre compte a été supprimé.</p>{% endif %}
 {% if session_expiree %}<p role="status">Votre session a expiré ou vous n'êtes pas connecté :

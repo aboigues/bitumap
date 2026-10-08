@@ -33,6 +33,51 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-032 — Retour après connexion vers un autre site possible (2026-10-08) — Close
+
+- **Contexte** : alerte CodeQL (`py/url-redirection`) sur la PR #53, code venu de #52 ;
+  jamais déployé.
+- **Symptôme** : le chemin de retour après connexion (anomalie 3, LL-030) acceptait un
+  chemin contenant un caractère blanc, que les navigateurs retirent d'une adresse : le
+  chemin pouvait alors désigner un autre site.
+- **Causes racines** :
+  1. Pourquoi ? `chemin_local` refusait une liste de motifs connus (`//`, barre inverse,
+     fins de ligne) au lieu de n'accepter qu'une forme sûre.
+  2. Pourquoi non vu ? Les tests reprenaient les mêmes motifs que le code ; l'alerte
+     CodeQL n'apparaît qu'en commentaire de PR, le contrôle restant vert (même famille que
+     LL-003).
+- **Correctif** : tout blanc et toute barre inverse refusés ; chemin ni schéma ni hôte
+  après analyse (forme reconnue par CodeQL). Redirection de la page de choix faite avec le
+  code de la liste des rapports, pas celui de la requête.
+- **Mesure préventive** : test `test_retour_jamais_vers_un_autre_site` (tabulation,
+  espace). Règle : toute alerte CodeQL d'une PR est lue et traitée avant la fusion, même
+  avec des contrôles verts.
+- **Références** : PR #52, #53.
+
+### LL-031 — Défauts d'interface découverts en production, après fusion (2026-10-08) — Close
+
+- **Contexte** : premiers usages en production (v0.1.1) par le mainteneur.
+- **Symptôme** : quatre anomalies d'interface relevées à l'usage, après fusion et
+  déploiement : aucun menu, commune cherchée par code postal seulement, heures en UTC
+  (LL-029), erreur après une longue inactivité (LL-030). Les PR avaient des tests verts et un
+  essai dans un navigateur.
+- **Causes racines** :
+  1. Pourquoi non vu avant la production ? Seul l'auteur des PR (l'agent) avait utilisé les
+     pages, en suivant le contrat ; personne n'avait essayé les parcours réels de l'usager.
+  2. Pourquoi ? Aucune étape ne demandait au mainteneur d'essayer les interfaces avant de
+     fusionner : sa revue portait sur le code et la description de la PR.
+  3. Pourquoi ? Essayer en local demandait de tout préparer à la main (base, stockage,
+     rapport, comptes, lien de connexion), sans procédure écrite.
+- **Correctif** : interfaces de #52 et #53 essayées par le mainteneur en local avant leur
+  fusion ; trois retours dès le premier essai, corrigés dans #53 : liens peu visibles,
+  résultat de recherche mal relié à la recherche, rang des points numéroté deux fois.
+- **Mesure préventive** : `scripts/essai/lancer.sh` (base, stockage simulé, rapport figé de
+  Courbevoie, serveur, lien de connexion affiché dans la console, compte mainteneur) ; README,
+  section Développement. Règle : toute PR qui ajoute ou modifie une page porte, dans ses
+  actions humaines, « essai des interfaces par le mainteneur avant fusion » avec la liste des
+  pages à essayer ; le mainteneur ne fusionne qu'après cet essai.
+- **Références** : PR #52, #53.
+
 ### LL-030 — Erreur en naviguant après être resté longtemps sur une page (2026-10-07) — Ouverte
 
 - **Contexte** : premiers usages en production, signalé par le mainteneur (anomalie 3) ;

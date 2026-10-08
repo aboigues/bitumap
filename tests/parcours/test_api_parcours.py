@@ -174,3 +174,14 @@ def test_adresses_json(client, agent):
     assert reponse.status_code == 200
     assert reponse.json()[0]["libelle"] == HOTEL_DE_VILLE[0]
     assert client.get("/parcours/adresses", params={"q": "ab"}).status_code == 400
+
+
+@respx.mock
+def test_fil_d_ariane_du_resultat(client, agent):
+    # 008 US3 : Accueil › Parcours › Courbevoie › Résultat.
+    simuler_ign()
+    page = client.get(_demander(client, agent).headers["location"]).text
+    fil = page.split('aria-label="Fil d\'Ariane"', 1)[1].split("</nav>", 1)[0]
+    assert '<a href="/parcours">Parcours</a>' in fil
+    assert '<a href="/parcours/92026">Courbevoie</a>' in fil
+    assert '<span aria-current="page">Résultat</span>' in fil

@@ -14,13 +14,15 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from bitumap import stockage
+from bitumap import stockage, territoire
 from bitumap.api import antibot, quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
+from bitumap.api.navigation import fil
 from bitumap.config import reglages
 from bitumap.db import connexion
 from bitumap.ia.budget import budget_jour_epuise
@@ -30,6 +32,7 @@ from bitumap.score.methode import VERSION_METHODE
 from bitumap.terrain import classement
 from bitumap.terrain import depot as releves_terrain
 from bitumap.territoire import ErreurTerritoire, commune_par_insee, communes_du_code_postal
+from bitumap.territoire.recherche import SEUIL, normaliser
 
 routeur = APIRouter()
 _EMPREINTE = re.compile(r"^[0-9a-f]{16}$")
@@ -117,16 +120,114 @@ def _creer_ou_rattacher(commune, empreinte: str, compte_id: str) -> str:
     return demande_id
 
 
+_CODE_POSTAL = re.compile(r"^\d{5}$")
+GEO_INDISPONIBLE = "Recherche par code postal indisponible : cherchez par le nom de la commune."
+AUCUNE_COMMUNE = "Aucune commune trouvée : le service couvre l'Île-de-France seulement."
+TROP_COURT = "Saisissez au moins 3 lettres du nom de la commune, ou son code postal."
+
+
+@routeur.get("/communes/recherche")
+def propositions(session: SessionRequise, q: str = "") -> JSONResponse:
+    """Propositions pendant la frappe (008 R2) : liste intégrée, aucun appel externe."""
+    trouvees = territoire.rechercher(q)
+    return JSONResponse(
+        [{"insee": c.insee, "nom": c.nom, "departement": c.departement} for c in trouvees],
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+def chercher_communes(q: str) -> tuple[list, str | None]:
+    """Communes pour une saisie (nom ou code postal) et message éventuel (FR-003, FR-007)."""
+    q = q.strip()
+    if _CODE_POSTAL.match(q):
+        try:
+            return communes_du_code_postal(q), None
+        except ErreurTerritoire as e:
+            return [], e.message
+        except httpx.HTTPError:
+            return [], GEO_INDISPONIBLE
+    trouvees = territoire.rechercher(q)
+    if trouvees:
+        return trouvees, None
+    trop_court = len(normaliser(q)) < SEUIL
+    return [], TROP_COURT if trop_court else AUCUNE_COMMUNE
+
+
+def communes_avec_rapport() -> list[territoire.Commune]:
+    """Communes dont un rapport est disponible, quel que soit le compte qui l'a demandé
+    (008 FR-010, R7) : dernière demande terminée depuis moins de ``cache_rapport_jours`` et
+    d'empreinte courante (même règle que ``rapport_valide``, sans appel au stockage)."""
+    with connexion() as conn:
+        lignes = conn.execute(
+            "SELECT DISTINCT ON (commune_insee) commune_insee, commune_nom, empreinte"
+            " FROM demande WHERE etat = 'terminee'"
+            " AND termine_le >= now() - make_interval(days => %s)"
+            " ORDER BY commune_insee, termine_le DESC",
+            (reglages().cache_rapport_jours,),
+        ).fetchall()
+    disponibles = [
+        territoire.par_insee(ligne["commune_insee"])
+        or territoire.Commune(
+            ligne["commune_insee"], ligne["commune_nom"], ligne["commune_insee"][:2]
+        )
+        for ligne in lignes
+        if ligne["empreinte"] == versions.empreinte_courante(ligne["commune_insee"])
+    ]
+    return sorted(disponibles, key=lambda c: normaliser(c.nom))
+
+
+def page_choix_commune(
+    requete: Request, session, rubrique: str, q: str = "", insee: str = ""
+) -> Response:
+    """Choix d'une commune pour les relevés ou le parcours (008 US2, contracts/interface.md) ;
+    ``insee`` : commune choisie parmi les propositions pendant la frappe."""
+    disponibles = communes_avec_rapport()
+    codes = {c.insee for c in disponibles}
+    # Code repris de la liste des rapports, pas de la requête (CodeQL py/url-redirection).
+    if cible := next((c.insee for c in disponibles if c.insee == insee), None):
+        return RedirectResponse(f"/{rubrique}/{cible}", status_code=303)
+    choisie = territoire.par_insee(insee) if insee else None
+    if choisie:
+        trouvees, message = [choisie], None
+    else:
+        trouvees, message = chercher_communes(q) if q else ([], None)
+    return gabarits.TemplateResponse(
+        requete,
+        "choix_commune.html",
+        {
+            "session": session,
+            "rubrique": rubrique,
+            "q": q,
+            "message": message,
+            "choisie": choisie,
+            "trouvees": [(c, c.insee in codes) for c in trouvees],
+            "disponibles": disponibles,
+        },
+    )
+
+
 @routeur.get("/communes")
-def communes(requete: Request, session: SessionRequise, code_postal: str = "") -> Response:
-    try:
-        liste = communes_du_code_postal(code_postal)
-    except ErreurTerritoire as e:
-        raise _erreur_territoire(e) from e
+def communes(
+    requete: Request, session: SessionRequise, q: str = "", insee: str = "", code_postal: str = ""
+) -> Response:
+    message, choisie = None, None
+    if insee:
+        choisie = territoire.par_insee(insee)
+        if choisie is None:
+            raise ErreurPublique(404, "code_inexistant", "Commune inconnue.")
+        liste = [choisie]
+    elif code_postal:  # anciens liens et formulaires (002)
+        try:
+            liste = communes_du_code_postal(code_postal)
+        except ErreurTerritoire as e:
+            raise _erreur_territoire(e) from e
+        q = code_postal
+    else:
+        liste, message = chercher_communes(q)
     return gabarits.TemplateResponse(
         requete,
         "communes.html",
-        {"session": session, "communes": liste, "code_postal": code_postal},
+        {"session": session, "communes": liste, "choisie": choisie, "q": q, "message": message},
     )
 
 
@@ -237,6 +338,28 @@ def _fichier_rapport(insee: str, empreinte: str, nom: str) -> bytes:
     return contenu
 
 
+_BODY = re.compile(r"<body\b[^>]*>", re.IGNORECASE)
+
+
+def _menu_du_rapport(insee: str, session) -> str:
+    """Menu et fil du compte qui consulte (008 R6, FR-015) : ni script ni formulaire."""
+    commune = territoire.par_insee(insee)
+    return gabarits.get_template("rapport_menu.html").render(
+        session=session,
+        rubrique="demandes",
+        fil=fil(("Mes demandes", "/demandes"), (commune.nom if commune else insee, None)),
+    )
+
+
+def _inserer_apres_body(html: str, bloc: str) -> str:
+    """Insère ``bloc`` juste après la balise ``<body>`` (présente dans toutes les versions du
+    gabarit du rapport) ; à défaut, en tête du document. Le rapport stocké n'est pas modifié."""
+    balise = _BODY.search(html)
+    if balise is None:
+        return bloc + html
+    return f"{html[: balise.end()]}\n{bloc}{html[balise.end() :]}"
+
+
 def _inserer_avant_script(html: str, bloc: str) -> str:
     """Insère ``bloc`` juste après le bloc ``donnees``, donc avant le script du rapport qui le
     lit au chargement (inséré après, il serait ignoré). Le JSON échappe ``</`` : la première
@@ -287,6 +410,7 @@ def rapport(insee: str, empreinte: str, session: SessionRequise) -> Response:
             f"{json_dans_html(corrige)}</script>"
         )
     html = _inserer_avant_script(html, bloc)
+    html = _inserer_apres_body(html, _menu_du_rapport(insee, session))
     return Response(
         html,
         media_type="text/html; charset=utf-8",

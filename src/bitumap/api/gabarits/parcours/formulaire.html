@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% set fil = fil_ariane(("Parcours", "/parcours"), (commune, None)) %}
+{% set rubrique = "parcours" %}
 {% block titre %}Parcours de surveillance · {{ commune }} · bitumap{% endblock %}
 {% block contenu %}
 <h1>Parcours de surveillance · {{ commune }}</h1>

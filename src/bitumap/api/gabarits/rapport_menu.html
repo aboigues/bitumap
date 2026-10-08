@@ -1,0 +1,21 @@
+{# Menu et fil insérés dans un rapport servi (008 R6, FR-015). Aucun script ni formulaire :
+   la CSP du rapport (form-action 'none', scripts du document seulement) reste inchangée ;
+   pas de « Se déconnecter » (page « Mon compte »). Couleurs : variables du rapport. #}
+<style>
+.bm-navigation{margin:-16px -16px 16px;background:var(--surface);border-bottom:1px solid var(--ligne);padding:0 16px}
+.bm-navigation ul{list-style:none;margin:0;padding:0 0 .5rem;display:grid}
+.bm-navigation summary{min-height:2.75rem;display:flex;align-items:center;cursor:pointer;font-weight:600;width:max-content}
+.bm-navigation .menu a{display:flex;align-items:center;min-height:2.75rem;padding:0 .5rem;text-decoration:none}
+.bm-navigation .menu a:hover{text-decoration:underline;text-decoration-color:var(--accent)}
+.bm-navigation .menu a[aria-current="page"]{font-weight:700;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:.35em;text-decoration-color:var(--accent)}
+.bm-navigation .large{display:none}
+@media (min-width:48em){.bm-navigation details{display:none}.bm-navigation .large{display:flex;flex-wrap:wrap;gap:0 .5rem;padding:0}}
+.bm-navigation .fil ol{list-style:none;margin:0;padding:.25rem 0 .5rem;display:flex;flex-wrap:wrap;gap:.25rem;font-size:.9rem;color:var(--discret)}
+.bm-navigation .fil li+li::before{content:"›" / "";margin-right:.25rem}
+.bm-navigation .fil [aria-current="page"]{color:var(--encre)}
+@media print{.bm-navigation{display:none}}
+</style>
+<div class="bm-navigation">
+{% include "_menu.html" %}
+{% include "_fil.html" %}
+</div>

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set titre_page = "Relevés terrain" if rubrique == "terrain" else "Parcours de surveillance" %}
+{% set fil = fil_ariane(("Relevés terrain" if rubrique == "terrain" else "Parcours", None)) %}
+{% set action_rapport = "Ouvrir les relevés" if rubrique == "terrain" else "Préparer un parcours" %}
+{% block titre %}{{ titre_page }} · bitumap{% endblock %}
+{% block contenu %}
+<h1>{{ titre_page }}</h1>
+{% if choisie %}
+{# Commune choisie parmi les propositions, sans rapport disponible (sinon : redirection). #}
+<section class="carte resultat" aria-labelledby="resultat-titre">
+  <h2 id="resultat-titre">Commune choisie</h2>
+  <p class="choisie">{{ choisie.nom }} ({{ choisie.departement }})</p>
+  <p>Pas encore de rapport pour cette commune.</p>
+  <p><a class="bouton principal" href="/communes?insee={{ choisie.insee }}">Demander le rapport</a></p>
+  <p><a href="/{{ rubrique }}">Choisir une autre commune</a></p>
+</section>
+{% else %}
+<p>Choisissez une commune dont le rapport est disponible.</p>
+{% with action="/" ~ rubrique, destination="/" ~ rubrique ~ "?insee=", valeur=q %}
+{% include "_recherche_commune.html" %}
+{% endwith %}
+{% if message %}<p role="status">{{ message }}</p>{% endif %}
+{% if trouvees %}
+<section class="carte resultat" aria-labelledby="resultat-titre">
+  <h2 id="resultat-titre">Résultats pour « {{ q }} »</h2>
+  <ul>
+    {% for c, disponible in trouvees %}
+    <li><strong>{{ c.nom }} ({{ c.departement }})</strong>
+      {% if disponible %}<a class="bouton principal" href="/{{ rubrique }}/{{ c.insee }}">{{ action_rapport }}</a>
+      {% else %}<span>pas encore de rapport</span>
+      <a class="bouton" href="/communes?insee={{ c.insee }}">Demander le rapport</a>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endif %}
+<h2>Communes avec un rapport disponible</h2>
+{% if disponibles %}
+<ul>
+  {% for c in disponibles %}<li><a href="/{{ rubrique }}/{{ c.insee }}">{{ c.nom }} ({{ c.departement }})</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>Aucun rapport disponible pour l'instant : <a href="/">demandez-en un</a>.</p>
+{% endif %}
+{% include "_source_communes.html" %}
+{% endblock %}

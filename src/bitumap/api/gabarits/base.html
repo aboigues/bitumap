@@ -18,7 +18,9 @@
     </form>
     {% endif %}
   </header>
+  {% include "_menu.html" %}
   <main id="contenu">
+    {% include "_fil.html" %}
     {% block contenu %}{% endblock %}
   </main>
   <footer class="pied">

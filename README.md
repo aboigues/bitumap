@@ -165,7 +165,7 @@ indépendantes qui se passent des fichiers intermédiaires versionnés.
 
 ```text
 src/bitumap/
-├── territoire/        # code postal → communes (API Géo), périmètre IDF, emprise
+├── territoire/        # code postal → communes (API Géo), recherche par nom (liste intégrée), périmètre IDF, emprise
 ├── sources/           # un adaptateur par source (acquisition + normalisation)
 │   ├── idfm.py        #   arrêts, lignes, passages par jour et en pointe
 │   ├── osm.py         #   feux, giratoires, revêtement, itinéraires bus
@@ -273,7 +273,7 @@ les fichiers OpenTofu, en prenant la dernière version stable au moment de l'ajo
 | [IGN Géoplateforme](https://geoservices.ign.fr/) : BD TOPO, RGE ALTI, LiDAR HD, orthophotos | type de route, bâti, pentes, ombres, âge de l'enrobé | Licence Ouverte Etalab 2.0 |
 | [Institut Paris Region](https://data-iau-idf.opendata.arcgis.com/) | îlots de chaleur | Licence Ouverte |
 | [Panoramax](https://panoramax.fr/) | photos de rue récentes | Licence Ouverte Etalab 2.0 |
-| [API Géo](https://geo.api.gouv.fr) | code postal → communes | Licence Ouverte |
+| [API Géo](https://geo.api.gouv.fr) | code postal → communes ; liste intégrée des communes pour la recherche par nom (008) | Licence Ouverte |
 | [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2) : USGS Landsat C2 niveau 2 | température de surface l'été (méthode 2.0) ; **service hors UE déclaré** | domaine public |
 | [Météo-France](https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-quotidiennes) : données quotidiennes | été de référence (méthode 2.0, 007) | Licence Ouverte 2.0 |
 | Comptages routiers : [Hauts-de-Seine](https://data.iledefrance.fr/explore/dataset/comptages-routiers-lineaires-dans-les-hauts-de-seine/), [réseau national](https://www.data.gouv.fr/datasets/trafic-moyen-journalier-annuel-sur-le-reseau-routier-national) | poids lourds hors bus (méthode 2.0) | Licence Ouverte |
@@ -353,6 +353,13 @@ python3 -m unittest discover -s tests/security   # validateur d'exceptions
 - Les agents IA ouvrent des PR mais ne fusionnent jamais (principe IX).
 - Tout incident ou bug ⇒ une entrée dans [`LESSON-LEARNED.md`](LESSON-LEARNED.md).
 - Infrastructure : aucune ressource créée à la main ; tout passe par OpenTofu.
+- Essai des interfaces avant fusion (LL-031) : `scripts/essai/lancer.sh`, puis
+  <http://127.0.0.1:8000>. Rapport figé de Courbevoie prêt, sans appel réseau ; lien de
+  connexion affiché dans la console ; `mainteneur@exemple.fr` est le compte mainteneur, toute
+  autre adresse un agent. Ctrl+C pour arrêter.
+- Liste des communes de la recherche par nom (`src/bitumap/territoire/communes_idf.json`) :
+  à régénérer une fois par an, après le 1er janvier (fusions et changements de nom), par
+  `uv run python scripts/territoire/liste_communes.py` ; relire le diff, puis PR.
 
 ---
 
