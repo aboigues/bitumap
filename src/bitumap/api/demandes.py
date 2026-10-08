@@ -183,8 +183,9 @@ def page_choix_commune(
     ``insee`` : commune choisie parmi les propositions pendant la frappe."""
     disponibles = communes_avec_rapport()
     codes = {c.insee for c in disponibles}
-    if insee in codes:
-        return RedirectResponse(f"/{rubrique}/{insee}", status_code=303)
+    # Code repris de la liste des rapports, pas de la requête (CodeQL py/url-redirection).
+    if cible := next((c.insee for c in disponibles if c.insee == insee), None):
+        return RedirectResponse(f"/{rubrique}/{cible}", status_code=303)
     choisie = territoire.par_insee(insee) if insee else None
     if choisie:
         trouvees, message = [choisie], None
@@ -198,6 +199,7 @@ def page_choix_commune(
             "rubrique": rubrique,
             "q": q,
             "message": message,
+            "choisie": choisie,
             "trouvees": [(c, c.insee in codes) for c in trouvees],
             "disponibles": disponibles,
         },
@@ -208,12 +210,12 @@ def page_choix_commune(
 def communes(
     requete: Request, session: SessionRequise, q: str = "", insee: str = "", code_postal: str = ""
 ) -> Response:
-    message = None
+    message, choisie = None, None
     if insee:
-        commune = territoire.par_insee(insee)
-        if commune is None:
+        choisie = territoire.par_insee(insee)
+        if choisie is None:
             raise ErreurPublique(404, "code_inexistant", "Commune inconnue.")
-        liste = [commune]
+        liste = [choisie]
     elif code_postal:  # anciens liens et formulaires (002)
         try:
             liste = communes_du_code_postal(code_postal)
@@ -225,7 +227,7 @@ def communes(
     return gabarits.TemplateResponse(
         requete,
         "communes.html",
-        {"session": session, "communes": liste, "q": q, "message": message},
+        {"session": session, "communes": liste, "choisie": choisie, "q": q, "message": message},
     )
 
 

@@ -18,19 +18,17 @@
 <label for="recherche">Rechercher un point</label>
 <input id="recherche" type="search" autocomplete="off" data-filtre-points>
 
-<ol class="liste-points">
+<ul class="liste-points">
 {% for p in points %}
   {% set r = releves.get(p.id) %}
   <li data-texte="{{ (p.designation ~ ' ' ~ p.id)|lower }}">
-    <a href="/terrain/{{ insee }}/{{ p.id }}">
-      <strong>{{ p.rang }} · {{ p.designation }}</strong>
-    </a>
+    <a href="/terrain/{{ insee }}/{{ p.id }}"><strong>{{ p.rang }} · {{ p.designation }}</strong></a>
     <span class="petit">{{ libelles_niveau(p.groupe) }} · {{ p.id }}
       {% if r %} · constaté : {{ niveaux[r.niveau] }} ({{ r.cree_le|heure("%d/%m/%Y") }}, {{ r.nb_releves }} relevé(s)){% else %} · non relevé{% endif %}
     </span>
   </li>
 {% endfor %}
-</ol>
+</ul>
 
 {% if absents %}
 <h2>Points relevés absents du rapport en vigueur</h2>

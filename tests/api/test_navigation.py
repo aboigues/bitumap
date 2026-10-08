@@ -112,6 +112,15 @@ def test_commune_sans_rapport_propose_la_demande(client, courriels, empreinte_fi
     assert 'href="/terrain/92004"' not in page
 
 
+def test_demander_le_rapport_mis_en_valeur(client, courriels, empreinte_fixe):
+    """Retour #53 : l'action « Demander le rapport » est un bouton, pas un lien dans le texte."""
+    connecter(client, courriels)
+    page = client.get("/terrain", params={"insee": "92012"}).text
+    assert "Commune choisie" in page and "Boulogne-Billancourt (92)" in page
+    assert 'class="bouton principal" href="/communes?insee=92012">Demander le rapport' in page
+    assert 'id="q"' not in page and 'href="/terrain">Choisir une autre commune' in page
+
+
 def test_commune_avec_rapport_trouvee_par_la_recherche(client, courriels, empreinte_fixe):
     _terminer("92026", "Courbevoie")
     connecter(client, courriels)
@@ -228,3 +237,14 @@ def test_fil_echappe(client, courriels):
     connecter(client, courriels)
     page = client.get("/communes", params={"q": "<b>x</b>"}).text
     assert "<b>x</b>" not in page
+
+
+def test_points_numerotes_une_seule_fois(client, courriels, s3):
+    """Retour #53 : le rang est écrit dans chaque point, la liste n'ajoute pas de numéro."""
+    from tests.conftest import rapport_courbevoie
+
+    rapport_courbevoie()
+    connecter(client, courriels)
+    page = client.get("/terrain/92026").text
+    assert '<ul class="liste-points">' in page and '<ol class="liste-points">' not in page
+    assert "<strong>1 · " in page

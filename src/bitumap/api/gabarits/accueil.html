@@ -6,6 +6,7 @@
 {% with action="/communes", destination="/communes?insee=", valeur="" %}
 {% include "_recherche_commune.html" %}
 {% endwith %}
+{% include "_source_communes.html" %}
 {% else %}
 {% if compte_supprime %}<p role="status">Votre compte a été supprimé.</p>{% endif %}
 {% if session_expiree %}<p role="status">Votre session a expiré ou vous n'êtes pas connecté :

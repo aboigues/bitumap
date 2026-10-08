@@ -1,6 +1,7 @@
 {# Recherche d'une commune par nom ou code postal (008 US1). Sans script : formulaire GET ;
    avec /statique/communes.js : propositions pendant la frappe. Paramètres : action,
-   destination (adresse complétée par le code INSEE choisi), valeur. #}
+   destination (adresse complétée par le code INSEE choisi), valeur. Source de la liste :
+   _source_communes.html, en bas de page (le résultat suit directement la recherche). #}
 <form method="get" action="{{ action }}" class="carte recherche-commune" role="search">
   <label for="q">Commune ou code postal (Île-de-France)</label>
   <input id="q" name="q" value="{{ valeur or '' }}" maxlength="100" autocomplete="off"
@@ -11,7 +12,5 @@
   <p id="q-aide" class="note">Au moins 3 lettres du nom, par exemple « courbe » ou « paris 17 ».</p>
   <p class="note" role="status" aria-live="polite" data-etat-recherche></p>
   <button type="submit">Chercher</button>
-  {% set liste = metadonnees_communes() %}
-  <p class="note">Liste des communes : {{ liste.source }}, version du {{ liste.genere_le }}.</p>
 </form>
 <script src="/statique/communes.js" defer></script>

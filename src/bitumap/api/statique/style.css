@@ -1,8 +1,9 @@
 :root { --fond: #f4f5f7; --surface: #fff; --encre: #1c2126; --discret: #5b6570;
-        --ligne: #d5dae0; --accent: #9a6a00; --p1: #c23b2e; --p2: #de8a1b; --p3: #7f8c98; }
+        --ligne: #d5dae0; --accent: #9a6a00; --p1: #c23b2e; --p2: #de8a1b; --p3: #7f8c98;
+        --lien: #0a58b5; --sur-accent: #fff; }
 @media (prefers-color-scheme: dark) {
   :root { --fond: #15191d; --surface: #1e2328; --encre: #e8ecef; --discret: #9aa5af;
-          --ligne: #343b42; --accent: #ebb33a; }
+          --ligne: #343b42; --accent: #ebb33a; --lien: #8cc4ff; --sur-accent: #15191d; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fond); color: var(--encre);
@@ -19,7 +20,16 @@ input, button { font: inherit; padding: .5rem .75rem; border-radius: 6px;
                 border: 1px solid var(--ligne); }
 button { background: var(--encre); color: var(--surface); cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-a { color: inherit; text-decoration-color: var(--accent); }
+/* Liens reconnaissables à leur couleur et à leur soulignement (retour #53). */
+a { color: var(--lien); text-decoration-thickness: 1px; text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+/* Action principale de la page : bouton ou lien présenté comme un bouton. */
+.bouton { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .5rem 1rem;
+          border-radius: 6px; border: 1px solid var(--ligne); font-weight: 600;
+          text-decoration: none; }
+.principal { background: var(--accent); color: var(--sur-accent); border-color: var(--accent);
+             font-weight: 600; }
+a.principal:hover { text-decoration: underline; }
 .note, .pied { color: var(--discret); font-size: .9rem; }
 .pied { text-align: center; padding: 2rem 1rem; }
 table { border-collapse: collapse; width: 100%; }
@@ -56,7 +66,7 @@ button.lien { background: none; color: inherit; border: none; padding: .25rem 0;
 .menu summary { min-height: 2.75rem; display: flex; align-items: center; cursor: pointer;
                 font-weight: 600; width: max-content; }
 .menu ul { list-style: none; margin: 0; padding: 0 0 .5rem; display: grid; }
-.menu a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 .5rem;
+.menu a { color: var(--encre); display: flex; align-items: center; min-height: 2.75rem; padding: 0 .5rem;
           text-decoration: none; overflow-wrap: anywhere; }
 .menu a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
 .menu a[aria-current="page"] { font-weight: 700; text-decoration: underline;
@@ -72,9 +82,25 @@ button.lien { background: none; color: inherit; border: none; padding: .25rem 0;
 .fil li + li::before { content: "›" / ""; margin-right: .25rem; }
 .fil [aria-current="page"] { color: var(--encre); }
 .recherche-commune { position: relative; }
+.recherche-commune p { margin: 0; }
+/* Séquence recherche → résultat (retour #53) : le résultat suit la recherche, encadré et
+   titré, avec l'action à mener ; une commune choisie remplace la recherche. */
+.resultat { margin-top: 1rem; border-left: 4px solid var(--accent); }
+.resultat h2 { margin: 0; font-size: 1.15rem; }
+.resultat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.resultat li { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; }
+.resultat fieldset { border: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
+.resultat legend { padding: 0; margin-bottom: .25rem; }
+.resultat label { display: flex; align-items: center; gap: .5rem; min-height: 2.75rem; }
+.choisie { font-size: 1.25rem; font-weight: 700; margin: 0; }
 .propositions { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ligne);
                 border-radius: 6px; background: var(--surface); }
 .propositions li { min-height: 2.75rem; display: flex; align-items: center; padding: 0 .75rem;
                    cursor: pointer; }
 .propositions li[aria-selected="true"], .propositions li:hover { background: var(--fond);
                    box-shadow: inset 4px 0 0 var(--accent); }
+
+/* Liste des points (relevés terrain) : le rang est écrit, pas de seconde numérotation. */
+ul.liste-points { list-style: none; padding-left: 0; }
+ul.liste-points li { margin-bottom: .75rem; }
+ul.liste-points .petit { display: block; color: var(--discret); }

@@ -40,6 +40,19 @@ Séparateur « › » ajouté par CSS (non lu) ; dernier élément sans lien, `a
 | `/confidentialite` | confidentialite | Accueil › Données personnelles |
 | page d'erreur | *(aucune)* | Accueil › Erreur |
 
+## Séquence recherche → résultat (retours du mainteneur sur #53)
+
+- Le résultat suit directement la recherche, dans un cadre titré à bordure d'accent :
+  « N communes trouvées pour « … » » (demande) ou « Résultats pour « … » » (relevés,
+  parcours) ; la source de la liste des communes passe en bas de page.
+- Commune choisie parmi les propositions (`?insee=`) : la recherche laisse place au cadre
+  « Commune choisie », avec l'action (« Demander le rapport ») et un lien pour changer de
+  commune.
+- Liens : couleur propre (`--lien`) et soulignement ; action principale de la page en
+  bouton (`.principal`), y compris quand c'est un lien (« Demander le rapport »).
+- Liste des points des relevés : le rang est écrit dans le libellé, la liste n'ajoute pas de
+  numéro (`<ul>`).
+
 ## Liens existants mis en cohérence (FR-014)
 
 - Accueil connecté : les liens « Mes demandes · Mon compte » sous le formulaire sont

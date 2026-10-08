@@ -108,7 +108,22 @@ def test_ancien_lien_code_postal(client, agent, territoire):
 def test_choix_direct_par_insee(client, agent):
     page = client.get("/communes", params={"insee": "92026"}).text
     assert _radios(page) == ["92026"]
+    assert '<input type="hidden" name="insee" value="92026">' in page
+    # Retour #53 : la commune choisie remplace la recherche, l'action suit.
+    assert "Commune choisie" in page and 'id="q"' not in page
+    assert page.index("Courbevoie (92)") < page.index('class="principal">Demander le rapport')
+    assert 'href="/">Changer de commune' in page
+
+
+def test_resultat_juste_apres_la_recherche(client, agent):
+    page = client.get("/communes", params={"q": "courbevoie"}).text
+    recherche, resultat = page.index('role="search"'), page.index('class="carte resultat"')
+    assert recherche < resultat
+    assert "Liste des communes" not in page[recherche:resultat]  # source en bas de page
+    assert html.unescape(page).count("1 commune trouvée pour « courbevoie »") == 1
     assert 'value="92026" required checked' in page
+    page = client.get("/communes", params={"q": "asnieres"}).text
+    assert html.unescape(page).count("2 communes trouvées pour « asnieres »") == 1
 
 
 def test_choix_direct_hors_liste(client, agent):
