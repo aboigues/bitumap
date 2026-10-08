@@ -54,7 +54,8 @@ def _veut_json(requete: Request) -> bool:
 
 def chemin_local(valeur: str | None) -> str | None:
     """Chemin de ce site seulement (« /demandes?x=1 ») : jamais une autre origine
-    (« //exemple », « /\\exemple », « /<tabulation>/exemple »), ni une page de connexion (boucle)."""
+    (« //exemple », « /\\exemple », « /<tabulation>/exemple »), ni une page de connexion
+    (boucle)."""
     if not valeur or len(valeur) > 512 or any(c.isspace() or c == "\\" for c in valeur):
         return None
     # Forme reconnue par CodeQL (py/url-redirection) : barres inverses ramenées à « / »,
