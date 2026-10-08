@@ -159,7 +159,16 @@ def creer_application() -> FastAPI:
             f"Canonical: {r.url_publique.rstrip('/')}/.well-known/security.txt\n"
         )
 
-    from bitumap.api import antibot, auth, compte, demandes, pages, parcours, terrain
+    from bitumap.api import (
+        antibot,
+        auth,
+        compte,
+        demandes,
+        navigation,  # noqa: F401  (globales des gabarits : menu, fil)
+        pages,
+        parcours,
+        terrain,
+    )
 
     app.include_router(antibot.routeur)
     app.include_router(auth.routeur)

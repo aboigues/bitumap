@@ -235,8 +235,11 @@ résultat d'un parcours) ; le menu (P1) couvre déjà les déplacements principa
 ### Résultats mesurables
 
 - **SC-001** : Pour 100 % des communes et arrondissements d'Île-de-France, la saisie du nom
-  officiel complet fait apparaître la commune parmi les propositions ; pour 95 % d'entre
-  eux, les 5 premières lettres suffisent à la faire apparaître parmi les 10 propositions.
+  officiel complet fait apparaître la commune parmi les 10 propositions ; la moitié
+  apparaissent dès 3 lettres, au moins 99 % en 7 lettres au plus et toutes en 10 au plus
+  (début du nom). Mesuré le 2026-10-08 : 3, 99,1 % et 100 % ; « 5 lettres pour 95 % »,
+  première rédaction, était impossible à tenir : 77 noms commencent par « Saint », 25 par
+  « Ville », 20 par « Paris ».
 - **SC-002** : Les propositions apparaissent en moins de 0,3 s après une frappe, sur un
   téléphone d'entrée de gamme.
 - **SC-003** : Depuis n'importe quelle page connectée, chacune des fonctions principales

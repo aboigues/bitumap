@@ -55,8 +55,10 @@ Mesures faites le 2026-10-08 sur `geo.api.gouv.fr` et sur le code de `main` (6f7
 - **Codes** : 5 chiffres ⇒ recherche par code postal actuelle (R4) ; aucune recherche par
   code INSEE (non demandée, retirée en clarification).
 - **Vérification SC-001** : test qui parcourt les 1 285 entrées ; nom complet ⇒ présent ;
-  5 premières lettres ⇒ présent dans les 10 pour au moins 95 % (mesure à consigner dans le
-  test).
+  lettres nécessaires (début du nom) : médiane 3, 99,1 % en 7 au plus, maximum 10 (mesure
+  du 2026-10-08 ; « Saint », « Ville » et « Paris » empêchent toute cible à 5 lettres).
+  Saisie sans espace ni apostrophe acceptée (« lhay » ⇒ L'Haÿ-les-Roses). Durée mesurée :
+  0,4 ms par recherche.
 
 ## R4 — Code postal : recherche actuelle conservée
 
@@ -74,10 +76,11 @@ Mesures faites le 2026-10-08 sur `geo.api.gouv.fr` et sur le code de `main` (6f7
   courante porte `aria-current="page"` et un style non fondé sur la seule couleur
   (soulignement épais) (FR-009).
 - **Téléphone** (clarification Q4) : `<details class="menu"><summary>Menu</summary>…`
-  natif, qui s'ouvre et se ferme **sans script** ; au-delà de 48 em, la règle CSS affiche
-  la liste et masque le `summary` (le `details` est rendu ouvert par CSS, ce qui ne change
-  pas son état pour les technologies d'assistance : vérifié au quickstart avec un lecteur
-  d'écran). Aucun script, aucune modification de CSP.
+  natif, qui s'ouvre et se ferme **sans script** ; au-delà de 48 em, une seconde liste
+  (`.large`) est affichée et le `details` masqué. L'une des deux est toujours en
+  `display: none`, donc ignorée des lecteurs d'écran. Écarté à l'implémentation : forcer
+  l'affichage du contenu d'un `details` fermé par CSS, non fiable selon les navigateurs
+  (`::details-content`). Aucun script, aucune modification de CSP.
 - **Fil d'Ariane** : `<nav aria-label="Fil d'Ariane"><ol>` ; dernier élément sans lien,
   `aria-current="page"` ; absent de l'accueil (FR-011).
 - **Mainteneur** : fonction globale des gabarits `est_mainteneur(session)` (réutilise

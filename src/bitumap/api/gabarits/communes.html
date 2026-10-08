@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block contenu %}
-<h1>Code postal {{ code_postal }}</h1>
-{% if communes|length > 1 %}<p>Ce code postal couvre {{ communes|length }} communes : choisissez la vôtre.</p>{% endif %}
+<h1>Choisir la commune</h1>
+{% with action="/communes", destination="/communes?insee=", valeur=q %}
+{% include "_recherche_commune.html" %}
+{% endwith %}
+{% if message %}<p role="status">{{ message }}</p>{% endif %}
+{% if communes %}
+{% if communes|length > 1 %}<p>{{ communes|length }} communes correspondent : choisissez la vôtre.</p>{% endif %}
 <form method="post" action="/demandes" class="carte">
   <input type="hidden" name="csrf" value="{{ session.csrf }}">
   <fieldset>
@@ -14,5 +19,5 @@
   {% include "_antibot.html" %}
   <button type="submit">Demander le rapport</button>
 </form>
-<p><a href="/">Autre code postal</a></p>
+{% endif %}
 {% endblock %}

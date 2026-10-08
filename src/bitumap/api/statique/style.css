@@ -47,3 +47,34 @@ button.lien { background: none; color: inherit; border: none; padding: .25rem 0;
   .feuille-de-route .petit::before { content: " — "; }
   a { text-decoration: none; }
 }
+
+/* Menu commun et fil d'Ariane (008, contracts/interface.md). Aucun script : sur écran étroit,
+   le menu est un <details> natif ; sur écran large, une seconde liste est affichée. L'une des
+   deux est toujours en display:none, donc ignorée des lecteurs d'écran. Un <details> fermé ne
+   peut pas être ouvert par CSS de façon fiable (::details-content), d'où les deux listes. */
+.menu { background: var(--surface); border-bottom: 1px solid var(--ligne); padding: 0 1rem; }
+.menu summary { min-height: 2.75rem; display: flex; align-items: center; cursor: pointer;
+                font-weight: 600; width: max-content; }
+.menu ul { list-style: none; margin: 0; padding: 0 0 .5rem; display: grid; }
+.menu a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 .5rem;
+          text-decoration: none; overflow-wrap: anywhere; }
+.menu a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.menu a[aria-current="page"] { font-weight: 700; text-decoration: underline;
+                               text-decoration-thickness: 3px; text-underline-offset: .35em;
+                               text-decoration-color: var(--accent); }
+.menu .large { display: none; }
+@media (min-width: 48em) {
+  .menu details { display: none; }
+  .menu .large { display: flex; flex-wrap: wrap; gap: 0 .5rem; padding: 0; }
+}
+.fil ol { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-wrap: wrap;
+          gap: .25rem; font-size: .9rem; color: var(--discret); }
+.fil li + li::before { content: "›" / ""; margin-right: .25rem; }
+.fil [aria-current="page"] { color: var(--encre); }
+.recherche-commune { position: relative; }
+.propositions { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ligne);
+                border-radius: 6px; background: var(--surface); }
+.propositions li { min-height: 2.75rem; display: flex; align-items: center; padding: 0 .75rem;
+                   cursor: pointer; }
+.propositions li[aria-selected="true"], .propositions li:hover { background: var(--fond);
+                   box-shadow: inset 4px 0 0 var(--accent); }

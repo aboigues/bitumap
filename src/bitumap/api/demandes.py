@@ -14,10 +14,11 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
-from bitumap import stockage
+from bitumap import stockage, territoire
 from bitumap.api import antibot, quotas
 from bitumap.api.application import ErreurPublique, gabarits
 from bitumap.api.auth import SessionRequise, verifier_csrf
@@ -30,6 +31,7 @@ from bitumap.score.methode import VERSION_METHODE
 from bitumap.terrain import classement
 from bitumap.terrain import depot as releves_terrain
 from bitumap.territoire import ErreurTerritoire, commune_par_insee, communes_du_code_postal
+from bitumap.territoire.recherche import SEUIL, normaliser
 
 routeur = APIRouter()
 _EMPREINTE = re.compile(r"^[0-9a-f]{16}$")
@@ -117,16 +119,61 @@ def _creer_ou_rattacher(commune, empreinte: str, compte_id: str) -> str:
     return demande_id
 
 
+_CODE_POSTAL = re.compile(r"^\d{5}$")
+GEO_INDISPONIBLE = "Recherche par code postal indisponible : cherchez par le nom de la commune."
+AUCUNE_COMMUNE = "Aucune commune trouvée : le service couvre l'Île-de-France seulement."
+TROP_COURT = "Saisissez au moins 3 lettres du nom de la commune, ou son code postal."
+
+
+@routeur.get("/communes/recherche")
+def propositions(session: SessionRequise, q: str = "") -> JSONResponse:
+    """Propositions pendant la frappe (008 R2) : liste intégrée, aucun appel externe."""
+    trouvees = territoire.rechercher(q)
+    return JSONResponse(
+        [{"insee": c.insee, "nom": c.nom, "departement": c.departement} for c in trouvees],
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+def chercher_communes(q: str) -> tuple[list, str | None]:
+    """Communes pour une saisie (nom ou code postal) et message éventuel (FR-003, FR-007)."""
+    q = q.strip()
+    if _CODE_POSTAL.match(q):
+        try:
+            return communes_du_code_postal(q), None
+        except ErreurTerritoire as e:
+            return [], e.message
+        except httpx.HTTPError:
+            return [], GEO_INDISPONIBLE
+    trouvees = territoire.rechercher(q)
+    if trouvees:
+        return trouvees, None
+    trop_court = len(normaliser(q)) < SEUIL
+    return [], TROP_COURT if trop_court else AUCUNE_COMMUNE
+
+
 @routeur.get("/communes")
-def communes(requete: Request, session: SessionRequise, code_postal: str = "") -> Response:
-    try:
-        liste = communes_du_code_postal(code_postal)
-    except ErreurTerritoire as e:
-        raise _erreur_territoire(e) from e
+def communes(
+    requete: Request, session: SessionRequise, q: str = "", insee: str = "", code_postal: str = ""
+) -> Response:
+    message = None
+    if insee:
+        commune = territoire.par_insee(insee)
+        if commune is None:
+            raise ErreurPublique(404, "code_inexistant", "Commune inconnue.")
+        liste = [commune]
+    elif code_postal:  # anciens liens et formulaires (002)
+        try:
+            liste = communes_du_code_postal(code_postal)
+        except ErreurTerritoire as e:
+            raise _erreur_territoire(e) from e
+        q = code_postal
+    else:
+        liste, message = chercher_communes(q)
     return gabarits.TemplateResponse(
         requete,
         "communes.html",
-        {"session": session, "communes": liste, "code_postal": code_postal},
+        {"session": session, "communes": liste, "q": q, "message": message},
     )
 
 
