@@ -36,6 +36,7 @@ dev = [
     "ruff>=0.16.9",
     "respx>=0.23.1",
     "moto[s3]>=5.2.3",
+    "pyyaml>=6.0.3",   # tests de structure des workflows
 ]
 
 [build-system]
