@@ -108,10 +108,15 @@ class _Ressources(HTMLParser):
 
 def test_aucune_ressource_externe(rapport):
     analyse = rapport["analyse"]
-    assert analyse.chargees == []  # ni script, ni style, ni image, ni police externes
+    # Ni script, ni style, ni image, ni police externes ; l'icône en ligne n'est pas chargée.
+    assert [c for c in analyse.chargees if c != f"link href={rendu.ICONE}"] == []
     assert analyse.liens  # les liens cliquables (sources, photos) restent permis
     assert not re.search(r"@import|url\(\s*['\"]?(https?:)?//", rapport["html"])
-    assert not analyse.balises & {"link", "iframe", "object", "embed", "base"}
+    assert not analyse.balises & {"iframe", "object", "embed", "base"}
+    # Seule balise <link> permise : l'icône en ligne (data:, rien n'est chargé ; issue #56).
+    icone = f'<link rel="icon" href="{rendu.ICONE}">'
+    assert re.findall(r"<link\b[^>]*>", rapport["html"]) == [icone]
+    assert rendu.ICONE.startswith("data:image/svg+xml;base64,")
 
 
 def test_script_conforme_a_la_csp(rapport):
