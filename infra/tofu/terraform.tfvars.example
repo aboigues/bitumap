@@ -16,3 +16,14 @@ digest_job = "sha256:00000000000000000000000000000000000000000000000000000000000
 activer_domaine = false
 # Facultatif : destinataire des alertes, compte mainteneur.
 # email_mainteneur = "…"
+# Facultatif : identité de l'éditeur (mentions légales, page « À propos »).
+# editeur = {
+#   nom         = "…"
+#   forme       = "EI"
+#   responsable = "…"   # entrepreneur, directeur de la publication
+#   siret       = "…"
+#   adresse     = "…"
+#   contact     = "…"   # adresse électronique
+#   site        = "https://…"
+#   presentation = "…"   # quelques phrases sur l'éditeur, page « À propos »
+# }

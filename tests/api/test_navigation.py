@@ -45,7 +45,7 @@ def empreinte_fixe(monkeypatch):
 def test_menu_du_visiteur(client):
     for chemin in ("/", "/confidentialite", "/page-inexistante"):
         page = client.get(chemin).text
-        assert _menu(page) == ["Accueil", "Données personnelles"], chemin
+        assert _menu(page) == ["Accueil", "À propos", "Données personnelles"], chemin
         for reservee in ("/demandes", "/terrain", "/parcours", "/compte"):
             assert f'href="{reservee}"' not in page, (chemin, reservee)
 

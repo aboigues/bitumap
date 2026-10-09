@@ -79,7 +79,8 @@ enregistrement : SPF et MX ne peuvent donc pas être posés sur le domaine du se
    s'arrête sur « Aucune offre Transactional Email sur le projet ».
 1. Dans `terraform.tfvars` : `domaine_envoi`, `digest_api` et `digest_job` (notes de la
    version : `gh release view v<x.y.z>`, lignes « api » et « job »), `email_mainteneur`
-   (facultatif). Laisser `activer_domaine` à `false`.
+   (facultatif), `editeur` (identité affichée dans les mentions légales, facultatif mais
+   attendu en production). Laisser `activer_domaine` à `false`.
 2. `tofu plan -input=false -out=bitumap.tfplan` puis `tofu apply bitumap.tfplan` : crée le
    conteneur, le job, le domaine d'envoi. Le job tourne dès lors toutes les 15 minutes.
 3. Chez le registraire, créer les enregistrements donnés par :

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set fil = fil_ariane(("À propos", None)) %}
+{% set rubrique = "a-propos" %}
+{% block titre %}À propos · bitumap{% endblock %}
+{% block contenu %}
+<h1>À propos de bitumap</h1>
+
+<h2>D'où vient le projet</h2>
+<p>bitumap est né d'un constat de terrain : sur le réseau bus, les chaussées se déforment là
+  où les bus freinent, s'arrêtent et redémarrent. Ce sont les ornières, qui apparaissent aux
+  arrêts, aux carrefours à feux et aux giratoires. Ce phénomène est <strong>fortement aggravé
+  pendant les périodes de canicule</strong> : chauffé par le soleil, l'enrobé se ramollit et
+  cède sous le poids des bus. Un premier prototype a été construit pour Courbevoie en
+  septembre 2026 ; bitumap en est la version outillée, qui permet de produire le même
+  diagnostic pour n'importe quelle commune d'Île-de-France.</p>
+
+<h2>À quoi il sert</h2>
+<p>Pour une commune donnée, bitumap classe les arrêts de bus, les carrefours à feux et les
+  giratoires selon le risque d'orniérage de l'enrobé : fréquentation des bus, freinages,
+  pente, ensoleillement et chaleur. Le résultat est un rapport qui indique <strong>où aller
+  regarder en priorité</strong> sur le terrain.</p>
+<p>C'est un <strong>premier tri de bureau</strong> : bitumap ne mesure pas l'état réel de la
+  chaussée. Les relevés faits sur place par les agents complètent ensuite le rapport, sans
+  jamais modifier le calcul d'origine.</p>
+
+<h2>Comment il fonctionne</h2>
+<ul>
+  <li><strong>Données ouvertes seulement</strong> : offre de bus d'Île-de-France Mobilités,
+    OpenStreetMap, IGN (BD TOPO, altitudes, photographies aériennes), îlots de chaleur,
+    Panoramax. Chaque source est citée dans le rapport, avec sa licence et sa date.</li>
+  <li><strong>Méthode transparente et reproductible</strong> : le score suit des règles publiées
+    et versionnées ; les mêmes données donnent toujours le même rapport.</li>
+  <li><strong>Intelligence artificielle encadrée</strong> : un modèle d'analyse d'images,
+    hébergé en France, estime l'âge de l'enrobé sur les photographies aériennes, pour les
+    seuls points les plus prioritaires ; son avis est présenté « à confirmer » et son coût est
+    plafonné.</li>
+  <li><strong>Hébergement souverain et sobre</strong> : le service tourne en France et ne
+    consomme rien quand personne ne s'en sert ; un rapport n'est calculé qu'à la demande, puis
+    réutilisé.</li>
+</ul>
+
+<h2>Une démarche de preuve de concept</h2>
+<p>bitumap est une <strong>preuve de concept</strong>, développée selon une démarche
+  <em lang="en">Forward Deployed Engineering</em> : l'outil est construit au plus près des
+  usages réels, et chaque retour du terrain le fait évoluer.</p>
+
+<h2>Portée et limites</h2>
+<ul>
+  <li><strong>Territoire</strong> : Île-de-France, réseau bus.</li>
+  <li><strong>Nature du résultat</strong> : aide à la priorisation des visites de terrain ; ni
+    diagnostic de chaussée, ni expertise, ni base suffisante pour décider de travaux.</li>
+  <li><strong>Fiabilité</strong> : elle dépend de la qualité et de la fraîcheur des données
+    ouvertes ; les avertissements de chaque rapport signalent les données manquantes.</li>
+</ul>
+
+{% if editeur.nom or editeur.responsable %}
+<h2>Qui porte le projet</h2>
+<p>bitumap est porté par {{ editeur.responsable or "" }}{% if editeur.responsable and editeur.nom %}, {% endif %}{{ editeur.nom or "" }}.
+  {% if editeur.presentation %}{{ editeur.presentation }}{% endif %}</p>
+{% if editeur.site %}<p><a href="{{ editeur.site }}" rel="noopener">{{ editeur.site }}</a></p>{% endif %}
+{% endif %}
+{% if editeur.contact %}<p>Contact : <a href="mailto:{{ editeur.contact }}">{{ editeur.contact }}</a>.</p>{% endif %}
+<p><a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Données personnelles</a></p>
+{% endblock %}

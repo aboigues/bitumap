@@ -31,6 +31,7 @@ ENTREES = (
     Entree("parcours", "Parcours", "/parcours", "connecte"),
     Entree("compte", "Mon compte", "/compte", "connecte"),
     Entree("moderation", "Modération", "/terrain/moderation", "mainteneur"),
+    Entree("a-propos", "À propos", "/a-propos", "visiteur"),
     Entree("confidentialite", "Données personnelles", "/confidentialite", "visiteur"),
 )
 
