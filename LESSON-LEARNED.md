@@ -33,6 +33,25 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-033 — Contrôle requis « exceptions » en échec : test avec pytest (2026-10-09) — Close
+
+- **Contexte** : CI de la PR #54, ajout d'un test de structure du workflow `release`.
+- **Symptôme** : job `exceptions` en échec : `ModuleNotFoundError: No module named
+  'pytest'` à l'import de `tests/security/test_release_attestations.py`.
+- **Causes racines** :
+  1. Pourquoi ? Le test importait pytest et PyYAML, alors que le job `exceptions` lance
+     `tests/security` par `python3 -m unittest`, sans installer les dépendances.
+  2. Pourquoi placé là ? Rangé par thème (sécurité), sans lire comment ce dossier est lancé ;
+     la règle n'était écrite que dans le docstring de `test_check_exceptions.py`.
+  3. Pourquoi non vu en local ? Le test a été lancé avec `uv run pytest`, dont
+     l'environnement contient toutes les dépendances.
+- **Correctif** : test déplacé dans `tests/unit` (job `tests`).
+- **Mesure préventive** : test `tests/security/test_bibliotheque_standard.py`, lancé par le
+  job `exceptions`, qui refuse tout import hors de la bibliothèque standard dans ce dossier,
+  avec un message qui renvoie vers `tests/unit`. Règle : un test est lancé localement comme le
+  lance son job de CI.
+- **Références** : PR #54.
+
 ### LL-032 — Retour après connexion vers un autre site possible (2026-10-08) — Close
 
 - **Contexte** : alerte CodeQL (`py/url-redirection`) sur la PR #53, code venu de #52 ;
