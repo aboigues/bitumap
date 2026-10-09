@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Génère l'icône du site (issue #56) : ``favicon.svg`` et ``favicon.ico``.
 
 Carré couleur asphalte, deux ornières ambre en perspective (une voie vue de face, pas deux
