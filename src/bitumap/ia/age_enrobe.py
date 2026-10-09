@@ -104,8 +104,10 @@ class AnalyseurAge:
         stats: StatistiquesIA,
         appel=client_ia.analyser,
         annee: int | None = None,
+        avancement: Callable[[str, int, int], None] | None = None,
     ):
         self._vignettes = vignettes
+        self._avancement = avancement  # 009 : (« ia », points traités, points P1)
         self._budget = budget
         self._stats = stats
         self._appel = appel
@@ -120,8 +122,12 @@ class AnalyseurAge:
         stats.modele, stats.version_prompt = self._modele, self._version
 
     def __call__(self, points_p1: list[Point]) -> None:
-        for p in points_p1:
+        if self._avancement and points_p1:
+            self._avancement("ia", 0, len(points_p1))
+        for k, p in enumerate(points_p1, start=1):
             p.facteurs.append(self._analyser(p))
+            if self._avancement:
+                self._avancement("ia", k, len(points_p1))
 
     def _analyser(self, p: Point) -> Facteur:
         try:

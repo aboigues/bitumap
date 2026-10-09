@@ -43,7 +43,11 @@ réveillée à chaque lot jusqu'au lendemain.
    (`lot.duree_regionale_s`).
 4. **Par commune**, en séquence, avec délai maximal de 30 min :
    `acquisition` (sources communales) → `calcul` (points, facteurs, IA P1, score) →
-   `rapport` (HTML, GeoJSON, sources, journal) ; `demande.etape` mis à jour à chaque étape.
+   `rapport` (HTML, GeoJSON, sources, journal). Avancement affiché à l'usager (009,
+   `specs/009-progression-rapport/contracts/progression.md`) : `demande.etape` vaut
+   `sources`, `points`, `ia` puis `rapport`, avec `demande.avancement` (0 à 99 %) et,
+   pendant les analyses par l'IA, `demande.fin_estimee` ; écrits au plus toutes les 5 s et
+   à chaque changement de phase, effacés à la sortie de l'état `en_cours`.
    Échec d'une commune ⇒ `en_echec` (ou nouvelle tentative au lot suivant si
    `tentatives < 2` et erreur transitoire) ; les autres communes continuent (FR-007d).
 5. **Notification** : e-mail à chaque compte rattaché (succès ou échec, FR-007c).

@@ -145,3 +145,41 @@ def test_orthophotos_en_echec_tracees_avec_leur_cause(base):
     a([p])
     assert "HTTP 429" in p.facteur("age_enrobe").explication
     assert a.echecs["orthophotos"] == [("A1", "Orthophotos IGN : HTTP 429")]
+
+
+def _avec_avancement(faux, vignettes, points):
+    appels = []
+    a = age_enrobe.AnalyseurAge(
+        vignettes,
+        budget.BudgetRapport(),
+        StatistiquesIA(),
+        faux,
+        annee=2026,
+        avancement=lambda *args: appels.append(args),
+    )
+    a(points)
+    return appels
+
+
+def test_avancement_apres_chaque_point_quel_que_soit_le_resultat(base):
+    # 009, contrat §1 : réponse, cache, orthophotos indisponibles, service en échec.
+    from bitumap.sources.base import SourceIndisponible
+
+    def vignettes(lon, lat):
+        if lon > 2.5:
+            raise SourceIndisponible("Orthophotos IGN", "HTTP 400")
+        return IMAGES
+
+    points = [
+        Point(id=f"A{i}", type="arret", nom="x", lon=2.27 + i, lat=48.9, priorite="P1")
+        for i in range(2)
+    ]
+    points.append(Point(id="A0", type="arret", nom="x", lon=2.27, lat=48.9, priorite="P1"))
+    appels = _avec_avancement(Faux(_reponse(2014, 2017)), vignettes, points)
+    assert appels == [("ia", 0, 3), ("ia", 1, 3), ("ia", 2, 3), ("ia", 3, 3)]
+
+
+def test_avancement_service_en_echec_et_liste_vide(base):
+    appels = _avec_avancement(Faux(None, erreur=RuntimeError("panne")), lambda *_: IMAGES, [_p1()])
+    assert appels == [("ia", 0, 1), ("ia", 1, 1)]
+    assert _avec_avancement(Faux(None), lambda *_: IMAGES, []) == []

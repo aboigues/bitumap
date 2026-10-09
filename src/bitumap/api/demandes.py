@@ -274,6 +274,17 @@ def _duree_moyenne_lot_min() -> float:
     return float(ligne["m"]) if ligne and ligne["m"] else DUREE_LOT_DEFAUT_MIN
 
 
+def minutes_restantes(fin_estimee: datetime | None) -> int | None:
+    """Durée restante arrondie à la minute supérieure (009, R5) ; 0 sous une minute ;
+    ``None`` sans estimation ou une fois l'heure passée."""
+    if fin_estimee is None:
+        return None
+    secondes = (fin_estimee - datetime.now(UTC)).total_seconds()
+    if secondes <= 0:
+        return None
+    return 0 if secondes < 60 else math.ceil(secondes / 60)
+
+
 def suivi_de(demande_id: str, compte_id: str) -> dict | None:
     with connexion() as conn:
         d = conn.execute(
@@ -290,7 +301,9 @@ def suivi_de(demande_id: str, compte_id: str) -> dict | None:
                 (d["cree_le"],),
             ).fetchone()["p"]
     suivi = dict(d)
+    suivi.setdefault("avancement", None)  # avant la migration du job (009, R7)
     suivi["position"] = position
+    suivi["minutes_restantes"] = minutes_restantes(suivi.get("fin_estimee"))
     if position is not None:
         lots_avant = math.ceil(position / reglages().lot_taille) - 1
         debut = _prochain_declenchement(datetime.now(UTC))
@@ -317,8 +330,8 @@ def suivi(requete: Request, demande_id: str, session: SessionRequise) -> Respons
 def mes_demandes(requete: Request, session: SessionRequise) -> Response:
     with connexion() as conn:
         lignes = conn.execute(
-            "SELECT d.id, d.commune_nom, d.commune_insee, d.empreinte, d.etat, d.cree_le"
-            " FROM demande d JOIN demandeur_demande dd ON dd.demande_id = d.id"
+            # d.* : l'avancement (009) n'existe qu'après la migration du job (R7).
+            "SELECT d.* FROM demande d JOIN demandeur_demande dd ON dd.demande_id = d.id"
             " WHERE dd.compte_id = %s ORDER BY d.cree_le DESC LIMIT 100",
             (session.compte_id,),
         ).fetchall()

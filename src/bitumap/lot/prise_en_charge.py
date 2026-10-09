@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from bitumap.config import reglages
 from bitumap.db import connexion
 
@@ -17,8 +19,8 @@ def reprendre_les_lots_interrompus() -> int:
     heures = reglages().lot_delai_max_h
     with connexion() as conn:
         reprises = conn.execute(
-            "UPDATE demande SET etat = 'en_file', etape = NULL, lot_id = NULL,"
-            " tentatives = tentatives + 1"
+            "UPDATE demande SET etat = 'en_file', etape = NULL, avancement = NULL,"
+            " fin_estimee = NULL, lot_id = NULL, tentatives = tentatives + 1"
             " WHERE etat = 'en_cours' AND tentatives < 2"
             " AND pris_en_charge_le < now() - make_interval(hours => %s)"
             " RETURNING id",
@@ -26,6 +28,7 @@ def reprendre_les_lots_interrompus() -> int:
         ).fetchall()
         conn.execute(
             "UPDATE demande SET etat = 'en_echec', termine_le = now(),"
+            " etape = NULL, avancement = NULL, fin_estimee = NULL,"
             " erreur_publique = 'La génération a été interrompue.'"
             " WHERE etat = 'en_cours' AND tentatives >= 2"
             " AND pris_en_charge_le < now() - make_interval(hours => %s)",
@@ -51,16 +54,23 @@ def prendre(lot_id: str, taille: int | None = None) -> list[dict]:
     return [dict(d) for d in demandes]
 
 
-def etape(demande_id: str, nom: str) -> None:
+def avancer(demande_id: str, etape: str, avancement: int, fin_estimee: datetime | None) -> None:
+    """Avancement de la génération (009, contrat §2) : jamais en recul, et seulement pour une
+    demande encore en cours (pas après une remise en file ou la fin)."""
     with connexion() as conn:
-        conn.execute("UPDATE demande SET etape = %s WHERE id = %s", (nom, demande_id))
+        conn.execute(
+            "UPDATE demande SET etape = %s,"
+            " avancement = GREATEST(coalesce(avancement, 0), %s), fin_estimee = %s"
+            " WHERE id = %s AND etat = 'en_cours'",
+            (etape, avancement, fin_estimee, demande_id),
+        )
 
 
 def terminer(demande_id: str, empreinte: str) -> None:
     with connexion() as conn:
         conn.execute(
-            "UPDATE demande SET etat = 'terminee', etape = NULL, termine_le = now(),"
-            " empreinte = %s WHERE id = %s",
+            "UPDATE demande SET etat = 'terminee', etape = NULL, avancement = NULL,"
+            " fin_estimee = NULL, termine_le = now(), empreinte = %s WHERE id = %s",
             (empreinte, demande_id),
         )
 
@@ -68,8 +78,8 @@ def terminer(demande_id: str, empreinte: str) -> None:
 def echouer(demande_id: str, message_public: str) -> None:
     with connexion() as conn:
         conn.execute(
-            "UPDATE demande SET etat = 'en_echec', etape = NULL, termine_le = now(),"
-            " erreur_publique = %s WHERE id = %s",
+            "UPDATE demande SET etat = 'en_echec', etape = NULL, avancement = NULL,"
+            " fin_estimee = NULL, termine_le = now(), erreur_publique = %s WHERE id = %s",
             (message_public, demande_id),
         )
 
@@ -78,8 +88,8 @@ def reporter(demande_id: str) -> None:
     """Budget IA du jour insuffisant : la demande retourne en file pour le lendemain."""
     with connexion() as conn:
         conn.execute(
-            "UPDATE demande SET etat = 'en_file', etape = NULL, lot_id = NULL, reportee = true"
-            " WHERE id = %s",
+            "UPDATE demande SET etat = 'en_file', etape = NULL, avancement = NULL,"
+            " fin_estimee = NULL, lot_id = NULL, reportee = true WHERE id = %s",
             (demande_id,),
         )
 

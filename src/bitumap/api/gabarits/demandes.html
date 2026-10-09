@@ -9,7 +9,8 @@
   <tbody>
   {% for d in demandes %}
   <tr><td>{{ d.commune_nom }}</td><td>{{ d.cree_le|heure }}</td>
-    <td>{{ {"en_file": "en file", "en_cours": "en cours", "terminee": "terminée", "en_echec": "en échec"}[d.etat] }}</td>
+    <td>{{ {"en_file": "en file", "en_cours": "en cours", "terminee": "terminée", "en_echec": "en échec"}[d.etat] }}
+        {%- if d.etat == "en_cours" and d.avancement is number %} ({{ d.avancement }} %){% endif %}</td>
     <td>{% if d.etat == "terminee" %}<a href="/rapports/{{ d.commune_insee }}/{{ d.empreinte }}">rapport</a>
         {% else %}<a href="/demandes/{{ d.id }}">suivi</a>{% endif %}</td></tr>
   {% endfor %}

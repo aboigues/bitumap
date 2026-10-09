@@ -26,6 +26,7 @@ from bitumap.ia.budget import (
 from bitumap.journal import JournalGeneration, evenement
 from bitumap.lot import prise_en_charge as file
 from bitumap.lot import versions
+from bitumap.lot.progression import Progression
 from bitumap.rapport import rendu
 from bitumap.score.comparaison import calculer_avec_v1
 from bitumap.score.methode import VERSION_METHODE, version_appliquee
@@ -157,20 +158,25 @@ def traiter(
 
     jg = JournalGeneration(insee, version_appliquee(), lot_id=lot_id)
     budget = BudgetRapport()
+    # Avancement affiché sur la page de suivi (009) ; ne fait jamais échouer la génération.
+    progression = Progression(lambda etape, pct, fin: file.avancer(ident, etape, pct, fin))
     kwargs = {} if appel_ia is None else {"appel": appel_ia}
-    analyseur = AnalyseurAge(vignettes, budget, jg.ia, **kwargs)
+    analyseur = AnalyseurAge(vignettes, budget, jg.ia, avancement=progression, **kwargs)
     try:
         with delai_maximal(reglages().commune_delai_max_min * 60):
-            file.etape(ident, "acquisition")
             fournisseur = _Chronometre(fabrique(insee), jg, "acquisition")
-            file.etape(ident, "calcul")
             with jg.chronometrer("calcul"):
                 # 2.0 : la commune est aussi calculée en 1.2 pour expliquer les changements
                 # de niveau (004 R6), sur les mêmes sources et réponses d'IA.
                 calcul = (
                     calculer_commune if jg.version_methode == VERSION_METHODE else calculer_avec_v1
                 )
-                resultat = calcul(fournisseur, nom, analyse_ia=_Chronometre(analyseur, jg, "ia"))
+                resultat = calcul(
+                    fournisseur,
+                    nom,
+                    analyse_ia=_Chronometre(analyseur, jg, "ia"),
+                    avancement=progression,
+                )
             # Temps propre du calcul : sans l'acquisition des sources ni l'IA.
             jg.durees_s["calcul"] = round(
                 jg.durees_s["calcul"]
@@ -184,7 +190,7 @@ def traiter(
                     f"{analyseur.hors_plafond} point(s) prioritaire(s)."
                 )
             _signaler_echecs_ia(analyseur, resultat.avertissements, insee)
-            file.etape(ident, "rapport")
+            progression("rapport", 0, 1)
             with jg.chronometrer("rapport"):
                 jg.nb_points = len(resultat.points)
                 jg.avertissements = resultat.avertissements

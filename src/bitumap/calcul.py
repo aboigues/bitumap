@@ -248,10 +248,14 @@ def calculer_commune(
     analyse_ia: Callable[[list[Point]], None] | None = None,
     methode: str | None = None,
     retenus: frozenset[str] | None = None,
+    avancement: Callable[[str, int, int], None] | None = None,
 ) -> ResultatCommune:
     """``methode`` : version à appliquer (défaut : ``BITUMAP_METHODE``) ; ``retenus`` :
     indicateurs de chaleur 2.0 qui agissent sur le score (défaut : ceux de la méthode ;
-    l'outil d'évaluation les essaie un par un, R7)."""
+    l'outil d'évaluation les essaie un par un, R7) ; ``avancement`` : appelé au fil du
+    travail, ``(phase, fait, total)`` (009, contrat §1), sans effet sur le résultat."""
+    signaler = avancement or (lambda phase, fait, total: None)
+    signaler("sources", 0, 1)
     avertissements: list[str] = []
     contour = f.contour()
     commune = c.polygone_commune(contour)
@@ -349,7 +353,10 @@ def calculer_commune(
         except Exception as erreur:
             avertissements.append(f"Comptages poids lourds indisponibles : {type(erreur).__name__}")
     infrarouge_ko: list[tuple[str, str]] = []
+    signaler("sources", 1, 1)
     for i, (p, g, voie) in enumerate(zip(points, geos_l93, voies_proches, strict=True)):
+        if i:
+            signaler("points", i, len(points))
         p.facteurs.append(charge.calculer(p))
         p.facteurs += sollicitation.calculer(p, distances_feux.get(p.id))
 
@@ -435,6 +442,7 @@ def calculer_commune(
             p.panoramax = None if photo is None else photo.__dict__
         except Exception:
             avertissements.append(f"Panoramax indisponible pour {p.id}")
+    signaler("points", len(points), len(points))
 
     if infrarouge_ko:
         avertissements.append(regrouper("Infrarouge indisponible", infrarouge_ko))

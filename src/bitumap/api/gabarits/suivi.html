@@ -3,7 +3,9 @@
 {% set rubrique = "demandes" %}
 {% block titre %}Suivi — {{ demande.commune_nom }}{% endblock %}
 {% block contenu %}
-{% if demande.etat in ("en_file", "en_cours") %}<meta http-equiv="refresh" content="30">{% endif %}
+{# Rechargement sans script : 15 s pendant la génération (009, R6), 30 s en file. #}
+{% if demande.etat == "en_cours" %}<meta http-equiv="refresh" content="15">
+{% elif demande.etat == "en_file" %}<meta http-equiv="refresh" content="30">{% endif %}
 <h1>Rapport de {{ demande.commune_nom }}</h1>
 {% if demande.etat == "en_file" %}
   <p>Votre demande est en file d'attente, en position <strong>{{ demande.position }}</strong>.
@@ -11,7 +13,18 @@
   {% else %}Traitement estimé vers <strong>{{ demande.heure_estimee|heure("%H:%M") }}</strong>.{% endif %}</p>
   <p class="note">Vous recevrez un e-mail quand le rapport sera prêt ; vous pouvez fermer cette page.</p>
 {% elif demande.etat == "en_cours" %}
-  <p>Génération en cours : étape <strong>{{ {"acquisition": "acquisition des données", "calcul": "calcul des priorités", "rapport": "mise en forme du rapport"}.get(demande.etape, "démarrage") }}</strong>.</p>
+  {% set phases = {"sources": "lecture des données", "points": "analyse des points",
+                   "ia": "analyse des photos aériennes", "rapport": "mise en forme du rapport"} %}
+  {% if demande.avancement is not none %}
+  <p>Génération en cours : <strong>{{ demande.avancement }} %</strong> — {{ phases.get(demande.etape, "génération en cours") }}.</p>
+  <progress max="100" value="{{ demande.avancement }}" aria-label="Avancement de la génération">{{ demande.avancement }} %</progress>
+  {% if demande.minutes_restantes == 0 %}<p>Moins d'une minute.</p>
+  {% elif demande.minutes_restantes %}<p>Environ {{ demande.minutes_restantes }} min {{ "restante" if demande.minutes_restantes == 1 else "restantes" }}.</p>{% endif %}
+  {% elif demande.etape %}
+  <p>Génération en cours : {{ phases.get(demande.etape, "génération en cours") }}.</p>
+  {% else %}
+  <p>Génération en cours : démarrage.</p>
+  {% endif %}
 {% elif demande.etat == "terminee" %}
   <p><a href="/rapports/{{ demande.commune_insee }}/{{ demande.empreinte }}">Ouvrir le rapport</a></p>
 {% else %}
