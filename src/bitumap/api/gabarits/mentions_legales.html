@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set fil = fil_ariane(("Mentions légales", None)) %}
+{% set rubrique = "mentions-legales" %}
+{% block titre %}Mentions légales · bitumap{% endblock %}
+{% block contenu %}
+{% set non_renseigne = "non renseigné" %}
+<h1>Mentions légales</h1>
+
+<h2>Éditeur</h2>
+<p>{{ editeur.responsable or non_renseigne }}{% if editeur.nom %}, {{ editeur.nom }}{% endif %}{% if editeur.forme %} ({{ editeur.forme }}){% endif %}<br>
+  SIRET : {{ editeur.siret or non_renseigne }}<br>
+  Adresse : {{ editeur.adresse or non_renseigne }}<br>
+  Contact : {% if editeur.contact %}<a href="mailto:{{ editeur.contact }}">{{ editeur.contact }}</a>{% else %}{{ non_renseigne }}{% endif %}
+  {% if editeur.site %}<br>Site : <a href="{{ editeur.site }}" rel="noopener">{{ editeur.site }}</a>{% endif %}</p>
+
+<h2>Directeur de la publication</h2>
+<p>{{ editeur.responsable or non_renseigne }}</p>
+
+<h2>Hébergeur</h2>
+<p>Scaleway SAS, société par actions simplifiée au capital de 142 050 €, 433 115 904 RCS
+  Paris, 8 rue de la Ville-l'Évêque, 75008 Paris, France. Données hébergées en France
+  (région Paris).</p>
+
+<h2>Données personnelles</h2>
+<p>Le traitement des données personnelles est décrit sur la page
+  <a href="/confidentialite">Données personnelles</a> (finalités, durées de conservation,
+  droits et contact).</p>
+
+<h2>Sources et propriété intellectuelle</h2>
+<p>Les rapports sont établis à partir de données ouvertes, utilisées selon leurs licences ;
+  chaque rapport cite ses sources, leur licence et leur date. Les fonds de carte et
+  photographies citées restent la propriété de leurs producteurs.</p>
+
+<h2>Signalement d'une faille de sécurité</h2>
+<p>Voir <a href="/.well-known/security.txt">security.txt</a>.</p>
+{% endblock %}

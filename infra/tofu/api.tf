@@ -54,6 +54,9 @@ resource "scaleway_container" "api" {
     # (à vérifier après le premier déploiement, quickstart §6).
     BITUMAP_ORIGINE_VIA_PROXY = "true"
     BITUMAP_S3_CLE_ACCES      = local.id_api.access_key
+    }, {
+    # Identité de l'éditeur (mentions légales, issue #57) : valeurs non vides seulement.
+    for cle, valeur in var.editeur : "BITUMAP_EDITEUR_${upper(cle)}" => valeur if valeur != ""
   })
 
   # Pas de référence à Secret Manager pour un conteneur (fournisseur 2.84) : les valeurs

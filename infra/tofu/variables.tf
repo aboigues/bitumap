@@ -97,3 +97,23 @@ variable "email_mainteneur" {
   default     = ""
   sensitive   = true
 }
+
+variable "editeur" {
+  description = "Identité de l'éditeur affichée dans les mentions légales et « À propos » (BITUMAP_EDITEUR_*) ; jamais versionnée."
+  type = object({
+    nom          = optional(string, "")
+    forme        = optional(string, "")
+    responsable  = optional(string, "")
+    siret        = optional(string, "")
+    adresse      = optional(string, "")
+    contact      = optional(string, "")
+    site         = optional(string, "")
+    presentation = optional(string, "")
+  })
+  default = {}
+
+  validation {
+    condition     = var.editeur.site == "" || startswith(var.editeur.site, "https://")
+    error_message = "editeur.site doit commencer par https://."
+  }
+}

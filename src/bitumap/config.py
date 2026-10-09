@@ -10,7 +10,7 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -92,6 +92,24 @@ class Reglages(BaseSettings):
     projet_scaleway: str = ""  # identifiant du projet BITUMAP (fourni par OpenTofu)
     # security.txt (RFC 9116) : signalement privé, comme SECURITY.md
     contact_securite: str = "https://github.com/aboigues/bitumap/security/advisories/new"
+    # Identité de l'éditeur (mentions légales et « À propos », issue #57) : fournie par
+    # OpenTofu (variable « editeur »), jamais versionnée ; « non renseigné » si absente.
+    editeur_nom: str | None = None
+    editeur_forme: str | None = None  # forme juridique, ex. « EI »
+    editeur_responsable: str | None = None  # entrepreneur, directeur de la publication
+    editeur_siret: str | None = None
+    editeur_adresse: str | None = None
+    editeur_contact: str | None = None  # adresse électronique
+    editeur_site: str | None = None  # site de l'éditeur, https:// seulement
+    editeur_presentation: str | None = None  # quelques phrases, texte simple (« À propos »)
+
+    @field_validator("editeur_site")
+    @classmethod
+    def _site_https(cls, valeur: str | None) -> str | None:
+        """Lien affiché sur les pages : https seulement (ni javascript:, ni http)."""
+        if valeur and not valeur.startswith("https://"):
+            raise ValueError("BITUMAP_EDITEUR_SITE doit commencer par https://")
+        return valeur or None
 
     # Secrets (Secret Manager en production, jamais dans le dépôt). ALTCHA et le sel ne
     # servent qu'à l'API, qui refuse de démarrer sans eux (api.application) ; le job ne les
