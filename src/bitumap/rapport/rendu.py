@@ -20,6 +20,13 @@ from bitumap.rapport import carte_svg
 from bitumap.score.methode import LIBELLES_GROUPES, VERSION_METHODE
 
 SCRIPT = (resources.files("bitumap.rapport") / "interactions.js").read_text("utf-8")
+# Icône du site en ligne (issue #56) : la CSP du rapport n'autorise que les images data:.
+ICONE = (
+    "data:image/svg+xml;base64,"
+    + base64.b64encode(
+        (resources.files("bitumap") / "api" / "statique" / "favicon.svg").read_bytes()
+    ).decode()
+)
 # Empreinte du seul script autorisé dans les rapports (CSP servie par l'API).
 EMPREINTE_SCRIPT = "sha256-" + base64.b64encode(hashlib.sha256(SCRIPT.encode()).digest()).decode()
 CSP_RAPPORT = (
@@ -152,6 +159,7 @@ def rendre(
         ia=journal.ia if journal.ia.modele else None,
         donnees_json=json_dans_html({"points": points_dict}),
         script=SCRIPT,
+        icone=ICONE,
     )
     geojson = {
         "type": "FeatureCollection",

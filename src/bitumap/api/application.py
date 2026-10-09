@@ -10,7 +10,7 @@ from urllib.parse import urlencode, urlparse, urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -168,6 +168,15 @@ def creer_application() -> FastAPI:
     @app.get("/health")
     def sante() -> dict:
         return {"etat": "ok"}
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> FileResponse:
+        # Demandé par les navigateurs à la racine, quelle que soit la page (issue #56).
+        return FileResponse(
+            DOSSIER / "statique" / "favicon.ico",
+            media_type="image/x-icon",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     @app.get("/.well-known/security.txt")
     def security_txt() -> PlainTextResponse:
