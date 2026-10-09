@@ -66,6 +66,8 @@ jobs:
       contents: read
     outputs:
       digests: ${{ steps.publication.outputs.digests }}
+      digest-api: ${{ steps.publication.outputs.digest-api }}
+      digest-job: ${{ steps.publication.outputs.digest-job }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,6 +111,7 @@ jobs:
             docker push "${REGISTRE}/${nom}:${TAG}"
             digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${REGISTRE}/${nom}:${TAG}")
             digests="${digests}- ${nom} : \`${digest}\`"$'\n'
+            echo "digest-${nom}=${digest##*@}" >> "$GITHUB_OUTPUT"
           done
           {
             echo "digests<<FIN"
@@ -122,9 +125,30 @@ jobs:
           REGISTRE: ${{ vars.BITUMAP_REGISTRE }}
         run: docker logout "${REGISTRE%%/*}" || true
 
+  attestations:
+    # Provenance signée de chaque image publiée (Sigstore, API des attestations de GitHub),
+    # vérifiée avant tout déploiement par scripts/deploiement/digests.sh. Job séparé : le
+    # jeton OIDC n'est jamais disponible là où se trouve la clé du registre.
+    name: attestations
+    needs: images
+    runs-on: ubuntu-26.04
+    permissions:
+      id-token: write       # certificat de signature Sigstore
+      attestations: write   # enregistrement de l'attestation
+    strategy:
+      matrix:
+        nom: [api, job]
+    steps:
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ vars.BITUMAP_REGISTRE }}/${{ matrix.nom }}
+          subject-digest: ${{ matrix.nom == 'api' && needs.images.outputs.digest-api || needs.images.outputs.digest-job }}
+          push-to-registry: false
+          create-storage-record: false
+
   publish:
     name: publish
-    needs: [sbom, images]
+    needs: [sbom, images, attestations]
     runs-on: ubuntu-26.04
     permissions:
       contents: write   # création de la version GitHub et ajout du SBOM

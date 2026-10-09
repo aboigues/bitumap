@@ -113,7 +113,25 @@ LL-025) : le domaine est créé mais lu trop tôt par le fournisseur, qui le mar
 `tofu untaint scaleway_tem_domain.envoi` et refaire le plan : il ne doit plus le
 remplacer.
 
-Nouvelle version : remplacer les digests dans `terraform.tfvars`, refaire le plan, l'appliquer.
+### Nouvelle version
+
+Reporter les digests avec `scripts/deploiement/digests.sh v<x.y.z>` (depuis la racine du
+dépôt). Le script ne modifie `terraform.tfvars` qu'après avoir vérifié :
+
+- la version GitHub (publiée, pas un brouillon) et le commit de son tag ;
+- le workflow `release` de ce tag, réussi sur ce commit ;
+- l'égalité des digests des notes de version et du tag dans le registre Scaleway ;
+- l'attestation de provenance de chaque image (`gh attestation verify`) : signée par
+  `release.yml` de ce dépôt, à partir de ce tag et de ce commit, sur un exécuteur de GitHub.
+
+Seules les lignes `digest_api` et `digest_job` sont remplacées et affichées (copie dans
+`terraform.tfvars.sauvegarde`, ignorée par git). Prérequis : `gh` connecté, profil scw
+`bitumap`, connexion Docker au registre (`scw -p bitumap registry login`). Les versions
+publiées avant les attestations (v0.1.0 à v0.1.2) passent par `--sans-attestation`, refusé
+pour toute autre version.
+
+Ensuite : `tofu plan -input=false -out=bitumap.tfplan` (seuls le conteneur et le job
+changent), `tofu apply bitumap.tfplan`, puis un second plan qui doit être vide (LL-024).
 
 ### Alerte de budget (T092)
 

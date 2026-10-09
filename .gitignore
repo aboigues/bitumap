@@ -29,4 +29,5 @@ var/
 # OpenTofu : fichiers locaux (le verrou des fournisseurs, lui, est versionné)
 .terraform/
 *.tfvars
+*.tfvars.sauvegarde
 !*.tfvars.example
