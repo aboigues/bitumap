@@ -104,3 +104,10 @@ button.lien { background: none; color: inherit; border: none; padding: .25rem 0;
 ul.liste-points { list-style: none; padding-left: 0; }
 ul.liste-points li { margin-bottom: .75rem; }
 ul.liste-points .petit { display: block; color: var(--discret); }
+/* Progression de la génération (009) : barre native, couleurs du thème. */
+progress { display: block; width: 100%; max-width: 32rem; height: .9rem; margin: .25rem 0 .75rem;
+           appearance: none; border: 1px solid var(--ligne); border-radius: .45rem;
+           background: var(--surface); overflow: hidden; accent-color: var(--accent); }
+progress::-webkit-progress-bar { background: var(--surface); }
+progress::-webkit-progress-value { background: var(--accent); }
+progress::-moz-progress-bar { background: var(--accent); }

@@ -145,12 +145,16 @@ def libelle_changement(p: Point) -> str | None:
 
 
 def calculer_avec_v1(
-    f, nom_commune: str, analyse_ia: Callable[[list[Point]], None] | None = None
+    f,
+    nom_commune: str,
+    analyse_ia: Callable[[list[Point]], None] | None = None,
+    avancement: Callable[[str, int, int], None] | None = None,
 ) -> ResultatCommune:
     """Calcul 2.0 de la commune, puis 1.2 sur les mêmes sources et réponses d'IA ; le
-    résultat 2.0 porte ``niveau_v1``, ``raison_changement`` et ``bilan_changements``."""
+    résultat 2.0 porte ``niveau_v1``, ``raison_changement`` et ``bilan_changements``.
+    ``avancement`` (009) n'est passé qu'au calcul principal : la passe 1.2 est rapide."""
     memoire = Memoire(f)
-    resultat = calculer_commune(memoire, nom_commune, analyse_ia)
+    resultat = calculer_commune(memoire, nom_commune, analyse_ia, avancement=avancement)
     v1 = calculer_commune(
         memoire, nom_commune, reprise_ia(resultat.points), methode=VERSION_METHODE
     )
