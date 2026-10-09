@@ -33,6 +33,35 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
 
 ## Entrées
 
+### LL-034 — Erreur passagère à la première page après une inactivité (2026-10-09) — Ouverte
+
+- **Contexte** : production v0.1.2, essai du mainteneur juste après le déploiement ; page
+  d'un rapport de Paris 17e.
+- **Symptôme** : page « Une erreur est survenue. Réessayez plus tard. » (erreur 500) ; la
+  même page s'ouvre au rechargement. Le rapport stocké est sain (ouvert en local sans
+  erreur).
+- **Causes racines** (mécanisme reproduit en local ; trace de production non lue, faute
+  d'accès au journal) :
+  1. Pourquoi ? La requête a reçu du pool une connexion déjà coupée par la base
+     (`AdminShutdown: terminating connection…` en local) ; le pool l'a ensuite jetée, d'où
+     le rechargement réussi.
+  2. Pourquoi coupée ? La base Serverless SQL se met en veille après 5 min sans requête et
+     ferme ses connexions ; le pool gardait les connexions inutilisées 10 min (valeur par
+     défaut de psycopg_pool).
+  3. Pourquoi donnée telle quelle ? Le pool ne vérifiait pas une connexion avant de la
+     donner.
+  4. Pourquoi non vu ? En local et en CI, la base PostgreSQL ne se met jamais en veille ; et
+     une erreur 500 n'alerte personne (trace dans le journal du conteneur seulement).
+- **Correctif** : connexion vérifiée avant d'être donnée (`check=ConnectionPool.check_connection`),
+  remplacée si elle est coupée ; connexions inutilisées fermées après 2 min (`max_idle`, au
+  plus 4 min d'inactivité). Vaut pour l'API et le job (même pool).
+- **Mesure préventive** : tests `test_connexion_coupee_par_la_base_remplacee` (connexion
+  coupée côté serveur puis réutilisée ; échoue sans le correctif) et
+  `test_connexions_inutilisees_fermees_avant_la_veille`. Reste ouverte jusqu'à la lecture
+  de la trace de production ou l'absence de récidive avec v0.1.3. Proposé, non décidé :
+  alerte au mainteneur sur les erreurs 500 ; accès au journal en lecture pour le diagnostic.
+- **Références** : branche `fix/pool-connexions-veille`.
+
 ### LL-033 — Contrôle requis « exceptions » en échec : test avec pytest (2026-10-09) — Close
 
 - **Contexte** : CI de la PR #54, ajout d'un test de structure du workflow `release`.
@@ -117,6 +146,9 @@ Il est lu au début de chaque session de travail, humaine ou IA (chargé via `CL
   `test_retour_a_la_page_demandee_apres_connexion`, `test_retour_jamais_vers_un_autre_site`,
   `test_page_d_erreur_propose_la_page_precedente`. Reste ouverte jusqu'à reproduction (message
   exact et page) ou absence de récidive.
+- **Piste nouvelle (2026-10-09)** : quatrième cause possible, non envisagée jusque-là, la
+  connexion à la base coupée par sa mise en veille et redonnée par le pool (LL-034) : même
+  symptôme (erreur après un long moment, puis rechargement réussi). Corrigée avec LL-034.
 - **Références** : branche `fix/interface-heure-session`.
 
 ### LL-029 — Heures affichées en UTC (2026-10-07) — Close
